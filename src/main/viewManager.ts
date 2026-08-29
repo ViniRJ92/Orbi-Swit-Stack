@@ -129,6 +129,24 @@ export class ViewManager {
         this.onChatMessages?.(accountId, chat?.chatKey ?? null, chat?.isGroup ?? false, payload.items);
       }
     );
+    // Fase 30.9 (2026-08-29, DIAGNÓSTICO TEMPORÁRIO) — só grava no log o
+    // identificador opaco (`data-id`, nunca texto/mídia/remetente) de cada
+    // balão visto e a decisão de classificação tomada, pra confirmar por que
+    // mensagens visivelmente sob o divisor "Hoje" (ex.: imagens encaminhadas)
+    // estavam saindo classificadas como "ontem" — ver comentário de
+    // `classifyByOwnDate` em webviewPreload.ts. Remover depois de confirmado.
+    ipcMain.on(
+      'mw:debug-classify',
+      (
+        event,
+        info: { dataId: string; isSelfSent: boolean; hasOwnDate: boolean; ownDate: string | null; fallbackBucket: string; effectiveBucket: string }
+      ) => {
+        const accountId = this.webContentsIdToAccount.get(event.sender.id);
+        logger.info(
+          `[debug-classify] conta=${accountId} dataId=${info.dataId} selfSent=${info.isSelfSent} temDataPropria=${info.hasOwnDate} dataPropria=${info.ownDate} bucketDivisor=${info.fallbackBucket} bucketFinal=${info.effectiveBucket}`
+        );
+      }
+    );
     // Fase 30 (reescrita) — avisa quando a conversa aberta desta conta
     // aparece/desaparece/troca (usado para ligar/desligar o canal de badge
     // enquanto uma conversa está sendo observada em tempo real, e para saber

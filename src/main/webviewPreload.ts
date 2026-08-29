@@ -183,11 +183,22 @@ function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | '
     if (node.hasAttribute && node.hasAttribute('data-id')) {
       const dataId = node.getAttribute('data-id') || '';
       if (!dataId || seenMessageIds.has(dataId)) continue;
-      if (/^true[_-]/i.test(dataId)) {
+      const isSelfSent = /^true[_-]/i.test(dataId);
+      const ownDate = classifyByOwnDate(node);
+      const effectiveBucket = isSelfSent ? 'other' : ownDate ?? bucket;
+      // Fase 30.9 (diagnóstico temporário) — ver comentário em viewManager.ts.
+      ipcRenderer.send('mw:debug-classify', {
+        dataId,
+        isSelfSent,
+        hasOwnDate: ownDate !== null,
+        ownDate,
+        fallbackBucket: bucket,
+        effectiveBucket,
+      });
+      if (isSelfSent) {
         seenMessageIds.add(dataId); // enviada por mim: nunca conta, mas marca vista pra não reprocessar sempre
         continue;
       }
-      const effectiveBucket = classifyByOwnDate(node) ?? bucket;
       if (effectiveBucket === 'other') continue; // mais antiga que ontem: nunca conta, não marca visto (barato reavaliar)
       seenMessageIds.add(dataId);
       out.push({ dataId, bucket: effectiveBucket });
