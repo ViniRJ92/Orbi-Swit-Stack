@@ -64,6 +64,17 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Cobre o caso de responder um cliente ao vivo: mensagens trocadas numa conversa aberta agora entram na contagem do dia certo.',
     '- Sem leitura de texto, remetente ou midia em nenhum momento - so o identificador da mensagem e o nome ja visivel no cabecalho da conversa.',
   ].join('\n'),
+  '0.33.4': [
+    'Analytics: correcao na identificacao do contato',
+    '',
+    '- Corrigido um caso em que o nome do contato da conversa aberta nao era identificado corretamente, impedindo o relatorio Hoje/Ontem de contar a mensagem.',
+  ].join('\n'),
+  '0.33.5': [
+    'Analytics: recupera mensagens de hoje/ontem ja carregadas',
+    '',
+    '- Mensagens de hoje ou ontem que ja estavam na tela ao abrir a conversa (por exemplo, se a conversa foi aberta antes desta atualizacao) agora entram na contagem, sem nunca recontar o que ja passou dessa janela.',
+    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

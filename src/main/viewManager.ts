@@ -93,6 +93,13 @@ export class ViewManager {
   // Fase 30 (reescrita) — ver comentário de topo de webviewPreload.ts.
   private onNewMessage?: (accountId: string, chatKey: string | null, isGroup: boolean, dataId: string, ts: number) => void;
   private onChatOpenStateChange?: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void;
+  // Fase 30.5 — ver comentário de scanCatchupMessages em webviewPreload.ts.
+  private onCatchupMessages?: (
+    accountId: string,
+    chatKey: string | null,
+    isGroup: boolean,
+    items: { dataId: string; bucket: 'today' | 'yesterday' }[]
+  ) => void;
   // Qual conversa (nome + se é grupo) está aberta agora em cada conta —
   // atualizado por `mw:chat-open-state`, consultado quando `mw:new-message`
   // chega (esse evento não repete o nome a cada mensagem, só no momento em
@@ -134,6 +141,19 @@ export class ViewManager {
       this.currentChat.set(accountId, { chatKey, isGroup });
       this.onChatOpenStateChange?.(accountId, open, chatKey, isGroup);
     });
+    // Fase 30.5 — varredura única (não é polling) de mensagens de Hoje/Ontem
+    // que já estavam carregadas quando a conversa foi aberta. Usa o
+    // chatKey/isGroup já rastreado desta conta (o mesmo da conversa que
+    // acabou de disparar este catch-up).
+    ipcMain.on(
+      'mw:catchup-messages',
+      (event, payload: { items: { dataId: string; bucket: 'today' | 'yesterday' }[] }) => {
+        const accountId = this.webContentsIdToAccount.get(event.sender.id);
+        if (!accountId || !Array.isArray(payload?.items) || payload.items.length === 0) return;
+        const chat = this.currentChat.get(accountId);
+        this.onCatchupMessages?.(accountId, chat?.chatKey ?? null, chat?.isGroup ?? false, payload.items);
+      }
+    );
   }
 
   setStatusChangeListener(cb: (accountId: string) => void): void {
@@ -150,6 +170,18 @@ export class ViewManager {
   /** Fase 30 (reescrita) — chamado sempre que a conversa aberta de uma conta aparece/desaparece/troca. */
   setChatOpenStateListener(cb: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void): void {
     this.onChatOpenStateChange = cb;
+  }
+
+  /** Fase 30.5 — chamado 1 vez por conversa aberta, com as mensagens de Hoje/Ontem que já estavam carregadas. */
+  setCatchupMessagesListener(
+    cb: (
+      accountId: string,
+      chatKey: string | null,
+      isGroup: boolean,
+      items: { dataId: string; bucket: 'today' | 'yesterday' }[]
+    ) => void
+  ): void {
+    this.onCatchupMessages = cb;
   }
 
   /**

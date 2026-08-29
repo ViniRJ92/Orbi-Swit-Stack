@@ -325,17 +325,49 @@ export class ChatActivityStore {
    * mesmo padrão de `processedMessageIds` em analyticsStore.ts.
    */
   recordLiveMessage(accountId: string, chatKey: string, dataId: string, ts: number): void {
-    const processed = this.data.processedLiveMessageIds[accountId] ?? [];
-    if (processed.includes(dataId)) return;
-
-    processed.push(dataId);
+    const added = this.markProcessedLive(accountId, dataId);
+    if (!added) return;
     this.data.events.push({ t: ts, day: dayKey(new Date(ts)), a: accountId, k: chatKey, c: 1 });
+    this.prune();
+    this.persist();
+  }
+
+  /**
+   * Fase 30.5 — "catch-up": mensagens de Hoje/Ontem que já estavam
+   * carregadas na tela quando a conversa foi aberta (ex.: você abriu antes
+   * do app começar a rastreá-la, ou marcou como "não lida" pra lembrete,
+   * mas a mensagem já tinha chegado de verdade) — ver comentário completo em
+   * `scanCatchupMessages` (webviewPreload.ts). Usa a MESMA lista de
+   * deduplicação de `recordLiveMessage` (`processedLiveMessageIds`) — um
+   * `data-id` só pode gerar 1 evento na vida do app, não importa se veio do
+   * canal ao vivo ou de um catch-up. `bucket` vem do divisor de data
+   * ("Hoje"/"Ontem") já visível na conversa, não de um timestamp exato —
+   * por isso resolve o dia via `todayKey()`/`yesterdayKey()`, não `dayKey`.
+   */
+  recordCatchupMessages(accountId: string, chatKey: string, items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
+    let addedAny = false;
+    const now = Date.now();
+    for (const item of items) {
+      if (!this.markProcessedLive(accountId, item.dataId)) continue;
+      const day = item.bucket === 'yesterday' ? yesterdayKey() : todayKey();
+      this.data.events.push({ t: now, day, a: accountId, k: chatKey, c: 1 });
+      addedAny = true;
+    }
+    if (!addedAny) return;
+    this.prune();
+    this.persist();
+  }
+
+  /** Marca um `data-id` como processado pelo canal de evento (ao vivo ou catch-up). Retorna `false` se já estava. */
+  private markProcessedLive(accountId: string, dataId: string): boolean {
+    const processed = this.data.processedLiveMessageIds[accountId] ?? [];
+    if (processed.includes(dataId)) return false;
+    processed.push(dataId);
     this.data.processedLiveMessageIds[accountId] =
       processed.length > MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT
         ? processed.slice(processed.length - MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT)
         : processed;
-    this.prune();
-    this.persist();
+    return true;
   }
 
   /** Conta descarregada (suspensa, ou app fechando) — cancela leituras pendentes e força novo grace period ao recarregar. */

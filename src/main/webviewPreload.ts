@@ -92,6 +92,18 @@ function reportWhatsAppDebounced(): void {
  * contar o histórico da conversa como mensagem nova, que era o problema
  * relatado. Ver o comentário de `attachMessageObserver` para o detalhe.
  *
+ * Catch-up de Hoje/Ontem (2026-08-29, Fase 30.5): a baseline acima descarta
+ * QUALQUER coisa já carregada quando a conversa abre — inclusive mensagens
+ * de HOJE/ONTEM genuinamente reais que só não tinham sido vistas ainda por
+ * este mecanismo (ex.: conversa aberta antes desta versão existir, ou
+ * marcada como "não lida" só como lembrete pessoal, sem ser mensagem nova de
+ * verdade). `scanCatchupMessages` cobre esse caso: 1 varredura, só depois do
+ * histórico estabilizar, usando os divisores "HOJE"/"ONTEM" que o WhatsApp
+ * já desenha na conversa (texto de interface, não conteúdo de mensagem) pra
+ * recuperar essas mensagens sem nunca recontar as mais antigas que isso nem
+ * as que já tiverem sido processadas antes (mesma lista de deduplicação do
+ * canal ao vivo, em chatActivityStore.ts).
+ *
  * Identificação da conversa (2026-08-29): além do `data-id`/timestamp, cada
  * evento de "conversa aberta" agora também carrega o NOME lido do cabeçalho
  * (`chatKey`, ver `extractChatKey`) e se é um grupo (`isGroup`) — necessário
@@ -144,6 +156,61 @@ function extractDataIds(node: Node): string[] {
 
 function reportNewMessage(dataId: string, ts: number): void {
   ipcRenderer.send('mw:new-message', { dataId, ts });
+}
+
+/**
+ * Fase 30.5 (2026-08-29) — "catch-up": mensagens de HOJE ou ONTEM que já
+ * estavam carregadas na tela antes do observador começar a olhar pra essa
+ * conversa (ex.: você abriu a conversa mais cedo, antes do app começar a
+ * rastreá-la; ou marcou como "não lida" pra lembrete, mas a mensagem já
+ * tinha chegado de verdade hoje). Sem isso, essas mensagens ficavam de fora
+ * pra sempre, mesmo sendo reais e do dia — a baseline da Fase 30.1/30.2 as
+ * tratava como "histórico" simplesmente por já estarem lá, sem olhar a data.
+ *
+ * Não é releitura periódica nem contradiz "nunca recontar histórico": roda
+ * só 1 vez por conversa aberta (depois do histórico terminar de carregar,
+ * mesma janela de `MESSAGE_ARM_DELAY_MS`), e cada mensagem encontrada só é
+ * aceita pelo processo principal se o `data-id` dela NUNCA tiver sido
+ * processado antes (mesma lista persistida usada pelas mensagens ao vivo) —
+ * ou seja, roda de novo a cada troca/reabertura, mas só a primeira vez que
+ * vê cada ID de verdade conta.
+ *
+ * O "dia" de cada mensagem aqui vem do PRÓPRIO divisor de data que o
+ * WhatsApp Web já desenha na conversa ("HOJE"/"ONTEM") — texto de interface,
+ * não conteúdo de mensagem, mesmo princípio já usado pelo `dateTag` da
+ * leitura da lista lateral (getChatEntries). Mensagens antes de "Ontem"
+ * (rótulo de data mais antigo, ou nenhum rótulo reconhecido) são ignoradas
+ * de propósito — não fazem parte do relatório Hoje x Ontem.
+ */
+const CATCHUP_DIVIDER_RE = /^(hoje|today|ontem|yesterday)$/i;
+
+function scanCatchupMessages(panel: Element): { dataId: string; bucket: 'today' | 'yesterday' }[] {
+  const nodes = Array.from(panel.querySelectorAll('[data-id], span[aria-label], div[role="button"] span'));
+  let bucket: 'today' | 'yesterday' | 'other' = 'other';
+  const seen = new Set<string>();
+  const out: { dataId: string; bucket: 'today' | 'yesterday' }[] = [];
+
+  for (const node of nodes) {
+    if (node.hasAttribute && node.hasAttribute('data-id')) {
+      const dataId = node.getAttribute('data-id') || '';
+      if (!dataId || seen.has(dataId)) continue;
+      seen.add(dataId);
+      if (/^true[_-]/i.test(dataId)) continue; // enviada por mim, nunca conta
+      if (bucket !== 'other') out.push({ dataId, bucket });
+      continue;
+    }
+    const text = (node.textContent || '').trim();
+    if (text.length > 0 && text.length <= 12 && CATCHUP_DIVIDER_RE.test(text)) {
+      const lower = text.toLowerCase();
+      bucket = lower === 'hoje' || lower === 'today' ? 'today' : 'yesterday';
+    }
+  }
+  return out;
+}
+
+function reportCatchupMessages(items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
+  if (items.length === 0) return;
+  ipcRenderer.send('mw:catchup-messages', { items });
 }
 
 /**
@@ -258,6 +325,11 @@ function attachMessageObserver(panel: Element): void {
   armMessageTimer = setTimeout(() => {
     armed = true;
     armMessageTimer = null;
+    // Fase 30.5: só agora, com o histórico já estabilizado (mesma espera
+    // que evita o bug da Fase 30.2), varre o que está na tela procurando
+    // mensagens de Hoje/Ontem que a baseline acima descartou só por já
+    // estarem carregadas — ver comentário de `scanCatchupMessages`.
+    reportCatchupMessages(scanCatchupMessages(panel));
   }, MESSAGE_ARM_DELAY_MS);
 }
 

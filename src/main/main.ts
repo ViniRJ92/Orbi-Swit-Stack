@@ -160,6 +160,15 @@ app.whenReady().then(() => {
       chatActivityStore?.onChatClosed(accountId);
     }
   });
+  // Fase 30.5: mensagens de Hoje/Ontem que já estavam carregadas quando a
+  // conversa abriu (ver comentário completo em webviewPreload.ts) — só
+  // conta pro relatório por contato (chatActivityStore); Volume total já
+  // reflete essas contas pelo canal de badge normal, sem precisar disso.
+  viewManager.setCatchupMessagesListener((accountId, chatKey, isGroup, items) => {
+    if (!isGroup && chatKey) {
+      chatActivityStore?.recordCatchupMessages(accountId, chatKey, items);
+    }
+  });
 
   const initialPreset = resolvePerformancePreset(settingsStore.getPerformanceMode(), settingsStore.getCustomMaxLoadedAccounts());
   accountManager = new AccountManager(
