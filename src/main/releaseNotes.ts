@@ -75,6 +75,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Mensagens de hoje ou ontem que ja estavam na tela ao abrir a conversa (por exemplo, se a conversa foi aberta antes desta atualizacao) agora entram na contagem, sem nunca recontar o que ja passou dessa janela.',
     '- Sem leitura de texto, remetente ou midia em nenhum momento.',
   ].join('\n'),
+  '0.33.6': [
+    'Analytics: corrige rolagem confundida com mensagem nova',
+    '',
+    '- Rolar a conversa pra ver historico antigo podia ser confundido com mensagem nova chegando - corrigido.',
+    '- Toda mudanca na conversa agora reclassifica o que esta visivel pelo divisor de data (Hoje/Ontem), nunca pelo instante em que apareceu na tela.',
+    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
