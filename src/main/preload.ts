@@ -8,6 +8,7 @@ import { AccountsChangedPayload, AnalyticsRange } from './types';
 import { PerformanceMode, CloseBehavior, SidebarPosition, IconSize } from './settingsStore';
 import { AccountService } from './services';
 import { UpdateState } from './updateManager';
+import { WhatsNewResult } from './releaseNotes';
 
 const api = {
   getAppInfo: () => ipcRenderer.invoke('mw:get-app-info'),
@@ -75,6 +76,13 @@ const api = {
     const listener = (_evt: unknown, state: UpdateState) => cb(state);
     ipcRenderer.on('mw:update-status-changed', listener);
     return () => ipcRenderer.removeListener('mw:update-status-changed', listener);
+  },
+  getWhatsNew: (): Promise<WhatsNewResult> => ipcRenderer.invoke('mw:get-whats-new'),
+  ackWhatsNew: () => ipcRenderer.invoke('mw:ack-whats-new'),
+  onOpenSettingsUpdates: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('mw:open-settings-updates', listener);
+    return () => ipcRenderer.removeListener('mw:open-settings-updates', listener);
   },
 };
 

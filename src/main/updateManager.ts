@@ -15,7 +15,7 @@
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { app } from 'electron';
+import { app, Notification } from 'electron';
 import { autoUpdater, UpdateInfo, ProgressInfo } from 'electron-updater';
 import { logger } from './logger';
 
@@ -61,8 +61,17 @@ function friendlyErrorMessage(err: unknown): string {
 
 export class UpdateManager {
   private state: UpdateState = { phase: 'idle' };
+  // Fase 29: evita disparar a notificação nativa de novo a cada checagem
+  // periódica (ver UPDATE_CHECK_INTERVAL_MS em main.ts) enquanto a versão
+  // disponível continuar sendo a mesma já avisada — só version novo (ou o
+  // app reiniciar) dispara uma notificação nova.
+  private notifiedVersion: string | null = null;
 
-  constructor(private readonly onStateChange: (state: UpdateState) => void) {
+  constructor(
+    private readonly onStateChange: (state: UpdateState) => void,
+    /** Fase 29: chamado quando o usuário clica na notificação nativa — normalmente mostra a janela e abre Configurações → Atualizações. */
+    private readonly onAvailableClick?: (version: string) => void
+  ) {
     // Nunca baixa nem instala por conta própria — cada uma dessas duas ações
     // só acontece quando o usuário clica explicitamente (ver download()/
     // install() abaixo, chamados pela UI via IPC).
@@ -70,9 +79,10 @@ export class UpdateManager {
     autoUpdater.autoInstallOnAppQuit = false;
 
     autoUpdater.on('checking-for-update', () => this.setState({ phase: 'checking' }));
-    autoUpdater.on('update-available', (info: UpdateInfo) =>
-      this.setState({ phase: 'available', version: info.version })
-    );
+    autoUpdater.on('update-available', (info: UpdateInfo) => {
+      this.setState({ phase: 'available', version: info.version });
+      this.notifyAvailable(info.version);
+    });
     autoUpdater.on('update-not-available', () => this.setState({ phase: 'not-available' }));
     autoUpdater.on('download-progress', (progress: ProgressInfo) =>
       this.setState({ phase: 'downloading', percent: Math.round(progress.percent) })
@@ -95,6 +105,25 @@ export class UpdateManager {
   private setState(state: UpdateState): void {
     this.state = state;
     this.onStateChange(state);
+  }
+
+  /**
+   * Fase 29: notificação nativa do Windows avisando que há uma versão nova
+   * — é o que permite o usuário saber sem precisar abrir Configurações e
+   * clicar em "Verificar" manualmente. Nunca baixa nada sozinha; clicar na
+   * notificação só chama `onAvailableClick`, que mostra a janela e abre a
+   * aba de Atualizações (ver main.ts) para o usuário decidir baixar.
+   */
+  private notifyAvailable(version: string): void {
+    if (version === this.notifiedVersion) return;
+    this.notifiedVersion = version;
+    if (!Notification.isSupported()) return;
+    const notification = new Notification({
+      title: 'Atualização disponível',
+      body: `A versão ${version} do Orbi Swit Stack já pode ser baixada.`,
+    });
+    notification.on('click', () => this.onAvailableClick?.(version));
+    notification.show();
   }
 
   getState(): UpdateState {

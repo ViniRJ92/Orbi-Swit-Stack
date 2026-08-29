@@ -80,6 +80,13 @@ interface SettingsShape {
   sidebarWidth: number;
   sidebarPosition: SidebarPosition;
   iconSize: IconSize;
+  /**
+   * Última versão do app (`app.getVersion()`) que o usuário já viu o modal
+   * "O que há de novo" — usada para decidir se essa tela aparece de novo
+   * (ver main/releaseNotes.ts). String vazia = nunca viu nenhuma (inclui
+   * instalações anteriores a este recurso).
+   */
+  lastSeenVersion: string;
 }
 
 const STORE_FILE = 'settings.json';
@@ -93,6 +100,7 @@ const DEFAULTS: SettingsShape = {
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
   sidebarPosition: 'left',
   iconSize: 'medium',
+  lastSeenVersion: '',
 };
 
 function clampSidebarWidth(width: number): number {
@@ -210,6 +218,15 @@ export class SettingsStore {
 
   setIconSize(size: IconSize): void {
     this.data.iconSize = size;
+    this.persist();
+  }
+
+  getLastSeenVersion(): string {
+    return this.data.lastSeenVersion ?? '';
+  }
+
+  setLastSeenVersion(version: string): void {
+    this.data.lastSeenVersion = version;
     this.persist();
   }
 }

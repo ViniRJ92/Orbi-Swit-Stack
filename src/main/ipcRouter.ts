@@ -25,6 +25,7 @@ import {
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
 import { UpdateManager } from './updateManager';
+import { resolveWhatsNew } from './releaseNotes';
 import { AnalyticsRange, BackupFile } from './types';
 import { logger } from './logger';
 
@@ -417,6 +418,21 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
 
   ipcMain.handle('mw:install-update', () => {
     deps.updateManager?.install();
+    return true;
+  });
+
+  // --- "O que há de novo" (Fase 29) ---
+  // Compara a versão instalada com a última que o usuário já confirmou ter
+  // visto (persistida em settings.json, não em localStorage — ver
+  // main/releaseNotes.ts para a justificativa) para decidir se o modal de
+  // notas de versão deve abrir sozinho ao iniciar.
+
+  ipcMain.handle('mw:get-whats-new', () =>
+    resolveWhatsNew(app.getVersion(), settingsStore.getLastSeenVersion())
+  );
+
+  ipcMain.handle('mw:ack-whats-new', () => {
+    settingsStore.setLastSeenVersion(app.getVersion());
     return true;
   });
 }

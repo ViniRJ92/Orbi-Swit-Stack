@@ -41,6 +41,12 @@ const IDLE_SWEEP_INTERVAL_MS = 60 * 1000;
 // frequente quanto o título da aba — uma conversa nova fica visível por
 // tempo suficiente pra não perder nenhuma leitura com esse intervalo.
 const CHAT_ACTIVITY_POLL_MS = 4000;
+// Fase 29: intervalo entre verificações automáticas de atualização
+// enquanto o app fica aberto, além da checagem única de sempre ao iniciar
+// (ver updateManager.ts). 4 horas é frequente o bastante para quem deixa o
+// app rodando na bandeja por dias sem reabrir, sem gerar tráfego de rede
+// desnecessário nem incomodar com verificações constantes.
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.png');
 
 let windowManager: WindowManager | null = null;
@@ -160,10 +166,31 @@ app.whenReady().then(() => {
   // updateManager.ts) — checagem silenciosa ao abrir, nunca baixa/instala
   // sozinha. O estado é empurrado pro renderer, que acende o indicador em
   // Configurações → Atualizações quando há algo novo.
-  updateManager = new UpdateManager((state) => {
-    windowManager?.get()?.webContents.send('mw:update-status-changed', state);
-  });
+  updateManager = new UpdateManager(
+    (state) => {
+      windowManager?.get()?.webContents.send('mw:update-status-changed', state);
+    },
+    // Fase 29: clique na notificação nativa de "atualização disponível" —
+    // mostra a janela (pode estar minimizada na bandeja) e avisa o
+    // renderer pra abrir Configurações já na aba Atualizações.
+    () => {
+      windowManager?.show();
+      windowManager?.get()?.webContents.send('mw:open-settings-updates');
+    }
+  );
   updateManager.check();
+
+  // Fase 29: além da checagem única ao abrir (acima), repete a verificação
+  // periodicamente enquanto o app fica aberto — cobre quem deixa o Orbi
+  // Swit Stack minimizado na bandeja por muito tempo sem reabrir. Continua
+  // sendo só uma checagem silenciosa (nunca baixa/instala sozinha); o
+  // resultado passa pelo mesmo `onStateChange` de sempre, que já empurra
+  // pro renderer e aciona tanto o indicador em Configurações quanto o
+  // aviso flutuante (ver UpdateToast.tsx no renderer).
+  const updateCheckInterval = setInterval(() => {
+    updateManager?.check();
+  }, UPDATE_CHECK_INTERVAL_MS);
+  app.on('before-quit', () => clearInterval(updateCheckInterval));
 
   notificationManager = new NotificationManager(
     APP_NAME,

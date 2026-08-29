@@ -948,7 +948,16 @@ function UpdatesTab({
   );
 }
 
-export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SettingsModal({
+  open,
+  onClose,
+  initialTab,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Fase 29: permite abrir o modal já direto na aba pedida (ex.: clique na notificação nativa de atualização disponível). */
+  initialTab?: TabKey;
+}) {
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
   const sidebarPosition = useAppStore((s) => s.sidebarPosition);
@@ -966,6 +975,14 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
   const hasUpdate = updateState.phase === 'available' || updateState.phase === 'downloading' || updateState.phase === 'downloaded';
 
   const [activeTab, setActiveTab] = useState<TabKey>('general');
+  // Fase 29: toda vez que o modal reabre com um `initialTab` explícito
+  // (ex.: clique na notificação nativa de "atualização disponível"), pula
+  // direto pra essa aba — sem isso o modal sempre reabriria em "Geral".
+  useEffect(() => {
+    if (open && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [open, initialTab]);
   const [startup, setStartup] = useState(false);
   const [performanceMode, setPerformanceMode] = useState<PerformanceMode>('balanced');
   const [customMaxLoaded, setCustomMaxLoadedState] = useState(6);

@@ -1151,3 +1151,17 @@ Analytics ganhou seções fixas "Atividade de hoje" e "Atividade de ontem", sepa
 **Limitação assumida**: o rótulo usado é o mesmo que o WhatsApp Web já mostra ao lado de cada conversa. Se o app ficar fechado por vários dias com mensagens acumuladas numa mesma conversa, o WhatsApp só mostra UM rótulo (o da mensagem mais recente) — o backlog inteiro é atribuído ao dia desse rótulo, por ser uma limitação da própria informação exibida pelo WhatsApp Web, não do app.
 
 **Nota de proveniência (2026-08-29)**: o código desta fase foi construído e publicado como instalador `OrbiSwitStack-Setup-0.31.0.exe`, mas por uma falha no fluxo de publicação nunca chegou a ser commitado no repositório — a tag `v0.31.0` ficou apontando para o commit da v0.30.3 por meses/dias. Reconciliado nesta data a partir do `git diff` real fornecido pelo usuário; todos os arquivos de `src/main/*.ts` foram conferidos byte a byte contra o instalador publicado (extraído via NSIS → asar → sourcemap do esbuild) antes deste commit ser criado. Ver `git log` a partir daqui para o histórico correto e linear das versões seguintes.
+
+## Fase 28.1 — Repositório do GitHub marcado como privado
+
+Decisão registrada (sem diff de código associado): o repositório `ViniRJ92/Orbi-Swit-Stack` passou a ser privado. Motivou a decisão de arquitetura da Fase 29 de não buscar as notas de versão da API pública do GitHub em tempo de execução (ver `releaseNotes.ts`).
+
+## Fase 29 (v0.32.0) — Atualizações mais visíveis + tela "O que há de novo"
+
+**Checagem periódica**: além da checagem única de sempre ao abrir o app, `main.ts` agora repete `updateManager.check()` a cada 4 horas (`UPDATE_CHECK_INTERVAL_MS`) enquanto o app fica aberto — cobre quem deixa o Orbi Swit Stack minimizado na bandeja por muito tempo sem reabrir. Continua só uma checagem silenciosa (nunca baixa/instala sozinha).
+
+**Notificação nativa do Windows**: `updateManager.ts` (`notifyAvailable`) dispara uma notificação nativa quando uma versão nova é detectada — só uma vez por versão (`notifiedVersion`), não a cada checagem periódica repetida. Clicar na notificação mostra a janela (pode estar na bandeja) e abre Configurações já na aba "Atualizações" (`mw:open-settings-updates` → `SettingsModal` ganhou prop `initialTab`).
+
+**Tela "O que há de novo"** (`WhatsNewModal.tsx`, novo componente): abre sozinha na primeira vez que o usuário abre uma versão nova que tenha notas cadastradas. Texto fica hardcoded em `src/main/releaseNotes.ts` (`RELEASE_NOTES`, por versão) em vez de buscado da API de Releases do GitHub em tempo real — decisão direta da Fase 28.1 (repositório privado, a API pública não enxerga sem token, e embutir um token só pra isso seria menos seguro sem necessidade). `resolveWhatsNew(currentVersion, lastSeenVersion)` é função pura: só mostra o modal se a versão mudou E existe texto cadastrado para ela; `settingsStore.ts` ganhou `lastSeenVersion`, persistida, marcada via `mw:ack-whats-new` ao clicar "Entendi".
+
+**Nota de proveniência (2026-08-29)**: mesma situação da Fase 28 — código construído e publicado como `OrbiSwitStack-Setup-0.32.0.exe`, nunca commitado no seu momento (o diff original nem chegou a ser commitado na máquina de origem — "em desenvolvimento" no nome do arquivo do patch). Reconciliado e verificado byte a byte da mesma forma.

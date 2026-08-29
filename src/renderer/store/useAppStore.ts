@@ -15,6 +15,7 @@ import {
   SidebarPosition,
   ThemePreference,
   UpdateState,
+  WhatsNewResult,
 } from '../types';
 import { SIDEBAR_WIDTH_DEFAULT } from '../constants';
 
@@ -31,11 +32,14 @@ interface AppState {
   isResizingSidebar: boolean;
   groups: GroupRecord[];
   updateState: UpdateState;
+  /** Fase 29: preenchido só quando há notas de versão novas a mostrar (null depois de confirmado). */
+  whatsNew: WhatsNewResult | null;
 
   init: () => Promise<void>;
   checkForUpdate: () => Promise<void>;
   downloadUpdate: () => Promise<void>;
   installUpdate: () => Promise<void>;
+  dismissWhatsNew: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   switchAccount: (id: string) => Promise<void>;
   suspendAccount: (id: string) => Promise<void>;
@@ -81,9 +85,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   isResizingSidebar: false,
   groups: [],
   updateState: { phase: 'idle' },
+  whatsNew: null,
 
   init: async () => {
-    const [appInfo, theme, payload, confirmBeforeRemove, sidebarWidth, sidebarPosition, iconSize, groups, updateState] =
+    const [appInfo, theme, payload, confirmBeforeRemove, sidebarWidth, sidebarPosition, iconSize, groups, updateState, whatsNew] =
       await Promise.all([
         window.multiwhats.getAppInfo(),
         window.multiwhats.getTheme(),
@@ -94,6 +99,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         window.multiwhats.getIconSize(),
         window.multiwhats.listGroups(),
         window.multiwhats.getUpdateState(),
+        window.multiwhats.getWhatsNew(),
       ]);
     set({
       appInfo,
@@ -106,6 +112,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       iconSize,
       groups,
       updateState,
+      // Fase 29: só guarda no estado quando há algo novo pra mostrar —
+      // evita o WhatsNewModal precisar checar `shouldShow` toda hora.
+      whatsNew: whatsNew.shouldShow ? whatsNew : null,
     });
     window.multiwhats.onAccountsChanged((payload) => {
       set({
@@ -117,6 +126,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     // atualização assim que ela muda (checagem automática ao abrir, e
     // qualquer ação manual feita em Configurações → Atualizações).
     window.multiwhats.onUpdateStatusChanged((state) => set({ updateState: state }));
+  },
+
+  dismissWhatsNew: async () => {
+    await window.multiwhats.ackWhatsNew();
+    set({ whatsNew: null });
   },
 
   checkForUpdate: async () => {

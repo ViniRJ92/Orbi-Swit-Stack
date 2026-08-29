@@ -202,6 +202,13 @@ export type UpdateState =
   | { phase: 'downloaded'; version: string }
   | { phase: 'error'; message: string };
 
+/** Fase 29 — espelha WhatsNewResult de src/main/releaseNotes.ts. */
+export interface WhatsNewResult {
+  version: string;
+  notes: string | null;
+  shouldShow: boolean;
+}
+
 export interface OrbiSwitStackApi {
   getAppInfo: () => Promise<AppInfo>;
   listAccounts: () => Promise<AccountsChangedPayload>;
@@ -262,6 +269,12 @@ export interface OrbiSwitStackApi {
   downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
   onUpdateStatusChanged: (cb: (state: UpdateState) => void) => () => void;
+  /** Fase 29: decide/consulta se o modal "O que há de novo" deve abrir para a versão atual. */
+  getWhatsNew: () => Promise<WhatsNewResult>;
+  /** Fase 29: marca a versão atual como já vista — não mostra o modal de novo para ela. */
+  ackWhatsNew: () => Promise<boolean>;
+  /** Fase 29: disparado quando o usuário clica na notificação nativa de atualização disponível. */
+  onOpenSettingsUpdates: (cb: () => void) => () => void;
 }
 
 declare global {

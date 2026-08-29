@@ -12,6 +12,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { AddAccountWizard } from './components/AddAccountWizard';
 import { AccountsDashboard } from './components/AccountsDashboard';
 import { CommandPalette } from './components/CommandPalette';
+import { WhatsNewModal } from './components/WhatsNewModal';
 
 // Carregado sob demanda: a biblioteca de gráficos (recharts) só entra no
 // bundle quando a aba Analytics é aberta pela primeira vez, em vez de pesar
@@ -29,9 +30,13 @@ export function App() {
   const sidebarPosition = useAppStore((s) => s.sidebarPosition);
   const updateState = useAppStore((s) => s.updateState);
   const hasUpdate = updateState.phase === 'available' || updateState.phase === 'downloading' || updateState.phase === 'downloaded';
+  const whatsNew = useAppStore((s) => s.whatsNew);
 
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Fase 29: quando a notificação nativa de atualização é clicada,
+  // Configurações abre já na aba certa em vez da aba "Geral" padrão.
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'updates' | undefined>(undefined);
   const [addAccountOpen, setAddAccountOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -52,6 +57,13 @@ export function App() {
     return window.multiwhats.onOpenCommandPalette(() => setPaletteOpen(true));
   }, []);
 
+  useEffect(() => {
+    return window.multiwhats.onOpenSettingsUpdates(() => {
+      setSettingsInitialTab('updates');
+      setSettingsOpen(true);
+    });
+  }, []);
+
   // Barra de título enxuta: só o nome do app (o criador fica só na tela
   // "Sobre", que é o lugar certo para essa informação — Fase 8).
   useEffect(() => {
@@ -70,7 +82,14 @@ export function App() {
   // que recebe os eventos de mousemove/mouseup, então escondemos a view
   // ativa durante o redimensionamento também.
   const anyModalOpen =
-    aboutOpen || settingsOpen || addAccountOpen || dashboardOpen || paletteOpen || analyticsOpen || isResizingSidebar;
+    aboutOpen ||
+    settingsOpen ||
+    addAccountOpen ||
+    dashboardOpen ||
+    paletteOpen ||
+    analyticsOpen ||
+    isResizingSidebar ||
+    whatsNew !== null;
   useEffect(() => {
     window.multiwhats.setOverlayActive(anyModalOpen);
   }, [anyModalOpen]);
@@ -131,7 +150,15 @@ export function App() {
   const modals = (
     <>
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} appInfo={appInfo} />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => {
+          setSettingsOpen(false);
+          setSettingsInitialTab(undefined);
+        }}
+        initialTab={settingsInitialTab}
+      />
+      <WhatsNewModal />
       <AddAccountWizard open={addAccountOpen} onClose={() => setAddAccountOpen(false)} />
       <AccountsDashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
       {analyticsLoaded && (
