@@ -159,12 +159,38 @@ function reportChatOpenState(open: boolean, chatKey: string | null, isGroup: boo
 }
 
 /**
- * Lê só o NOME já visível no cabeçalho da conversa aberta — nunca telefone,
- * status ou qualquer outro dado. Mesmo padrão de seletor (`span[title]`) já
- * usado em `getChatEntries` (viewManager.ts) para a lista lateral, aplicado
- * aqui ao cabeçalho em vez da linha da lista.
+ * Lê só o NOME já visível (do contato/grupo da conversa aberta) — nunca
+ * telefone, status ou qualquer outro dado.
+ *
+ * Prioridade 1 (2026-08-29, correção): a linha marcada como SELECIONADA na
+ * lista lateral (`aria-selected="true"`, atributo de acessibilidade que o
+ * WhatsApp Web já usa para indicar qual conversa está aberta) — reaproveita
+ * exatamente o mesmo seletor (`span[title]`) que `getChatEntries`
+ * (viewManager.ts) já usa pra lista lateral, e que já está comprovado
+ * funcionando contra o WhatsApp Web real (é como os nomes já aparecem
+ * corretamente no relatório Hoje/Ontem hoje). Evita depender de um seletor
+ * novo e não testado para o cabeçalho da conversa.
+ *
+ * Prioridade 2 (reserva): o cabeçalho da própria conversa aberta, caso a
+ * linha selecionada não seja encontrada por qualquer motivo (ex.: lista
+ * lateral minimizada/oculta).
  */
 function extractChatKey(main: Element): { key: string | null; isGroup: boolean } {
+  const activeRow =
+    document.querySelector('#pane-side [aria-selected="true"]') ||
+    document.querySelector('[data-testid="chat-list"] [aria-selected="true"]') ||
+    document.querySelector('[aria-selected="true"][role="row"]');
+  if (activeRow) {
+    const nameEl = activeRow.querySelector('span[title]');
+    const raw = nameEl ? (nameEl.getAttribute('title') || nameEl.textContent || '').trim() : '';
+    if (raw.length > 0) {
+      const isGroup = !!activeRow.querySelector(
+        '[data-icon="default-group"], [aria-label*="grupo" i], [aria-label*="group" i]'
+      );
+      return { key: raw, isGroup };
+    }
+  }
+
   const header = main.querySelector('header');
   if (!header) return { key: null, isGroup: false };
   const nameEl = header.querySelector('span[title]');
