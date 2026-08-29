@@ -44,6 +44,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Causa: mensagens de uma conversa que voce ja esta olhando na hora sao marcadas como lidas quase na mesma hora, entao o contador de nao lidas nunca chegava a refletir esse movimento.',
     '- Sem leitura de texto, remetente ou midia em nenhum momento.',
   ].join('\n'),
+  '0.33.1': [
+    'Analytics: correcao de duplicidade ao trocar de instancia',
+    '',
+    '- Corrigido um caso em que reabrir o app ou trocar de instancia podia contar mensagens repetidas no Analytics.',
+    '- O contador de mensagens da conversa aberta agora reage ao instante exato em que uma mensagem nova chega, em vez de reler a tela periodicamente.',
+    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

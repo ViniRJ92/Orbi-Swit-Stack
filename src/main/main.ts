@@ -132,6 +132,19 @@ app.whenReady().then(() => {
 
   viewManager = new ViewManager(win, accountStore);
   viewManager.setStatusChangeListener(() => pushAccountsUpdate());
+  // Fase 30 (reescrita): mensagens novas chegam por EVENTO (MutationObserver
+  // dentro da própria página, ver webviewPreload.ts), não por polling — o
+  // processo principal só reage quando algo de fato acontece.
+  viewManager.setNewMessageListener((accountId, dataId, ts) => {
+    analyticsStore?.recordNewMessage(accountId, dataId, ts);
+  });
+  viewManager.setChatOpenStateListener((accountId, open) => {
+    if (open) {
+      analyticsStore?.markChatOpen(accountId);
+    } else {
+      analyticsStore?.onAccountChatClosed(accountId);
+    }
+  });
 
   const initialPreset = resolvePerformancePreset(settingsStore.getPerformanceMode(), settingsStore.getCustomMaxLoadedAccounts());
   accountManager = new AccountManager(
@@ -253,12 +266,14 @@ app.whenReady().then(() => {
   // de só o título — não precisa (nem deve) rodar a cada atualização de
   // status para não gerar overhead desnecessário.
   //
-  // Fase 30: no mesmo ciclo, também lê a conversa ABERTA de cada conta (ver
-  // viewManager.getOpenChatMessages) e alimenta o analyticsStore por ela —
-  // corrige o sub-registro da conta que o usuário está usando em tempo real
-  // (ver comentário de topo de analyticsStore.ts). `onAccountChatClosed` é
-  // chamado sempre que não há conversa aberta detectável, devolvendo a conta
-  // para o canal de badge normal.
+  // Fase 30 (reescrita): o canal de "conversa aberta" do analyticsStore NÃO
+  // faz mais parte deste polling — ele é alimentado por evento, empurrado
+  // pelo próprio webviewPreload.ts assim que uma mensagem chega (ver
+  // viewManager.setNewMessageListener/setChatOpenStateListener, ligados
+  // acima). Aqui só cuidamos de destravar o canal de badge (`analyticsStore
+  // .onAccountChatClosed`) quando a conta é descarregada — a view sendo
+  // destruída derruba o listener de evento sem avisar, então isso evita a
+  // conta ficar presa num estado de "conversa aberta" para sempre.
   setInterval(() => {
     if (!accountManager || !viewManager || !chatActivityStore || !analyticsStore) return;
     const statuses = accountManager.buildStatuses();
@@ -268,16 +283,6 @@ app.whenReady().then(() => {
         analyticsStore.onAccountChatClosed(status.id);
         continue;
       }
-      viewManager
-        .getOpenChatMessages(status.id)
-        .then(({ hasOpenChat, messages }) => {
-          if (hasOpenChat) {
-            analyticsStore?.observeOpenChatMessages(status.id, messages);
-          } else {
-            analyticsStore?.onAccountChatClosed(status.id);
-          }
-        })
-        .catch(() => {});
       viewManager
         .getChatEntries(status.id)
         .then((entries) => chatActivityStore?.observe(status.id, entries))

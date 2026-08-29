@@ -90,6 +90,9 @@ export class ViewManager {
   private loggedInState: Map<string, boolean> = new Map();
   private loadErrorState: Map<string, boolean> = new Map();
   private onShortcut?: (input: Electron.Input) => void;
+  // Fase 30 (reescrita) — ver comentário de topo de webviewPreload.ts.
+  private onNewMessage?: (accountId: string, dataId: string, ts: number) => void;
+  private onChatOpenStateChange?: (accountId: string, open: boolean) => void;
 
   constructor(
     window: BrowserWindow,
@@ -102,10 +105,38 @@ export class ViewManager {
       this.loggedInState.set(accountId, !!payload?.loggedIn);
       this.onStatusChange?.(accountId);
     });
+    // Fase 30 (reescrita) — evento empurrado pelo próprio webviewPreload no
+    // instante em que uma nova bolha de mensagem é inserida no DOM da
+    // conversa aberta (MutationObserver, nunca polling). Ver o comentário de
+    // topo de webviewPreload.ts para o desenho completo (baseline por
+    // conversa, nunca reconta histórico).
+    ipcMain.on('mw:new-message', (event, payload: { dataId: string; ts: number }) => {
+      const accountId = this.webContentsIdToAccount.get(event.sender.id);
+      if (!accountId || !payload?.dataId) return;
+      this.onNewMessage?.(accountId, payload.dataId, payload.ts ?? Date.now());
+    });
+    // Fase 30 (reescrita) — avisa quando a conversa aberta desta conta
+    // aparece/desaparece (usado para ligar/desligar o canal de badge
+    // enquanto uma conversa está sendo observada em tempo real).
+    ipcMain.on('mw:chat-open-state', (event, payload: { open: boolean }) => {
+      const accountId = this.webContentsIdToAccount.get(event.sender.id);
+      if (!accountId) return;
+      this.onChatOpenStateChange?.(accountId, !!payload?.open);
+    });
   }
 
   setStatusChangeListener(cb: (accountId: string) => void): void {
     this.onStatusChange = cb;
+  }
+
+  /** Fase 30 (reescrita) — chamado a cada mensagem nova detectada por evento na conversa aberta de qualquer conta. */
+  setNewMessageListener(cb: (accountId: string, dataId: string, ts: number) => void): void {
+    this.onNewMessage = cb;
+  }
+
+  /** Fase 30 (reescrita) — chamado sempre que a conversa aberta de uma conta aparece/desaparece. */
+  setChatOpenStateListener(cb: (accountId: string, open: boolean) => void): void {
+    this.onChatOpenStateChange = cb;
   }
 
   /**
@@ -448,123 +479,6 @@ export class ViewManager {
         }));
     } catch {
       return [];
-    }
-  }
-
-  /**
-   * Fase 30 — leitura PASSIVA da conversa ABERTA no momento (painel `#main`),
-   * complementar à leitura da lista lateral acima (Fase 17/28). Autorizada
-   * explicitamente pelo usuário (2026-08-29) para corrigir o sub-registro de
-   * mensagens da conta que está sendo usada em tempo real: o WhatsApp marca
-   * como lida uma mensagem que chega numa conversa já aberta quase
-   * instantaneamente, então nem o título da aba (analyticsStore.ts) nem o
-   * contador de não lidas da lista lateral (getChatEntries acima) chegam a
-   * refletir essas mensagens — os dois métodos de badge estruturalmente não
-   * as veem. Ver o comentário de `AnalyticsStore.observeOpenChatMessages`
-   * para como isso se combina com o método de badge sem contar a mesma
-   * mensagem duas vezes.
-   *
-   * Só lê o que já está desenhado na tela dentro do painel de mensagens da
-   * conversa aberta: o atributo `data-id` de cada bolha (identificador opaco
-   * da mensagem, não é o texto) e sob qual divisor de data (Hoje/Ontem) ela
-   * está agrupada. NUNCA lê o texto, remetente, mídia ou qualquer conteúdo da
-   * mensagem em si — só a presença e o identificador de cada bolha já
-   * renderizada. NUNCA abre nem clica em nada: só lê a conversa que o próprio
-   * WhatsApp Web já está mostrando no momento da leitura.
-   *
-   * `hasOpenChat` é decidido pela existência do próprio painel `#main`
-   * (elemento que só existe quando há uma conversa aberta — a tela inicial
-   * "mantenha seu celular conectado" não o renderiza), independente de os
-   * seletores mais específicos usados para ler as bolhas terem sucesso ou não
-   * — isso importa porque `hasOpenChat` é o sinal usado para desligar
-   * temporariamente o método de badge para esta conta; um falso-negativo
-   * aqui reabriria risco de dupla contagem, então este sinal usa o indicador
-   * mais robusto disponível, mesmo que a leitura fina das mensagens falhe.
-   *
-   * Limitações conhecidas (mesma natureza das de getChatEntries acima):
-   *  - Só enxerga a conversa que já está aberta nesta conta neste instante —
-   *    não abre nenhuma outra (seria automação, fora do escopo do projeto).
-   *  - A lista de mensagens também é virtualizada pelo WhatsApp Web — só
-   *    bolhas próximas da posição de rolagem atual existem no DOM. Mensagens
-   *    mais antigas fora da janela visível simplesmente não aparecem aqui, o
-   *    que é esperado e não afeta a deduplicação (cada uma só precisa ser
-   *    vista 1 vez, em qualquer poll, para ser contada).
-   *  - A detecção do divisor de data (texto "HOJE"/"ONTEM"/data) é best-effort
-   *    e pode variar por idioma/layout — mensagens fora de Hoje/Ontem são
-   *    ignoradas de propósito (não fazem parte do que foi pedido).
-   *  - Qualquer falha aqui é silenciosa (retorna sem conversa aberta), nunca
-   *    derruba o app nem afeta qualquer outra função.
-   */
-  async getOpenChatMessages(
-    accountId: string
-  ): Promise<{ hasOpenChat: boolean; messages: { id: string; bucket: 'today' | 'yesterday' }[] }> {
-    const account = this.accountStore.get(accountId);
-    if (!account || account.service !== 'whatsapp') return { hasOpenChat: false, messages: [] };
-    const managed = this.views.get(accountId);
-    if (!managed) return { hasOpenChat: false, messages: [] };
-
-    const script = `
-      (() => {
-        try {
-          const main = document.querySelector('#main');
-          if (!main) return { hasOpenChat: false, messages: [] };
-
-          const panel =
-            main.querySelector('[data-testid="conversation-panel-messages"]') ||
-            main.querySelector('[role="application"]') ||
-            main.querySelector('.copyable-area') ||
-            main;
-
-          const DIVIDER_RE = /^(hoje|today|ontem|yesterday|\\d{1,2}\\s+de\\s+[a-zç]+\\s+de\\s+\\d{4}|[a-zç]+\\s+\\d{1,2},?\\s+\\d{4}|\\d{1,2}\\/\\d{1,2}\\/\\d{4})$/i;
-
-          const nodes = Array.from(panel.querySelectorAll('[data-id], span[aria-label], div[role="button"] span'));
-          let bucket = 'other';
-          const seenIds = new Set();
-          const out = [];
-
-          for (const node of nodes) {
-            if (node.hasAttribute && node.hasAttribute('data-id')) {
-              const dataId = node.getAttribute('data-id') || '';
-              if (!dataId || seenIds.has(dataId)) continue;
-              seenIds.add(dataId);
-              // Formato usual: "{true|false}_{chatId}_{msgId}" — "true" =
-              // enviada por mim (nunca conta, mesma regra do badge de não
-              // lidas, que também só reflete mensagens recebidas).
-              if (/^true[_-]/i.test(dataId)) continue;
-              if (bucket === 'today' || bucket === 'yesterday') {
-                out.push({ id: dataId, bucket });
-              }
-              continue;
-            }
-            const text = (node.textContent || '').trim();
-            if (text.length > 0 && text.length <= 24 && DIVIDER_RE.test(text)) {
-              const lower = text.toLowerCase();
-              if (lower === 'hoje' || lower === 'today') bucket = 'today';
-              else if (lower === 'ontem' || lower === 'yesterday') bucket = 'yesterday';
-              else bucket = 'other';
-            }
-          }
-          return { hasOpenChat: true, messages: out };
-        } catch (err) {
-          return { hasOpenChat: false, messages: [] };
-        }
-      })()
-    `;
-
-    try {
-      const result = await managed.view.webContents.executeJavaScript(script, true);
-      if (!result || typeof result !== 'object') return { hasOpenChat: false, messages: [] };
-      const hasOpenChat = !!(result as any).hasOpenChat;
-      const rawMessages = (result as any).messages;
-      const messages = Array.isArray(rawMessages)
-        ? rawMessages.filter(
-            (m: any): m is { id: string; bucket: 'today' | 'yesterday' } =>
-              !!m && typeof m.id === 'string' && m.id.length > 0 && (m.bucket === 'today' || m.bucket === 'yesterday')
-          )
-        : [];
-      return { hasOpenChat, messages };
-    } catch {
-      return { hasOpenChat: false, messages: [] };
     }
   }
 

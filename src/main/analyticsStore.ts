@@ -35,15 +35,32 @@
  * — o título nunca chega a subir, nenhum delta é gerado, e o total daquela
  * conta podia ficar em 0 (inclusive sumindo da lista/liderança do Analytics,
  * já que `buildSummary` só lista contas com `total > 0`). Autorizado
- * explicitamente pelo usuário (2026-08-29): um segundo canal,
- * `observeOpenChatMessages()`, alimentado por `viewManager.getOpenChatMessages()`
- * (leitura passiva do `data-id` de cada bolha já visível na conversa aberta,
- * nunca o texto), complementa o método de badge SEM substituí-lo — só entra
- * em ação para a conta que tem uma conversa aberta detectável no momento, e
- * desliga o método de badge para essa mesma conta enquanto isso dura (ver
- * `openChatAccounts` abaixo), para as duas fontes nunca contarem a mesma
- * mensagem duas vezes. Deduplicação aqui é por identidade (cada `data-id` só
- * gera 1 evento na vida do app), não por delta — ver `processedMessageIds`.
+ * explicitamente pelo usuário (2026-08-29): um segundo canal, alimentado por
+ * evento (não por polling — ver `recordNewMessage()` abaixo e o comentário
+ * de topo de `webviewPreload.ts`), complementa o método de badge SEM
+ * substituí-lo — só entra em ação para a conta que tem uma conversa aberta
+ * no momento, e desliga o método de badge para essa mesma conta enquanto
+ * isso dura (ver `openChatAccounts`/`markChatOpen`/`onAccountChatClosed`
+ * abaixo), para as duas fontes nunca contarem a mesma mensagem duas vezes.
+ * Deduplicação aqui é por identidade (cada `data-id` só gera 1 evento na
+ * vida do app), não por delta — ver `processedMessageIds`.
+ *
+ * Reescrita (2026-08-29, mesmo dia): a primeira versão desta Fase 30 lia a
+ * conversa aberta por POLLING (a cada 4s, `viewManager.getOpenChatMessages`
+ * reexecutava um script que varria toda a conversa e comparava contra
+ * `processedMessageIds`) — isso tinha risco real de recontagem se qualquer
+ * ponta da deduplicação falhasse ao trocar de instância ou reabrir o app, e
+ * dependia de parsing de texto ("HOJE"/"ONTEM") pra decidir o dia, frágil e
+ * desnecessário. Reescrito para ser genuinamente orientado a evento: um
+ * `MutationObserver` dentro da própria página (`webviewPreload.ts`) reporta
+ * cada mensagem nova no INSTANTE em que ela é inserida no DOM — nunca
+ * reprocessa uma bolha que já existia quando o observador começou a olhar
+ * pra ela (baseline por conversa), e o timestamp já vem exato do momento da
+ * captura (sem qualquer inferência de "Hoje"/"Ontem" por texto).
+ * `processedMessageIds` continua existindo só como rede de segurança contra
+ * o caso (raro) de o WhatsApp Web reciclar/remontar o mesmo nó do DOM ao
+ * rolar a lista virtualizada — nunca é o mecanismo principal de "não contar
+ * histórico", que agora vem de construção (o observador não vê o passado).
  *
  * Nota: esta é uma métrica DIFERENTE da Fase 28 (relatório "Hoje x Ontem" por
  * conversa, ver chatActivityStore.ts) — aqui o total é por CONTA (alimenta
@@ -322,39 +339,41 @@ export class AnalyticsStore {
   }
 
   /**
-   * Fase 30 — canal alternativo baseado no `data-id` de cada mensagem já
-   * visível na conversa ABERTA no momento (ver viewManager.getOpenChatMessages),
-   * em vez do delta do contador de não lidas do título. Chamado só quando
-   * `hasOpenChat` veio `true` daquela leitura — por isso já marca a conta
-   * como "com conversa aberta" (`openChatAccounts`), desligando o canal de
-   * badge pra ela em `observe()` até a conversa fechar (ver
-   * `onAccountChatClosed`). Isso é o que garante que as duas fontes nunca
-   * contem a mesma mensagem: enquanto uma está ativa para a conta, a outra
-   * está desligada para ela.
+   * Fase 30 (reescrita) — chamado quando `viewManager` reporta que a
+   * conversa aberta desta conta apareceu (evento `mw:chat-open-state`,
+   * originado do próprio `webviewPreload.ts` no instante em que o painel
+   * `#main` é detectado). Marca a conta como "com conversa aberta"
+   * (`openChatAccounts`), desligando o canal de badge pra ela em
+   * `observe()` até a conversa fechar (ver `onAccountChatClosed`) — é isso
+   * que garante que as duas fontes nunca contem a mesma mensagem.
+   */
+  markChatOpen(accountId: string): void {
+    this.openChatAccounts.add(accountId);
+    this.cancelSettling(accountId);
+  }
+
+  /**
+   * Fase 30 (reescrita) — chamado 1 vez por mensagem nova, no instante em
+   * que ela é detectada (evento `mw:new-message`, originado do
+   * `MutationObserver` em `webviewPreload.ts` — nunca um polling que varre
+   * tudo de novo). `ts` é o timestamp real do momento da inserção no DOM,
+   * não da leitura — elimina qualquer necessidade de inferir "Hoje"/"Ontem"
+   * por texto para este canal.
    *
    * Deduplicação por identidade, não por delta: cada `data-id` só pode gerar
    * 1 evento na vida do app (ou até ser expulso do teto por conta, ver
-   * MAX_PROCESSED_IDS_PER_ACCOUNT) — reler a mesma bolha em polls seguintes
-   * (o normal, já que ela continua visível na tela) nunca soma de novo.
+   * MAX_PROCESSED_IDS_PER_ACCOUNT). Isto é uma rede de segurança contra o
+   * WhatsApp Web reciclar o mesmo nó do DOM ao rolar a lista virtualizada —
+   * o motivo real de "nunca contar histórico" é estrutural (o observador só
+   * existe a partir do momento em que a conversa abre, nunca vê o que já
+   * estava lá antes).
    */
-  observeOpenChatMessages(accountId: string, messages: { id: string }[]): void {
-    this.openChatAccounts.add(accountId);
-    if (messages.length === 0) return;
-
+  recordNewMessage(accountId: string, dataId: string, ts: number): void {
     const processed = this.data.processedMessageIds[accountId] ?? [];
-    const processedSet = new Set(processed);
-    let addedAny = false;
+    if (processed.includes(dataId)) return;
 
-    for (const msg of messages) {
-      if (processedSet.has(msg.id)) continue;
-      processedSet.add(msg.id);
-      processed.push(msg.id);
-      this.data.events.push({ t: Date.now(), a: accountId, c: 1 });
-      addedAny = true;
-    }
-
-    if (!addedAny) return;
-
+    processed.push(dataId);
+    this.data.events.push({ t: ts, a: accountId, c: 1 });
     this.data.processedMessageIds[accountId] =
       processed.length > MAX_PROCESSED_IDS_PER_ACCOUNT
         ? processed.slice(processed.length - MAX_PROCESSED_IDS_PER_ACCOUNT)
@@ -364,12 +383,11 @@ export class AnalyticsStore {
   }
 
   /**
-   * Fase 30 — chamado quando a leitura da conversa aberta não encontrou
-   * nenhuma conversa aberta para esta conta (ou ela foi descarregada).
-   * Devolve a conta para o canal de badge normal a partir da próxima
-   * observação de título. Não apaga `processedMessageIds` — os IDs já vistos
-   * continuam valendo pra sempre (ou até o teto por conta), mesmo que a
-   * conversa seja reaberta depois.
+   * Fase 30 — chamado quando a conversa aberta desta conta fecha (ou ela foi
+   * descarregada). Devolve a conta para o canal de badge normal a partir da
+   * próxima observação de título. Não apaga `processedMessageIds` — os IDs
+   * já vistos continuam valendo pra sempre (ou até o teto por conta), mesmo
+   * que a conversa seja reaberta depois.
    */
   onAccountChatClosed(accountId: string): void {
     this.openChatAccounts.delete(accountId);
