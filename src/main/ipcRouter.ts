@@ -384,13 +384,15 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
 
   ipcMain.handle('mw:get-analytics-summary', (_evt, range: AnalyticsRange) => {
     const accounts = accountManager.list().map((a) => ({ id: a.id, name: a.name, color: a.color }));
-    const summary = analyticsStore.buildSummary(range, accounts);
-    summary.chatActivity = chatActivityStore?.buildSummary(range, accounts) ?? {
-      newConversations: 0,
-      messages: 0,
-      byAccount: [],
-    };
-    return summary;
+    return analyticsStore.buildSummary(range, accounts);
+  });
+
+  // Fase 28: relatório fixo de Hoje x Ontem por instância — não depende do
+  // seletor de período geral do Analytics (ver chatActivityStore.ts).
+  ipcMain.handle('mw:get-chat-activity-daily', () => {
+    const accounts = accountManager.list().map((a) => ({ id: a.id, name: a.name, color: a.color }));
+    const empty = { totalConversations: 0, totalMessages: 0, byAccount: [] };
+    return chatActivityStore?.buildDailyReport(accounts) ?? { today: empty, yesterday: empty };
   });
 
   ipcMain.handle('mw:clear-analytics', () => {

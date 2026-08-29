@@ -14,10 +14,14 @@
  * bloco "Recebidas vs. Enviadas" / "Status de Entrega" pedido no upgrade de
  * UI/UX foi deliberadamente omitido desta versão.
  *
- * Fase 17: adicionado "Novas conversas" x "Mensagens" — ver
- * chatActivityStore.ts (processo principal) para a explicação completa da
- * métrica e de como ela nunca conta a mesma mensagem duas vezes nem inclui
- * grupos.
+ * Fase 28: a seção "Atividade por instância — Hoje/Ontem" (ver
+ * DailyActivityCard abaixo) substituiu os dois KPIs soltos da Fase 17
+ * ("Novas conversas"/"Mensagens", que ficavam presos ao seletor de período
+ * geral) por um relatório fixo separado por dia — ver chatActivityStore.ts
+ * (processo principal) para a explicação completa da métrica, de como ela
+ * nunca conta a mesma mensagem duas vezes, nunca inclui grupos, e de como o
+ * dia de cada mensagem é decidido pelo próprio rótulo "Hoje"/"Ontem" do
+ * WhatsApp Web.
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
@@ -26,10 +30,8 @@ import {
   AlertTriangle,
   BarChart3,
   CalendarRange,
-  MessageSquare,
   RefreshCw,
   TrendingUp,
-  UserPlus,
   Users,
   Wifi,
   WifiOff,
@@ -48,7 +50,14 @@ import {
 } from 'recharts';
 import { Modal } from './Modal';
 import { useAppStore } from '../store/useAppStore';
-import { AccountStatus, AnalyticsPeriod, AnalyticsRange, AnalyticsSummary } from '../types';
+import {
+  AccountStatus,
+  AnalyticsPeriod,
+  AnalyticsRange,
+  AnalyticsSummary,
+  ChatActivityDailySummary,
+  ChatActivityDayReport,
+} from '../types';
 import { dateInputValue, endOfDateInput, previousRange, quickRange, startOfDateInput } from '../analyticsRange';
 
 const PERIODS: { key: 'today' | '7d' | '30d'; label: string }[] = [
@@ -102,18 +111,18 @@ function KpiCard({
   deltaPositive?: boolean;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-2 rounded-xl border border-border bg-surface px-4 py-3.5">
+    <div className="flex flex-1 flex-col gap-2.5 rounded-xl border border-border bg-surface px-5 py-4">
       <div className="flex items-center gap-2 text-text-faint">
         <span className="flex h-6 w-6 items-center justify-center rounded-md bg-surface-hover text-accent">{icon}</span>
         <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
       </div>
       <div>
-        <p className="text-xl font-semibold text-text">{value}</p>
+        <p className="text-2xl font-semibold text-text">{value}</p>
         {detail && (
           <p
             className={
-              'mt-0.5 truncate text-[11px] ' +
-              (deltaPositive === undefined ? 'text-text-dim' : deltaPositive ? 'text-emerald-400' : 'text-red-400')
+              'mt-1 truncate text-[11.5px] font-light ' +
+              (deltaPositive === undefined ? 'text-text-faint' : deltaPositive ? 'text-emerald-400' : 'text-red-400')
             }
           >
             {detail}
@@ -126,9 +135,53 @@ function KpiCard({
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-surface p-4">
-      <p className="mb-2 shrink-0 text-[12px] font-semibold text-text-dim">{title}</p>
+    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-surface p-5">
+      <p className="mb-3 shrink-0 text-[12.5px] font-semibold text-text-dim">{title}</p>
       <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Fase 28: um card de relatório diário (Hoje ou Ontem) — uma linha por
+ * instância com atividade, no formato "Nome teve N novas interações — M
+ * mensagens", mais os totais do dia inteiro. Nunca mostra nome/telefone de
+ * pessoa nenhuma, só o nome da própria instância (conta) e números
+ * agregados — ver chatActivityStore.ts para a fonte do dado.
+ */
+function DailyActivityCard({ title, report }: { title: string; report: ChatActivityDayReport | undefined }) {
+  const rows = report?.byAccount ?? [];
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 rounded-xl border border-border bg-surface p-5">
+      <div className="flex shrink-0 items-center justify-between">
+        <p className="text-[13.5px] font-semibold text-text">{title}</p>
+        <span className="text-[11.5px] font-light text-text-faint">
+          {report?.totalConversations ?? 0} interações · {report?.totalMessages ?? 0} mensagens
+        </span>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+        {rows.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center text-center text-[12px] font-light text-text-faint">
+            Sem novas interações.
+          </div>
+        ) : (
+          rows.map((a) => (
+            <div
+              key={a.accountId}
+              className="flex items-center justify-between gap-3 rounded-lg bg-surface-hover/60 px-3.5 py-2.5"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.color }} />
+                <span className="truncate text-[12.5px] font-medium text-text">{a.name}</span>
+              </div>
+              <span className="shrink-0 text-[11.5px] font-light text-text-dim">
+                {a.newConversations} {a.newConversations === 1 ? 'nova interação' : 'novas interações'} — {a.messages}{' '}
+                {a.messages === 1 ? 'mensagem' : 'mensagens'}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -164,6 +217,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
   const [prevSummary, setPrevSummary] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
+  const [chatDaily, setChatDaily] = useState<ChatActivityDailySummary | null>(null);
 
   const prevStatusesRef = useRef<Map<string, AccountStatus>>(new Map());
 
@@ -208,6 +262,28 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, quick, customStart, customEnd, compare]);
+
+  // Fase 28: relatório fixo de Hoje x Ontem — busca independente do
+  // seletor de período geral acima (não faz sentido esse relatório
+  // "seguir" o filtro de Hoje/7 dias/30 dias/personalizado).
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const loadDaily = async () => {
+      try {
+        const result = await window.multiwhats.getChatActivityDaily();
+        if (!cancelled) setChatDaily(result);
+      } catch {
+        // Silencioso — a UI só mostra "sem novas interações" se isto falhar.
+      }
+    };
+    loadDaily();
+    const interval = setInterval(loadDaily, REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [open]);
 
   // Alertas em tempo real: detecta transições de status (não faz nenhuma
   // leitura nova — usa exatamente os mesmos campos de AccountStatus que já
@@ -290,8 +366,8 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       onClose={onClose}
       title="Analytics"
       icon={<BarChart3 size={15} />}
-      size="lg"
-      contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5"
+      size="xl"
+      contentClassName="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-6"
     >
       {/* Barra superior: atalhos rápidos + intervalo customizado + comparação */}
       <div className="flex shrink-0 flex-wrap items-center gap-3">
@@ -391,37 +467,37 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       )}
 
       {/* Topo do painel: saúde da conexão */}
-      <div className="flex shrink-0 gap-3">
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
+      <div className="flex shrink-0 gap-4">
+        <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-400">
             <Wifi size={13} />
           </span>
           <div>
-            <p className="text-lg font-semibold text-text">{healthCounts.online}</p>
-            <p className="text-[11px] text-text-faint">Online</p>
+            <p className="text-xl font-semibold text-text">{healthCounts.online}</p>
+            <p className="text-[11px] font-light text-text-faint">Online</p>
           </div>
         </div>
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
+        <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-red-500/15 text-red-400">
             <WifiOff size={13} />
           </span>
           <div>
-            <p className="text-lg font-semibold text-text">{healthCounts.offline}</p>
-            <p className="text-[11px] text-text-faint">Offline</p>
+            <p className="text-xl font-semibold text-text">{healthCounts.offline}</p>
+            <p className="text-[11px] font-light text-text-faint">Offline</p>
           </div>
         </div>
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
+        <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 text-amber-400">
             <RefreshCw size={13} />
           </span>
           <div>
-            <p className="text-lg font-semibold text-text">{healthCounts.reconnecting}</p>
-            <p className="text-[11px] text-text-faint">Reconectando</p>
+            <p className="text-xl font-semibold text-text">{healthCounts.reconnecting}</p>
+            <p className="text-[11px] font-light text-text-faint">Reconectando</p>
           </div>
         </div>
       </div>
 
-      <div className="flex shrink-0 gap-3">
+      <div className="flex shrink-0 gap-4">
         <KpiCard
           icon={<BarChart3 size={13} />}
           label="Volume total"
@@ -444,27 +520,17 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       </div>
 
       {/*
-        Fase 17: "Novas conversas" (pessoas únicas) x "Mensagens" (total),
-        contando só conversas individuais — grupos nunca entram aqui (ver
-        chatActivityStore.ts). Métrica separada do "Volume total" acima, que
-        soma tudo, inclusive grupos, por conta.
+        Fase 28: relatório fixo de Hoje x Ontem por instância, separado do
+        seletor de período acima de propósito (ver chatActivityStore.ts) —
+        "Praça Seca 1 teve 4 novas interações — 13 mensagens", nunca
+        misturando os dois dias e nunca contando de novo o que já foi visto.
       */}
-      <div className="flex shrink-0 gap-3">
-        <KpiCard
-          icon={<UserPlus size={13} />}
-          label="Novas conversas"
-          value={String(summary?.chatActivity.newConversations ?? 0)}
-          detail="pessoas diferentes que mandaram algo novo (sem contar grupos)"
-        />
-        <KpiCard
-          icon={<MessageSquare size={13} />}
-          label="Mensagens"
-          value={String(summary?.chatActivity.messages ?? 0)}
-          detail="total de mensagens novas dessas pessoas"
-        />
+      <div className="flex min-h-[190px] shrink-0 gap-4">
+        <DailyActivityCard title="Atividade de hoje" report={chatDaily?.today} />
+        <DailyActivityCard title="Atividade de ontem" report={chatDaily?.yesterday} />
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-3">
+      <div className="flex min-h-0 flex-1 gap-4">
         <ChartCard title="Movimento por instância">
           {barData.length === 0 ? (
             <EmptyChartState loading={loading} />
@@ -486,7 +552,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
                   contentStyle={CHART_TOOLTIP_STYLE}
                   labelStyle={{ color: 'var(--color-text)' }}
                 />
-                <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={18} fill="var(--color-accent)" />
+                <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={22} fill="var(--color-accent)" />
               </BarChart>
             </ResponsiveContainer>
           )}

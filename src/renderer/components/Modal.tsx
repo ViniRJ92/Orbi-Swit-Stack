@@ -11,7 +11,7 @@ import { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-const SIZE_CLASSES: Record<'sm' | 'md' | 'lg', string> = {
+const SIZE_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
   sm: 'w-[360px]',
   md: 'w-[440px]',
   // Altura fixa (dentro do teto de max-h-[85vh] logo abaixo) para que o
@@ -19,6 +19,10 @@ const SIZE_CLASSES: Record<'sm' | 'md' | 'lg', string> = {
   // para dividir — sem isso a rolagem interna do painel nunca entraria em
   // ação porque o cartão encolheria para caber no conteúdo.
   lg: 'w-[860px] h-[620px]',
+  // Fase 28: Analytics ganhou mais conteúdo (relatório Hoje x Ontem por
+  // instância, além dos KPIs/gráficos que já existiam) — precisa de mais
+  // espaço horizontal e vertical que o "lg" sem espremer nada.
+  xl: 'w-[1180px] h-[760px]',
 };
 
 export function Modal({
@@ -41,7 +45,7 @@ export function Modal({
   icon?: ReactNode;
   /** @deprecated use `size="md"` */
   wide?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   contentClassName?: string;
   children: ReactNode;
 }) {

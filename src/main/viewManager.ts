@@ -353,7 +353,9 @@ export class ViewManager {
    *    silenciosa — retorna lista vazia — e nunca derruba o app nem afeta
    *    qualquer outra função.
    */
-  async getChatEntries(accountId: string): Promise<{ key: string; isGroup: boolean; unread: number }[]> {
+  async getChatEntries(
+    accountId: string
+  ): Promise<{ key: string; isGroup: boolean; unread: number; dateTag: 'today' | 'yesterday' | 'other' }[]> {
     const account = this.accountStore.get(accountId);
     if (!account || account.service !== 'whatsapp') return [];
     const managed = this.views.get(accountId);
@@ -403,7 +405,22 @@ export class ViewManager {
               if (dataId.includes('g.us')) isGroup = true;
             }
 
-            out.push({ key: name, isGroup, unread });
+            // Rótulo de data/hora da última mensagem, ao lado do nome — o
+            // WhatsApp Web mostra "HH:MM" quando a última mensagem é de
+            // hoje, "Ontem"/"Yesterday" quando é do dia anterior, ou uma
+            // data/dia da semana quando é mais antiga. Lido aqui só para
+            // decidir em qual "dia" (hoje/ontem) a mensagem entra no
+            // relatório — nunca para identificar a pessoa.
+            let dateTag = 'other';
+            const timeCandidates = row.querySelectorAll('span, div');
+            for (const el of timeCandidates) {
+              const t = (el.textContent || '').trim();
+              if (!t || t.length > 12) continue;
+              if (/^\\d{1,2}:\\d{2}$/.test(t)) { dateTag = 'today'; break; }
+              if (/^(ontem|yesterday)$/i.test(t)) { dateTag = 'yesterday'; break; }
+            }
+
+            out.push({ key: name, isGroup, unread, dateTag });
           }
           return out;
         } catch (err) {
@@ -415,10 +432,20 @@ export class ViewManager {
     try {
       const result = await managed.view.webContents.executeJavaScript(script, true);
       if (!Array.isArray(result)) return [];
-      return result.filter(
-        (e): e is { key: string; isGroup: boolean; unread: number } =>
-          !!e && typeof e.key === 'string' && e.key.length > 0
-      );
+      return result
+        .filter(
+          (e): e is { key: string; isGroup: boolean; unread: number; dateTag: string } =>
+            !!e && typeof e.key === 'string' && e.key.length > 0
+        )
+        .map((e) => ({
+          key: e.key,
+          isGroup: e.isGroup,
+          unread: e.unread,
+          dateTag: (e.dateTag === 'today' || e.dateTag === 'yesterday' ? e.dateTag : 'other') as
+            | 'today'
+            | 'yesterday'
+            | 'other',
+        }));
     } catch {
       return [];
     }

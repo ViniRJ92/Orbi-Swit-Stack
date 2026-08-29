@@ -170,12 +170,10 @@ export interface AnalyticsSummary {
   averagePerAccount: number;
   byAccount: AnalyticsAccountTotal[];
   timeline: { hour: number; count: number }[];
-  /** Fase 17: "Novas conversas" x "Mensagens", separado do totalVolume acima (que mistura tudo, inclusive grupos). */
-  chatActivity: ChatActivitySummary;
 }
 
-/** Fase 17 — ver main/types.ts para a explicação completa da métrica. */
-export interface ChatActivityAccountTotal {
+/** Fase 17/28 — ver main/types.ts para a explicação completa da métrica (relatório fixo Hoje x Ontem). */
+export interface ChatActivityAccountDaily {
   accountId: string;
   name: string;
   color: string;
@@ -183,10 +181,15 @@ export interface ChatActivityAccountTotal {
   messages: number;
 }
 
-export interface ChatActivitySummary {
-  newConversations: number;
-  messages: number;
-  byAccount: ChatActivityAccountTotal[];
+export interface ChatActivityDayReport {
+  totalConversations: number;
+  totalMessages: number;
+  byAccount: ChatActivityAccountDaily[];
+}
+
+export interface ChatActivityDailySummary {
+  today: ChatActivityDayReport;
+  yesterday: ChatActivityDayReport;
 }
 
 /** Fase 27 — espelha UpdateState de src/main/updateManager.ts. */
@@ -249,6 +252,8 @@ export interface OrbiSwitStackApi {
   importBackup: () => Promise<BackupResult>;
   openLogsFolder: () => Promise<boolean>;
   getAnalyticsSummary: (range: AnalyticsRange) => Promise<AnalyticsSummary>;
+  /** Fase 28: relatório fixo de Hoje x Ontem por instância — independente do período geral do Analytics. */
+  getChatActivityDaily: () => Promise<ChatActivityDailySummary>;
   clearAnalytics: () => Promise<boolean>;
   onAccountsChanged: (cb: (payload: AccountsChangedPayload) => void) => () => void;
   onOpenCommandPalette: (cb: () => void) => () => void;

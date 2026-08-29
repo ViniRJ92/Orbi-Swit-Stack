@@ -343,10 +343,6 @@ export class AnalyticsStore {
       averagePerAccount,
       byAccount,
       timeline: hourly.map((count, hour) => ({ hour, count })),
-      // Preenchido de verdade pelo chamador (ver ipcRouter.ts) com o
-      // resultado do chatActivityStore — este store não conhece essa
-      // métrica, só devolve um placeholder vazio pra satisfazer o tipo.
-      chatActivity: { newConversations: 0, messages: 0, byAccount: [] },
     };
   }
 }

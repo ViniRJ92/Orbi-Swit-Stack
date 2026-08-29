@@ -116,27 +116,34 @@ export interface AnalyticsSummary {
   byAccount: AnalyticsAccountTotal[];
   /** Soma por hora do dia (0-23), agregada em todos os dias do período — alimenta o gráfico de linha (picos de uso). */
   timeline: { hour: number; count: number }[];
-  /** Fase 17: "Novas conversas" x "Mensagens", separado do totalVolume acima (que mistura tudo, inclusive grupos). */
-  chatActivity: ChatActivitySummary;
 }
 
 /**
- * Fase 17 — separação entre "pessoas únicas que mandaram algo novo" e
- * "quantidade total de mensagens novas dessas pessoas". Grupos nunca entram
- * aqui (ver chatActivityStore.ts). Só contas WhatsApp alimentam isso hoje.
+ * Fase 17/28 — separação entre "pessoas únicas que mandaram algo novo" e
+ * "quantidade total de mensagens novas dessas pessoas", agora atribuída ao
+ * dia real em que a mensagem chegou (rótulo "Hoje"/"Ontem" do WhatsApp Web,
+ * não o instante em que o app fez a leitura — ver chatActivityStore.ts).
+ * Grupos nunca entram aqui. Só contas WhatsApp alimentam isso hoje. Fixo em
+ * Hoje x Ontem — independente do seletor de período geral do Analytics.
  */
-export interface ChatActivityAccountTotal {
+export interface ChatActivityAccountDaily {
   accountId: string;
   name: string;
   color: string;
-  /** Quantas pessoas (conversas individuais) diferentes mandaram ao menos 1 mensagem nova no período. */
+  /** Quantas pessoas (conversas individuais) diferentes mandaram ao menos 1 mensagem nova NAQUELE dia. */
   newConversations: number;
-  /** Total de mensagens novas dessas pessoas no período (uma pessoa pode gerar várias). */
+  /** Total de mensagens novas dessas pessoas NAQUELE dia (uma pessoa pode gerar várias). */
   messages: number;
 }
 
-export interface ChatActivitySummary {
-  newConversations: number;
-  messages: number;
-  byAccount: ChatActivityAccountTotal[];
+export interface ChatActivityDayReport {
+  totalConversations: number;
+  totalMessages: number;
+  /** Uma entrada por conta com atividade > 0 naquele dia, ordenada da maior para a menor. */
+  byAccount: ChatActivityAccountDaily[];
+}
+
+export interface ChatActivityDailySummary {
+  today: ChatActivityDayReport;
+  yesterday: ChatActivityDayReport;
 }
