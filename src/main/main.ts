@@ -1,0 +1,267 @@
+/**
+ * Processo principal do Orbi Swit Stack (antigo "MultiWhats", depois
+ * "Whats Control" — renomeado na Fase 7; a arquitetura de isolamento e
+ * suspensão de sessões não mudou).
+ *
+ * Este arquivo só orquestra o ciclo de vida do app e conecta os módulos
+ * especializados abaixo — cada um cuida de uma responsabilidade própria:
+ *  - accountManager: contas, troca, suspensão manual/automática (LRU + idle);
+ *  - viewManager: isolamento e ciclo de vida das WebContentsView do WhatsApp Web;
+ *  - windowManager: janela principal, área de conteúdo, "fechar minimiza";
+ *  - trayManager: bandeja do Windows;
+ *  - shortcutManager: atalhos de teclado de navegação entre contas;
+ *  - notificationManager: notificações nativas de novas mensagens;
+ *  - ipcRouter: todos os comandos expostos à UI (window.multiwhats);
+ *  - accountStore / settingsStore / logger: persistência e diagnóstico.
+ *
+ * Orbi Swit Stack — Criado por Vinicius Braga
+ */
+import { app, BrowserWindow } from 'electron';
+import * as path from 'path';
+import { AccountStore } from './accountStore';
+import { GroupStore } from './groupStore';
+import { AnalyticsStore } from './analyticsStore';
+import { ChatActivityStore } from './chatActivityStore';
+import { ViewManager } from './viewManager';
+import { AccountManager } from './accountManager';
+import { NotificationManager } from './notificationManager';
+import { TrayManager } from './trayManager';
+import { ShortcutManager } from './shortcutManager';
+import { WindowManager } from './windowManager';
+import { registerIpcHandlers } from './ipcRouter';
+import { SettingsStore, resolvePerformancePreset } from './settingsStore';
+import { UpdateManager } from './updateManager';
+import { logger } from './logger';
+
+const APP_NAME = 'Orbi Swit Stack';
+const CREATOR_NAME = 'Vinicius Braga';
+const IDLE_SWEEP_INTERVAL_MS = 60 * 1000;
+// Fase 17: intervalo de leitura passiva da lista de conversas (ver
+// viewManager.getChatEntries / chatActivityStore.ts). Não precisa ser tão
+// frequente quanto o título da aba — uma conversa nova fica visível por
+// tempo suficiente pra não perder nenhuma leitura com esse intervalo.
+const CHAT_ACTIVITY_POLL_MS = 4000;
+const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.png');
+
+let windowManager: WindowManager | null = null;
+let viewManager: ViewManager | null = null;
+let accountManager: AccountManager | null = null;
+let trayManager: TrayManager | null = null;
+let notificationManager: NotificationManager | null = null;
+let analyticsStore: AnalyticsStore | null = null;
+let chatActivityStore: ChatActivityStore | null = null;
+let updateManager: UpdateManager | null = null;
+
+function pushAccountsUpdate(): void {
+  const win = windowManager?.get();
+  if (!win || !accountManager) return;
+  const statuses = accountManager.buildStatuses();
+  win.webContents.send('mw:accounts-changed', {
+    accounts: accountManager.list(),
+    statuses,
+  });
+  notificationManager?.notifyIfNewMessages(statuses);
+  // Fase 9: além de decidir se notifica, guardamos um histórico local de
+  // "mensagens novas por conta" para alimentar a aba Analytics (ver
+  // analyticsStore.ts) — reaproveita o mesmo contador de não lidas, nada
+  // de conteúdo de conversa é lido para isso.
+  analyticsStore?.observe(statuses);
+  trayManager?.updateMenu();
+  windowManager?.updateUnreadBadge(accountManager.totalUnread());
+}
+
+function switchToAccount(accountId: string): void {
+  accountManager?.switchTo(accountId);
+  pushAccountsUpdate();
+}
+
+// Necessário no Windows para que as notificações nativas mostrem o nome e
+// ícone corretos do app em vez de aparecerem como "Electron". Precisa bater
+// com o appId do instalador (package.json -> build.appId).
+app.setAppUserModelId('com.viniciusbraga.orbiswitstack');
+
+// Tratamento de erros (Fase 5): erros não capturados não devem derrubar o
+// app silenciosamente sem deixar rastro — ficam registrados no log de
+// diagnóstico para o usuário poder relatar o problema com detalhes.
+process.on('uncaughtException', (err) => {
+  logger.error(`Exceção não tratada no processo principal: ${err?.stack ?? String(err)}`);
+});
+process.on('unhandledRejection', (reason) => {
+  logger.error(`Promise rejeitada sem tratamento: ${String(reason)}`);
+});
+
+app.whenReady().then(() => {
+  logger.info(`${APP_NAME} iniciado (versão ${app.getVersion()}).`);
+
+  // Fase 8: sem contas fictícias na primeira instalação — o usuário começa
+  // com a lista vazia e um empty state convidativo (ver App.tsx) em vez de
+  // 20 instâncias mockadas "WhatsApp 01..20".
+  const accountStore = new AccountStore();
+  const settingsStore = new SettingsStore();
+  const groupStore = new GroupStore();
+  analyticsStore = new AnalyticsStore();
+  chatActivityStore = new ChatActivityStore();
+
+  windowManager = new WindowManager(
+    APP_NAME,
+    CREATOR_NAME,
+    ICON_PATH,
+    (bounds) => viewManager?.setContentBounds(bounds),
+    (input) => shortcutManagerRef?.handleNavigationShortcut(input),
+    () => {
+      pushAccountsUpdate();
+      const activeId = accountManager?.getActiveAccountId();
+      if (activeId) switchToAccount(activeId);
+    },
+    () => settingsStore.getCloseBehavior(),
+    () => {
+      windowManager?.markQuitting();
+      app.quit();
+    },
+    settingsStore.getSidebarWidth(),
+    settingsStore.getSidebarPosition(),
+    settingsStore.getIconSize()
+  );
+  const win = windowManager.create();
+
+  viewManager = new ViewManager(win, accountStore);
+  viewManager.setStatusChangeListener(() => pushAccountsUpdate());
+
+  const initialPreset = resolvePerformancePreset(settingsStore.getPerformanceMode(), settingsStore.getCustomMaxLoadedAccounts());
+  accountManager = new AccountManager(
+    accountStore,
+    viewManager,
+    initialPreset.maxLoadedAccounts,
+    initialPreset.idleSuspendMinutes
+  );
+
+  const shortcutManagerRef = new ShortcutManager(
+    accountStore,
+    () => accountManager!.getActiveAccountId(),
+    (id) => switchToAccount(id),
+    () => windowManager?.get()?.webContents.send('mw:open-command-palette')
+  );
+  viewManager.setShortcutHandler((input) => shortcutManagerRef.handleNavigationShortcut(input));
+
+  trayManager = new TrayManager(
+    APP_NAME,
+    CREATOR_NAME,
+    ICON_PATH,
+    () => windowManager?.toggle(),
+    () => windowManager?.show(),
+    () => {
+      windowManager?.markQuitting();
+      app.quit();
+    }
+  );
+  trayManager.create();
+
+  // Fase 27: verificação de atualização via GitHub Releases (ver
+  // updateManager.ts) — checagem silenciosa ao abrir, nunca baixa/instala
+  // sozinha. O estado é empurrado pro renderer, que acende o indicador em
+  // Configurações → Atualizações quando há algo novo.
+  updateManager = new UpdateManager((state) => {
+    windowManager?.get()?.webContents.send('mw:update-status-changed', state);
+  });
+  updateManager.check();
+
+  notificationManager = new NotificationManager(
+    APP_NAME,
+    ICON_PATH,
+    accountStore,
+    () => windowManager?.get() ?? null,
+    (accountId) => {
+      windowManager?.show();
+      switchToAccount(accountId);
+    },
+    () => settingsStore.getNotificationsEnabled()
+  );
+
+  registerIpcHandlers({
+    appName: APP_NAME,
+    creatorName: CREATOR_NAME,
+    accountStore,
+    accountManager,
+    groupStore,
+    settingsStore,
+    analyticsStore,
+    chatActivityStore,
+    updateManager,
+    getMainWindow: () => windowManager?.get() ?? null,
+    switchToAccount,
+    pushAccountsUpdate,
+    updateTrayMenu: () => trayManager?.updateMenu(),
+    forgetNotificationState: (id) => notificationManager?.forget(id),
+    applyPerformanceMode: (mode) => {
+      const preset = resolvePerformancePreset(mode, settingsStore.getCustomMaxLoadedAccounts());
+      accountManager?.updateLimits(preset.maxLoadedAccounts, preset.idleSuspendMinutes);
+      logger.info(`Modo de desempenho alterado para "${mode}" (máx. ${preset.maxLoadedAccounts} contas carregadas, ${preset.idleSuspendMinutes} min de ociosidade).`);
+    },
+    setOverlayActive: (active) => viewManager?.setOverlayActive(active),
+    setSidebarWidth: (width) => windowManager?.setSidebarWidth(width),
+    setSidebarPosition: (position) => windowManager?.setSidebarPosition(position),
+    setIconSize: (size) => windowManager?.setIconSize(size),
+  });
+
+  app.on('render-process-gone', (_event, _wc, details) => {
+    logger.error(`Uma página travou/encerrou inesperadamente (motivo: ${details.reason}).`);
+  });
+
+  const first = accountStore.list()[0];
+  if (first) {
+    // A troca de verdade acontece assim que a janela terminar de carregar
+    // (ver callback onReady passado ao WindowManager acima).
+    accountManager.switchTo(first.id);
+  }
+
+  setInterval(() => {
+    accountManager?.sweepIdleAccounts();
+    pushAccountsUpdate();
+  }, IDLE_SWEEP_INTERVAL_MS);
+
+  // Fase 17: alimenta o chatActivityStore com uma leitura passiva e
+  // periódica da lista de conversas de cada conta WhatsApp carregada (ver
+  // viewManager.getChatEntries). Roda no seu próprio intervalo, separado do
+  // ciclo de "não lidas por conta" acima, porque lê o DOM da página em vez
+  // de só o título — não precisa (nem deve) rodar a cada atualização de
+  // status para não gerar overhead desnecessário.
+  setInterval(() => {
+    if (!accountManager || !viewManager || !chatActivityStore) return;
+    const statuses = accountManager.buildStatuses();
+    for (const status of statuses) {
+      if (!status.loaded) {
+        chatActivityStore.onAccountUnloaded(status.id);
+        continue;
+      }
+      viewManager
+        .getChatEntries(status.id)
+        .then((entries) => chatActivityStore?.observe(status.id, entries))
+        .catch(() => {});
+    }
+  }, CHAT_ACTIVITY_POLL_MS);
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      windowManager?.create();
+    } else {
+      windowManager?.show();
+    }
+  });
+});
+
+let appIsQuitting = false;
+
+app.on('before-quit', () => {
+  appIsQuitting = true;
+  windowManager?.markQuitting();
+  logger.info(`${APP_NAME} encerrado pelo usuário.`);
+});
+
+app.on('window-all-closed', () => {
+  // No Windows/Linux o app continua rodando na bandeja mesmo com a janela
+  // fechada (ver WindowManager.create -> win.on('close', ...)); este handler
+  // só entra em ação se a janela for destruída de fato (ex.: durante o "Sair").
+  if (process.platform !== 'darwin' && appIsQuitting) {
+    app.quit();
+  }
+});

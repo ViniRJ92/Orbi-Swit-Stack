@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* Paleta de cores por tema — aplicada via [data-theme] no <html>, decidido
+   em useTheme.ts (inclusive quando a preferência é "seguir o sistema").
+   Fase 2: paleta refinada (tons mais profundos, superfícies elevadas,
+   acento em gradiente) — mesma estrutura de tokens de antes, só os valores
+   mudaram, então nada na lógica de tema precisou ser tocado.
+   Orbi Swit Stack — Criado por Vinicius Braga */
+:root {
+  --color-app: #0d1418;
+  --color-sidebar: #151e24;
+  --color-header: #151e24;
+  --color-surface: #1a252c;
+  --color-surface-hover: #202d35;
+  --color-accent: #25d366;
+  --color-accent-2: #1fb8a8;
+  --color-accent-contrast: #06120d;
+  --color-text: #edf1f3;
+  --color-text-dim: #8b98a3;
+  --color-text-faint: #5f6c76;
+  --color-border: #26333b;
+  --color-border-strong: #34434c;
+  --color-danger: #f15c6d;
+  --color-input: #0f171c;
+  --color-content: #0a1014;
+  --color-overlay: rgba(4, 8, 10, 0.65);
+}
+
+:root[data-theme='light'] {
+  --color-app: #f3f5f6;
+  --color-sidebar: #ffffff;
+  --color-header: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f2f4f5;
+  --color-accent: #0e9c86;
+  --color-accent-2: #17b88f;
+  --color-accent-contrast: #ffffff;
+  --color-text: #16191b;
+  --color-text-dim: #5c6870;
+  --color-text-faint: #8b969d;
+  --color-border: #e5e8ea;
+  --color-border-strong: #d3d8db;
+  --color-danger: #c9364a;
+  --color-input: #ffffff;
+  --color-content: #eef1f2;
+  --color-overlay: rgba(20, 26, 28, 0.4);
+}
+
+@theme inline {
+  --color-app: var(--color-app);
+  --color-sidebar: var(--color-sidebar);
+  --color-header: var(--color-header);
+  --color-surface: var(--color-surface);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-accent: var(--color-accent);
+  --color-accent-2: var(--color-accent-2);
+  --color-accent-contrast: var(--color-accent-contrast);
+  --color-text: var(--color-text);
+  --color-text-dim: var(--color-text-dim);
+  --color-text-faint: var(--color-text-faint);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-danger: var(--color-danger);
+  --color-input: var(--color-input);
+  --color-content: var(--color-content);
+  --color-overlay: var(--color-overlay);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family:
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+/* Gradiente sutil do acento — usado no monograma da marca e em realces
+   pontuais, para dar uma sensação "premium" sem exagerar em cor. */
+.accent-gradient {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+}
+
+.accent-glow {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
