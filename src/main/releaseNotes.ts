@@ -51,6 +51,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- O contador de mensagens da conversa aberta agora reage ao instante exato em que uma mensagem nova chega, em vez de reler a tela periodicamente.',
     '- Sem leitura de texto, remetente ou midia em nenhum momento.',
   ].join('\n'),
+  '0.33.2': [
+    'Analytics: correcao do historico contado como mensagem nova',
+    '',
+    '- Corrigido um caso em que abrir uma conversa contava o historico inteiro dela como mensagens novas.',
+    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

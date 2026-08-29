@@ -81,6 +81,17 @@ function reportWhatsAppDebounced(): void {
  *     resetada para a conversa nova — nunca soma o que já estava carregado
  *     nela.
  *
+ * Correção (2026-08-29, bug encontrado em uso real): o WhatsApp Web não
+ * popula o histórico da conversa no MESMO instante em que o painel `#main`
+ * aparece — o container nasce vazio e as mensagens do histórico chegam um
+ * instante depois, em um único lote assíncrono. Sem uma janela de espera,
+ * esse lote inteiro (mensagens antigas, já lidas) era capturado como se
+ * fossem "novas" — ver `MESSAGE_ARM_DELAY_MS` abaixo. Limitação assumida:
+ * uma mensagem genuinamente nova que chegue durante essa janela (2s desde
+ * a conversa abrir) não é contada — troca deliberada para nunca mais
+ * contar o histórico da conversa como mensagem nova, que era o problema
+ * relatado. Ver o comentário de `attachMessageObserver` para o detalhe.
+ *
  * Continua NUNCA lendo texto, remetente ou mídia de nenhuma mensagem — só o
  * atributo `data-id` (identificador opaco) de cada bolha, exatamente como a
  * leitura da lista lateral (getChatEntries) já fazia. Mensagens enviadas
@@ -123,14 +134,39 @@ function reportChatOpenState(open: boolean): void {
   ipcRenderer.send('mw:chat-open-state', { open });
 }
 
+let armMessageTimer: ReturnType<typeof setTimeout> | null = null;
+
 function detachMessageObserver(): void {
   chatMessageObserver?.disconnect();
   chatMessageObserver = null;
   seenMessageIds.clear();
+  if (armMessageTimer) {
+    clearTimeout(armMessageTimer);
+    armMessageTimer = null;
+  }
 }
 
+// Quanto tempo esperar, a partir do instante em que o painel de conversa
+// aparece, antes de tratar uma bolha inserida como mensagem NOVA de verdade.
+// Motivo (bug real encontrado em uso ao vivo, 2026-08-29): o WhatsApp Web
+// não popula o histórico da conversa no mesmo instante em que o container
+// `#main`/painel de mensagens aparece — o container nasce vazio e o React
+// deles insere as mensagens do histórico um instante depois, em um único
+// lote. Sem essa janela de espera, esse lote inteiro (mensagens antigas,
+// já lidas) era capturado pelo `MutationObserver` como se fossem mensagens
+// novas — sintoma observado: dezenas de eventos gravados com o EXATO MESMO
+// timestamp, muito acima do número real de mensagens novas recebidas.
+// Mesma classe de problema, mesma solução, do `SETTLE_MS` de
+// analyticsStore.ts (Fase 15) — lá era o título escrito em mais de um
+// passo; aqui é a lista de mensagens populada em mais de um passo.
+const MESSAGE_ARM_DELAY_MS = 2000;
+
 function attachMessageObserver(panel: Element): void {
-  // Baseline: tudo que já está na tela agora nunca conta como "novo".
+  let armed = false;
+
+  // Baseline: tudo que já está na tela agora (ou que aparecer durante a
+  // janela de estabilização abaixo) nunca conta como "novo" — é o
+  // histórico da conversa, não uma chegada em tempo real.
   panel.querySelectorAll('[data-id]').forEach((el) => {
     const id = el.getAttribute('data-id');
     if (id) seenMessageIds.add(id);
@@ -143,6 +179,7 @@ function attachMessageObserver(panel: Element): void {
         for (const dataId of extractDataIds(node)) {
           if (seenMessageIds.has(dataId)) continue;
           seenMessageIds.add(dataId);
+          if (!armed) continue; // ainda dentro da janela de carregamento do histórico
           // "true_..." = enviada por mim; nunca conta (mesma regra do
           // contador de não lidas, que só reflete mensagens recebidas).
           if (/^true[_-]/i.test(dataId)) continue;
@@ -152,6 +189,11 @@ function attachMessageObserver(panel: Element): void {
     }
   });
   chatMessageObserver.observe(panel, { childList: true, subtree: true });
+
+  armMessageTimer = setTimeout(() => {
+    armed = true;
+    armMessageTimer = null;
+  }, MESSAGE_ARM_DELAY_MS);
 }
 
 /** Liga/desliga o observador de mensagens conforme o painel de conversa aparece/some/troca. */
