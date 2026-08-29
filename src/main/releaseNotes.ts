@@ -89,6 +89,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Isso tambem explicava contas com atividade real nao aparecendo no Analytics: a sobrecarga impedia o rastreamento de se firmar antes da sessao cair.',
     '- Modo de desempenho "Personalizado": deixou de suspender contas por tempo parado quando o limite de contas carregadas escolhido nao esta sendo atingido - so reconecta do zero quando o limite de fato exige liberar espaco.',
   ].join('\n'),
+  '0.33.8': [
+    'Analytics: corrige conversas grandes nao contadas',
+    '',
+    '- Corrigido: conversas com bastante historico podiam nao ter nenhuma mensagem de hoje/ontem contada, mesmo com atividade real - causa: a contagem dependia do marcador "Hoje"/"Ontem" continuar visivel na tela, e o WhatsApp Web remove esse marcador da tela quando ha muita mensagem acima dele.',
+    '- Agora cada mensagem carrega a propria data (mesmo dado que a funcao "copiar" do WhatsApp ja usa), entao a contagem funciona independente de quanto historico a conversa tem ou de quanto voce rolou a tela.',
+    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

@@ -128,11 +128,51 @@ function findMessagePanel(main: Element): Element {
 
 const DATE_DIVIDER_RE = /^(hoje|today|ontem|yesterday)$/i;
 
+function pad2(n: number): string {
+  return n < 10 ? '0' + n : String(n);
+}
+
+function formatDDMMYYYY(d: Date): string {
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+const PRE_PLAIN_TEXT_DATE_RE = /\[\d{1,2}:\d{2},\s*(\d{2}\/\d{2}\/\d{4})\]/;
+
 /**
- * Caminha TODA a conversa visível agora, em ordem, classificando cada bolha
- * pelo divisor de data mais próximo ANTES dela (nunca por quando apareceu no
- * DOM). Retorna só as de Hoje/Ontem, nunca vistas antes nesta sessão da
- * página, nunca enviadas pelo próprio usuário.
+ * Fase 30.8 (2026-08-29) — cada bolha do WhatsApp Web carrega, no mesmo
+ * atributo que a própria função "copiar" da interface já usa
+ * (`data-pre-plain-text`, ex.: "[21:27, 29/08/2026] Fulano: "), a data e hora
+ * DAQUELA mensagem específica — nunca o texto dela. Diferente do divisor
+ * visual "Hoje"/"Ontem" (que pode sair do HTML por causa da lista
+ * virtualizada em conversas com bastante histórico — bug real identificado
+ * em uso ao vivo: conversas grandes paravam de contar porque o divisor não
+ * estava mais renderizado quando a conversa era aberta já rolada até o
+ * fim), esse atributo viaja junto de cada bolha individualmente, então a
+ * classificação de uma mensagem nunca depende do que mais está renderizado
+ * na tela no momento.
+ */
+function classifyByOwnDate(node: Element): 'today' | 'yesterday' | 'other' | null {
+  const withAttr = node.hasAttribute('data-pre-plain-text') ? node : node.querySelector('[data-pre-plain-text]');
+  const raw = withAttr ? withAttr.getAttribute('data-pre-plain-text') : null;
+  if (!raw) return null;
+  const match = PRE_PLAIN_TEXT_DATE_RE.exec(raw);
+  if (!match) return null;
+  const dateStr = match[1];
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  if (dateStr === formatDDMMYYYY(now)) return 'today';
+  if (dateStr === formatDDMMYYYY(yesterday)) return 'yesterday';
+  return 'other';
+}
+
+/**
+ * Caminha TODA a conversa visível agora, em ordem. Prioridade de
+ * classificação por bolha: (1) a data própria dela (`data-pre-plain-text`,
+ * ver `classifyByOwnDate`), confiável mesmo com virtualização; (2) se essa
+ * bolha não tiver esse atributo por algum motivo, o divisor de data mais
+ * próximo ANTES dela (comportamento anterior, mantido como reserva). Retorna
+ * só as de Hoje/Ontem, nunca vistas antes nesta sessão da página, nunca
+ * enviadas pelo próprio usuário.
  */
 function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | 'yesterday' }[] {
   const nodes = Array.from(panel.querySelectorAll('[data-id], span[aria-label], div[role="button"] span'));
@@ -147,9 +187,10 @@ function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | '
         seenMessageIds.add(dataId); // enviada por mim: nunca conta, mas marca vista pra não reprocessar sempre
         continue;
       }
-      if (bucket === 'other') continue; // mais antiga que ontem: nunca conta, não marca visto (barato reavaliar)
+      const effectiveBucket = classifyByOwnDate(node) ?? bucket;
+      if (effectiveBucket === 'other') continue; // mais antiga que ontem: nunca conta, não marca visto (barato reavaliar)
       seenMessageIds.add(dataId);
-      out.push({ dataId, bucket });
+      out.push({ dataId, bucket: effectiveBucket });
       continue;
     }
     const text = (node.textContent || '').trim();
