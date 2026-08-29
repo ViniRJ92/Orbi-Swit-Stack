@@ -353,10 +353,11 @@ export class AnalyticsStore {
   }
 
   /**
-   * Fase 30 (reescrita) — chamado 1 vez por mensagem nova, no instante em
-   * que ela é detectada (evento `mw:new-message`, originado do
-   * `MutationObserver` em `webviewPreload.ts` — nunca um polling que varre
-   * tudo de novo). `ts` é o timestamp real do momento da inserção no DOM,
+   * Fase 30.6 (versão definitiva) — chamado 1 vez por mensagem nova, a
+   * partir do evento único `mw:chat-messages`, originado do
+   * `MutationObserver`/classificação por divisor de data em
+   * `webviewPreload.ts` (nunca um polling). `ts` é calculado por `main.ts` a
+   * partir do bucket Hoje/Ontem daquela mensagem,
    * não da leitura — elimina qualquer necessidade de inferir "Hoje"/"Ontem"
    * por texto para este canal.
    *

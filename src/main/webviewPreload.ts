@@ -55,68 +55,51 @@ function reportWhatsAppDebounced(): void {
 }
 
 /**
- * Fase 30 (reescrita) — detecção de mensagens novas por EVENTO de inserção no
- * DOM, não por releitura periódica. Corrige o desenho anterior desta fase
- * (polling a cada 4s em viewManager.ts, reexecutando um script que varria
- * TODA a conversa aberta a cada leitura) — aquele desenho podia recontar
- * mensagens ao trocar de instância/reabrir o app se a deduplicação por ID
- * falhasse em qualquer ponta; este não tem esse problema por construção,
- * porque nunca reprocessa uma mensagem que já existia no DOM antes do
- * observador começar a olhar para ela.
+ * Fase 30.6 (2026-08-29, versão definitiva) — detecção de mensagens por
+ * EVENTO (nunca por polling), unificada num único mecanismo: toda vez que
+ * ALGO muda na conversa aberta (mensagem nova chegando, troca de conversa,
+ * ou até rolar a tela pra ver o histórico), a conversa inteira visível
+ * agora é reclassificada do zero usando o divisor de data que o próprio
+ * WhatsApp Web já desenha ("HOJE"/"ONTEM") — nunca o texto da mensagem.
  *
- * Como funciona:
- *  1. Assim que o painel de conversa (`#main`) aparece, TODAS as bolhas já
- *     presentes viram "baseline" (`seenMessageIds`) — nunca são reportadas
- *     como novas. Isso vale tanto para a primeira conversa aberta quando o
- *     app inicia quanto para qualquer troca de conversa depois.
- *  2. Um `MutationObserver` passa a vigiar esse painel. Só os nós
- *     REALMENTE inseridos depois disso (`addedNodes`) são inspecionados; se
- *     tiverem `data-id` e ainda não tiverem sido vistos, são reportados na
- *     hora, com o timestamp exato do instante da inserção (`Date.now()`
- *     dentro do próprio callback do observer) — não existe mais parsing de
- *     rótulo "Hoje"/"Ontem" para decidir a data: o timestamp já é o
- *     momento real de chegada.
- *  3. Quando a conversa muda (o painel `#main` é trocado/desmontado e
- *     remontado por outro), o observador antigo é desligado e a baseline é
- *     resetada para a conversa nova — nunca soma o que já estava carregado
- *     nela.
+ * Por que reclassificar tudo de novo a cada mudança, em vez de só olhar o
+ * que foi inserido: o WhatsApp Web usa uma lista VIRTUALIZADA — rolar pra
+ * cima pra ver mensagens antigas faz ele inserir essas mensagens antigas de
+ * novo no HTML (é assim que listas longas ficam leves). Um desenho que só
+ * perguntasse "isso é um elemento novo no DOM?" confundiria isso com
+ * mensagem nova de verdade — bug real identificado em uso ao vivo
+ * (2026-08-29). Reclassificar pelo DIVISOR DE DATA em vez de "quando
+ * apareceu no DOM" resolve isso de vez: uma mensagem de antes de ontem
+ * nunca conta, não importa se ela aparece no HTML agora (rolagem) ou há
+ * dias — e uma mensagem de hoje conta, não importa se ela já estava
+ * carregada quando a conversa abriu ou acabou de chegar.
  *
- * Correção (2026-08-29, bug encontrado em uso real): o WhatsApp Web não
- * popula o histórico da conversa no MESMO instante em que o painel `#main`
- * aparece — o container nasce vazio e as mensagens do histórico chegam um
- * instante depois, em um único lote assíncrono. Sem uma janela de espera,
- * esse lote inteiro (mensagens antigas, já lidas) era capturado como se
- * fossem "novas" — ver `MESSAGE_ARM_DELAY_MS` abaixo. Limitação assumida:
- * uma mensagem genuinamente nova que chegue durante essa janela (2s desde
- * a conversa abrir) não é contada — troca deliberada para nunca mais
- * contar o histórico da conversa como mensagem nova, que era o problema
- * relatado. Ver o comentário de `attachMessageObserver` para o detalhe.
+ * Deduplicação por identidade (`data-id`, nunca o texto) é o que garante
+ * "nunca recontar": cada bolha só pode gerar 1 evento na vida do app,
+ * guardado numa lista persistida (`seenMessageIds` aqui + a lista
+ * equivalente em analyticsStore.ts/chatActivityStore.ts do lado do processo
+ * principal) — reprocessar a conversa inteira de novo a cada mudança é
+ * seguro e propositalmente redundante: rodar 1 vez ou 100 vezes no mesmo
+ * dia dá exatamente o mesmo resultado, porque tudo que já foi visto antes é
+ * ignorado.
  *
- * Catch-up de Hoje/Ontem (2026-08-29, Fase 30.5): a baseline acima descarta
- * QUALQUER coisa já carregada quando a conversa abre — inclusive mensagens
- * de HOJE/ONTEM genuinamente reais que só não tinham sido vistas ainda por
- * este mecanismo (ex.: conversa aberta antes desta versão existir, ou
- * marcada como "não lida" só como lembrete pessoal, sem ser mensagem nova de
- * verdade). `scanCatchupMessages` cobre esse caso: 1 varredura, só depois do
- * histórico estabilizar, usando os divisores "HOJE"/"ONTEM" que o WhatsApp
- * já desenha na conversa (texto de interface, não conteúdo de mensagem) pra
- * recuperar essas mensagens sem nunca recontar as mais antigas que isso nem
- * as que já tiverem sido processadas antes (mesma lista de deduplicação do
- * canal ao vivo, em chatActivityStore.ts).
+ * Cada bolha aceita (dentro de Hoje ou Ontem, nunca mais antiga) é reportada
+ * com `{ dataId, bucket }` — o processo principal decide o dia exato
+ * (`todayKey()`/`yesterdayKey()`) a partir do bucket, nunca de um timestamp
+ * de "quando o app percebeu isso", que é exatamente a fonte do bug anterior.
  *
- * Identificação da conversa (2026-08-29): além do `data-id`/timestamp, cada
- * evento de "conversa aberta" agora também carrega o NOME lido do cabeçalho
- * (`chatKey`, ver `extractChatKey`) e se é um grupo (`isGroup`) — necessário
- * para o relatório "Hoje x Ontem" por pessoa (chatActivityStore.ts) saber a
- * quem atribuir cada mensagem, do mesmo jeito que a leitura da lista lateral
- * (getChatEntries) já fazia. `syncChatPanelState` reage a essa mudança de
- * nome mesmo quando `#main` continua o mesmo elemento entre duas conversas
- * diferentes — ver comentário de `currentChatKey` abaixo.
+ * Identificação da conversa: cada evento de "conversa aberta" carrega o
+ * NOME lido da lista lateral (`chatKey`, ver `extractChatKey` — reaproveita
+ * o mesmo campo `span[title]` da linha selecionada, já comprovado
+ * funcionando) e se é grupo (`isGroup`) — necessário para o relatório
+ * "Hoje x Ontem" por pessoa (chatActivityStore.ts) saber a quem atribuir
+ * cada mensagem. `syncChatPanelState` reage à mudança de nome mesmo quando
+ * `#main` continua o mesmo elemento entre duas conversas diferentes.
  *
- * Continua NUNCA lendo texto, remetente ou mídia de nenhuma mensagem — só o
- * atributo `data-id` (identificador opaco) de cada bolha, exatamente como a
- * leitura da lista lateral (getChatEntries) já fazia. Mensagens enviadas
- * pelo próprio usuário (`data-id` começando com `true_`) nunca são
+ * NUNCA lê texto, remetente ou mídia de nenhuma mensagem — só o atributo
+ * `data-id` (identificador opaco) de cada bolha e o texto do divisor de
+ * data (elemento de interface, não conteúdo de mensagem). Mensagens
+ * enviadas pelo próprio usuário (`data-id` começando com `true_`) nunca são
  * reportadas, mesma regra do contador de não lidas.
  *
  * Registra o observador de imediato quando a página carrega — não depende
@@ -128,10 +111,10 @@ let mainPanelPresent = false;
 // Nome da conversa atualmente rastreada — não só a presença de `#main`, que
 // pode continuar montado (mesmo elemento) quando o usuário troca de uma
 // conversa pra outra sem fechar o painel; sem isso, trocar de contato não
-// reiniciaria a baseline e o histórico da conversa nova seria capturado como
-// mensagem nova (o mesmo bug de carregamento, só que disparado por troca de
-// conversa em vez de abertura inicial).
+// seria detectado como troca de conversa.
 let currentChatKey: string | null = null;
+// IDs já reportados NESTA sessão da página (whatsapp reload = zera, o que é
+// seguro porque o processo principal também deduplica de forma persistida).
 const seenMessageIds = new Set<string>();
 
 function findMessagePanel(main: Element): Element {
@@ -143,64 +126,34 @@ function findMessagePanel(main: Element): Element {
   );
 }
 
-function extractDataIds(node: Node): string[] {
-  if (!(node instanceof Element)) return [];
-  const ids: string[] = [];
-  if (node.hasAttribute('data-id')) ids.push(node.getAttribute('data-id') || '');
-  node.querySelectorAll?.('[data-id]').forEach((el) => {
-    const id = el.getAttribute('data-id');
-    if (id) ids.push(id);
-  });
-  return ids.filter((id) => id.length > 0);
-}
-
-function reportNewMessage(dataId: string, ts: number): void {
-  ipcRenderer.send('mw:new-message', { dataId, ts });
-}
+const DATE_DIVIDER_RE = /^(hoje|today|ontem|yesterday)$/i;
 
 /**
- * Fase 30.5 (2026-08-29) — "catch-up": mensagens de HOJE ou ONTEM que já
- * estavam carregadas na tela antes do observador começar a olhar pra essa
- * conversa (ex.: você abriu a conversa mais cedo, antes do app começar a
- * rastreá-la; ou marcou como "não lida" pra lembrete, mas a mensagem já
- * tinha chegado de verdade hoje). Sem isso, essas mensagens ficavam de fora
- * pra sempre, mesmo sendo reais e do dia — a baseline da Fase 30.1/30.2 as
- * tratava como "histórico" simplesmente por já estarem lá, sem olhar a data.
- *
- * Não é releitura periódica nem contradiz "nunca recontar histórico": roda
- * só 1 vez por conversa aberta (depois do histórico terminar de carregar,
- * mesma janela de `MESSAGE_ARM_DELAY_MS`), e cada mensagem encontrada só é
- * aceita pelo processo principal se o `data-id` dela NUNCA tiver sido
- * processado antes (mesma lista persistida usada pelas mensagens ao vivo) —
- * ou seja, roda de novo a cada troca/reabertura, mas só a primeira vez que
- * vê cada ID de verdade conta.
- *
- * O "dia" de cada mensagem aqui vem do PRÓPRIO divisor de data que o
- * WhatsApp Web já desenha na conversa ("HOJE"/"ONTEM") — texto de interface,
- * não conteúdo de mensagem, mesmo princípio já usado pelo `dateTag` da
- * leitura da lista lateral (getChatEntries). Mensagens antes de "Ontem"
- * (rótulo de data mais antigo, ou nenhum rótulo reconhecido) são ignoradas
- * de propósito — não fazem parte do relatório Hoje x Ontem.
+ * Caminha TODA a conversa visível agora, em ordem, classificando cada bolha
+ * pelo divisor de data mais próximo ANTES dela (nunca por quando apareceu no
+ * DOM). Retorna só as de Hoje/Ontem, nunca vistas antes nesta sessão da
+ * página, nunca enviadas pelo próprio usuário.
  */
-const CATCHUP_DIVIDER_RE = /^(hoje|today|ontem|yesterday)$/i;
-
-function scanCatchupMessages(panel: Element): { dataId: string; bucket: 'today' | 'yesterday' }[] {
+function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | 'yesterday' }[] {
   const nodes = Array.from(panel.querySelectorAll('[data-id], span[aria-label], div[role="button"] span'));
   let bucket: 'today' | 'yesterday' | 'other' = 'other';
-  const seen = new Set<string>();
   const out: { dataId: string; bucket: 'today' | 'yesterday' }[] = [];
 
   for (const node of nodes) {
     if (node.hasAttribute && node.hasAttribute('data-id')) {
       const dataId = node.getAttribute('data-id') || '';
-      if (!dataId || seen.has(dataId)) continue;
-      seen.add(dataId);
-      if (/^true[_-]/i.test(dataId)) continue; // enviada por mim, nunca conta
-      if (bucket !== 'other') out.push({ dataId, bucket });
+      if (!dataId || seenMessageIds.has(dataId)) continue;
+      if (/^true[_-]/i.test(dataId)) {
+        seenMessageIds.add(dataId); // enviada por mim: nunca conta, mas marca vista pra não reprocessar sempre
+        continue;
+      }
+      if (bucket === 'other') continue; // mais antiga que ontem: nunca conta, não marca visto (barato reavaliar)
+      seenMessageIds.add(dataId);
+      out.push({ dataId, bucket });
       continue;
     }
     const text = (node.textContent || '').trim();
-    if (text.length > 0 && text.length <= 12 && CATCHUP_DIVIDER_RE.test(text)) {
+    if (text.length > 0 && text.length <= 12 && DATE_DIVIDER_RE.test(text)) {
       const lower = text.toLowerCase();
       bucket = lower === 'hoje' || lower === 'today' ? 'today' : 'yesterday';
     }
@@ -208,9 +161,9 @@ function scanCatchupMessages(panel: Element): { dataId: string; bucket: 'today' 
   return out;
 }
 
-function reportCatchupMessages(items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
+function reportChatMessages(items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
   if (items.length === 0) return;
-  ipcRenderer.send('mw:catchup-messages', { items });
+  ipcRenderer.send('mw:chat-messages', { items });
 }
 
 /**
@@ -266,71 +219,31 @@ function extractChatKey(main: Element): { key: string | null; isGroup: boolean }
   return { key: raw.length > 0 ? raw : null, isGroup };
 }
 
-let armMessageTimer: ReturnType<typeof setTimeout> | null = null;
+// Agrupa rajadas de mutação (WhatsApp mexe no DOM várias vezes por segundo)
+// numa única varredura, mesmo espírito do debounce de `reportWhatsAppDebounced`.
+const SCAN_DEBOUNCE_MS = 400;
+let scanDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 function detachMessageObserver(): void {
   chatMessageObserver?.disconnect();
   chatMessageObserver = null;
   seenMessageIds.clear();
-  if (armMessageTimer) {
-    clearTimeout(armMessageTimer);
-    armMessageTimer = null;
+  if (scanDebounceTimer) {
+    clearTimeout(scanDebounceTimer);
+    scanDebounceTimer = null;
   }
 }
 
-// Quanto tempo esperar, a partir do instante em que o painel de conversa
-// aparece, antes de tratar uma bolha inserida como mensagem NOVA de verdade.
-// Motivo (bug real encontrado em uso ao vivo, 2026-08-29): o WhatsApp Web
-// não popula o histórico da conversa no mesmo instante em que o container
-// `#main`/painel de mensagens aparece — o container nasce vazio e o React
-// deles insere as mensagens do histórico um instante depois, em um único
-// lote. Sem essa janela de espera, esse lote inteiro (mensagens antigas,
-// já lidas) era capturado pelo `MutationObserver` como se fossem mensagens
-// novas — sintoma observado: dezenas de eventos gravados com o EXATO MESMO
-// timestamp, muito acima do número real de mensagens novas recebidas.
-// Mesma classe de problema, mesma solução, do `SETTLE_MS` de
-// analyticsStore.ts (Fase 15) — lá era o título escrito em mais de um
-// passo; aqui é a lista de mensagens populada em mais de um passo.
-const MESSAGE_ARM_DELAY_MS = 2000;
-
 function attachMessageObserver(panel: Element): void {
-  let armed = false;
+  const scan = () => reportChatMessages(scanChatMessages(panel));
+  const scanDebounced = () => {
+    if (scanDebounceTimer) clearTimeout(scanDebounceTimer);
+    scanDebounceTimer = setTimeout(scan, SCAN_DEBOUNCE_MS);
+  };
 
-  // Baseline: tudo que já está na tela agora (ou que aparecer durante a
-  // janela de estabilização abaixo) nunca conta como "novo" — é o
-  // histórico da conversa, não uma chegada em tempo real.
-  panel.querySelectorAll('[data-id]').forEach((el) => {
-    const id = el.getAttribute('data-id');
-    if (id) seenMessageIds.add(id);
-  });
-
-  chatMessageObserver = new MutationObserver((mutations) => {
-    const ts = Date.now();
-    for (const mutation of mutations) {
-      mutation.addedNodes.forEach((node) => {
-        for (const dataId of extractDataIds(node)) {
-          if (seenMessageIds.has(dataId)) continue;
-          seenMessageIds.add(dataId);
-          if (!armed) continue; // ainda dentro da janela de carregamento do histórico
-          // "true_..." = enviada por mim; nunca conta (mesma regra do
-          // contador de não lidas, que só reflete mensagens recebidas).
-          if (/^true[_-]/i.test(dataId)) continue;
-          reportNewMessage(dataId, ts);
-        }
-      });
-    }
-  });
+  scan(); // varredura imediata: cobre o que já estiver carregado agora mesmo
+  chatMessageObserver = new MutationObserver(scanDebounced);
   chatMessageObserver.observe(panel, { childList: true, subtree: true });
-
-  armMessageTimer = setTimeout(() => {
-    armed = true;
-    armMessageTimer = null;
-    // Fase 30.5: só agora, com o histórico já estabilizado (mesma espera
-    // que evita o bug da Fase 30.2), varre o que está na tela procurando
-    // mensagens de Hoje/Ontem que a baseline acima descartou só por já
-    // estarem carregadas — ver comentário de `scanCatchupMessages`.
-    reportCatchupMessages(scanCatchupMessages(panel));
-  }, MESSAGE_ARM_DELAY_MS);
 }
 
 /**

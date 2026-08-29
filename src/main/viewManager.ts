@@ -90,19 +90,17 @@ export class ViewManager {
   private loggedInState: Map<string, boolean> = new Map();
   private loadErrorState: Map<string, boolean> = new Map();
   private onShortcut?: (input: Electron.Input) => void;
-  // Fase 30 (reescrita) — ver comentário de topo de webviewPreload.ts.
-  private onNewMessage?: (accountId: string, chatKey: string | null, isGroup: boolean, dataId: string, ts: number) => void;
-  private onChatOpenStateChange?: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void;
-  // Fase 30.5 — ver comentário de scanCatchupMessages em webviewPreload.ts.
-  private onCatchupMessages?: (
+  // Fase 30.6 (versão definitiva) — ver comentário de topo de webviewPreload.ts.
+  private onChatMessages?: (
     accountId: string,
     chatKey: string | null,
     isGroup: boolean,
     items: { dataId: string; bucket: 'today' | 'yesterday' }[]
   ) => void;
+  private onChatOpenStateChange?: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void;
   // Qual conversa (nome + se é grupo) está aberta agora em cada conta —
-  // atualizado por `mw:chat-open-state`, consultado quando `mw:new-message`
-  // chega (esse evento não repete o nome a cada mensagem, só no momento em
+  // atualizado por `mw:chat-open-state`, consultado quando `mw:chat-messages`
+  // chega (esse evento não repete o nome a cada varredura, só no momento em
   // que a conversa abre/troca).
   private currentChat: Map<string, { chatKey: string | null; isGroup: boolean }> = new Map();
 
@@ -117,17 +115,20 @@ export class ViewManager {
       this.loggedInState.set(accountId, !!payload?.loggedIn);
       this.onStatusChange?.(accountId);
     });
-    // Fase 30 (reescrita) — evento empurrado pelo próprio webviewPreload no
-    // instante em que uma nova bolha de mensagem é inserida no DOM da
-    // conversa aberta (MutationObserver, nunca polling). Ver o comentário de
-    // topo de webviewPreload.ts para o desenho completo (baseline por
-    // conversa, nunca reconta histórico).
-    ipcMain.on('mw:new-message', (event, payload: { dataId: string; ts: number }) => {
-      const accountId = this.webContentsIdToAccount.get(event.sender.id);
-      if (!accountId || !payload?.dataId) return;
-      const chat = this.currentChat.get(accountId);
-      this.onNewMessage?.(accountId, chat?.chatKey ?? null, chat?.isGroup ?? false, payload.dataId, payload.ts ?? Date.now());
-    });
+    // Fase 30.6 — evento empurrado pelo próprio webviewPreload toda vez que a
+    // conversa aberta muda (mensagem nova, troca de conversa, rolagem) — a
+    // classificação Hoje/Ontem/mais-antiga e a deduplicação por `data-id` já
+    // vêm prontas de lá. Ver o comentário de topo de webviewPreload.ts para
+    // o desenho completo (nunca reconta histórico, nunca é polling).
+    ipcMain.on(
+      'mw:chat-messages',
+      (event, payload: { items: { dataId: string; bucket: 'today' | 'yesterday' }[] }) => {
+        const accountId = this.webContentsIdToAccount.get(event.sender.id);
+        if (!accountId || !Array.isArray(payload?.items) || payload.items.length === 0) return;
+        const chat = this.currentChat.get(accountId);
+        this.onChatMessages?.(accountId, chat?.chatKey ?? null, chat?.isGroup ?? false, payload.items);
+      }
+    );
     // Fase 30 (reescrita) — avisa quando a conversa aberta desta conta
     // aparece/desaparece/troca (usado para ligar/desligar o canal de badge
     // enquanto uma conversa está sendo observada em tempo real, e para saber
@@ -141,39 +142,14 @@ export class ViewManager {
       this.currentChat.set(accountId, { chatKey, isGroup });
       this.onChatOpenStateChange?.(accountId, open, chatKey, isGroup);
     });
-    // Fase 30.5 — varredura única (não é polling) de mensagens de Hoje/Ontem
-    // que já estavam carregadas quando a conversa foi aberta. Usa o
-    // chatKey/isGroup já rastreado desta conta (o mesmo da conversa que
-    // acabou de disparar este catch-up).
-    ipcMain.on(
-      'mw:catchup-messages',
-      (event, payload: { items: { dataId: string; bucket: 'today' | 'yesterday' }[] }) => {
-        const accountId = this.webContentsIdToAccount.get(event.sender.id);
-        if (!accountId || !Array.isArray(payload?.items) || payload.items.length === 0) return;
-        const chat = this.currentChat.get(accountId);
-        this.onCatchupMessages?.(accountId, chat?.chatKey ?? null, chat?.isGroup ?? false, payload.items);
-      }
-    );
   }
 
   setStatusChangeListener(cb: (accountId: string) => void): void {
     this.onStatusChange = cb;
   }
 
-  /** Fase 30 (reescrita) — chamado a cada mensagem nova detectada por evento na conversa aberta de qualquer conta. */
-  setNewMessageListener(
-    cb: (accountId: string, chatKey: string | null, isGroup: boolean, dataId: string, ts: number) => void
-  ): void {
-    this.onNewMessage = cb;
-  }
-
-  /** Fase 30 (reescrita) — chamado sempre que a conversa aberta de uma conta aparece/desaparece/troca. */
-  setChatOpenStateListener(cb: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void): void {
-    this.onChatOpenStateChange = cb;
-  }
-
-  /** Fase 30.5 — chamado 1 vez por conversa aberta, com as mensagens de Hoje/Ontem que já estavam carregadas. */
-  setCatchupMessagesListener(
+  /** Fase 30.6 — chamado toda vez que a conversa aberta muda, com as mensagens de Hoje/Ontem ainda não vistas. */
+  setChatMessagesListener(
     cb: (
       accountId: string,
       chatKey: string | null,
@@ -181,7 +157,12 @@ export class ViewManager {
       items: { dataId: string; bucket: 'today' | 'yesterday' }[]
     ) => void
   ): void {
-    this.onCatchupMessages = cb;
+    this.onChatMessages = cb;
+  }
+
+  /** Fase 30 (reescrita) — chamado sempre que a conversa aberta de uma conta aparece/desaparece/troca. */
+  setChatOpenStateListener(cb: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void): void {
+    this.onChatOpenStateChange = cb;
   }
 
   /**

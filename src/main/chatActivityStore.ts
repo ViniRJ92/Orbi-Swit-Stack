@@ -60,13 +60,14 @@
  * conversa que o usuário está de fato respondendo em tempo real é marcada
  * como lida pelo WhatsApp quase instantaneamente, então o contador de não
  * lidas daquela conversa específica nunca chega a subir, e mensagens
- * trocadas ao vivo nunca eram contadas. `markChatOpen()`/`recordLiveMessage()`
+ * trocadas ao vivo nunca eram contadas. `markChatOpen()`/`recordChatMessages()`
  * (alimentados por `viewManager.setChatOpenStateListener`/
- * `setNewMessageListener`, que por sua vez vêm do `MutationObserver` de
- * `webviewPreload.ts` — nunca polling) cobrem exatamente essa lacuna: cada
- * `data-id` de mensagem já visível na conversa aberta vira 1 evento na hora
- * exata da chegada (timestamp real, não mais rótulo "Hoje"/"Ontem" por
- * texto), atribuído ao NOME lido do cabeçalho da conversa (`chatKey`).
+ * `setChatMessagesListener`, que por sua vez vêm do `MutationObserver`/
+ * classificação por divisor de data em `webviewPreload.ts` — nunca polling)
+ * cobrem exatamente essa lacuna: cada `data-id` de mensagem de Hoje/Ontem já
+ * visível na conversa aberta vira 1 evento, atribuído ao dia certo (pelo
+ * divisor "Hoje"/"Ontem" já desenhado na tela) e ao NOME lido da lista
+ * lateral (`chatKey`).
  *
  * As duas fontes nunca contam a mesma conversa ao mesmo tempo: enquanto uma
  * conta+conversa está em `openChats` (evento ativo), `observe()` (lista
@@ -316,39 +317,27 @@ export class ChatActivityStore {
   }
 
   /**
-   * Fase 30 — 1 chamada por mensagem nova detectada por evento na conversa
-   * aberta (nunca por polling — ver comentário de topo do arquivo e de
-   * `webviewPreload.ts`). `ts` é o timestamp real do instante da inserção no
-   * DOM, usado diretamente para decidir o dia (`dayKey`) — elimina a
-   * limitação de "rótulo Hoje/Ontem por texto" que o canal de lista lateral
-   * ainda tem. Deduplicação por identidade (`data-id`), não por delta —
-   * mesmo padrão de `processedMessageIds` em analyticsStore.ts.
+   * Fase 30.6 (versão definitiva) — canal de evento único: chamado toda vez
+   * que `webviewPreload.ts` reclassifica a conversa aberta (mensagem nova,
+   * troca de conversa, ou rolagem revelando histórico antigo — ver
+   * comentário de topo daquele arquivo). `items` já vem filtrado (só
+   * Hoje/Ontem, nunca mais antigo) e deduplicado NAQUELA sessão da página;
+   * aqui a deduplicação é permanente, por `data-id`, entre reinícios do app
+   * (`processedLiveMessageIds`) — rodar isto 1 vez ou 100 vezes por dia pro
+   * mesmo conjunto de mensagens dá exatamente o mesmo resultado. `bucket`
+   * (não um timestamp) decide o dia via `todayKey()`/`yesterdayKey()`.
    */
-  recordLiveMessage(accountId: string, chatKey: string, dataId: string, ts: number): void {
-    const added = this.markProcessedLive(accountId, dataId);
-    if (!added) return;
-    this.data.events.push({ t: ts, day: dayKey(new Date(ts)), a: accountId, k: chatKey, c: 1 });
-    this.prune();
-    this.persist();
-  }
-
-  /**
-   * Fase 30.5 — "catch-up": mensagens de Hoje/Ontem que já estavam
-   * carregadas na tela quando a conversa foi aberta (ex.: você abriu antes
-   * do app começar a rastreá-la, ou marcou como "não lida" pra lembrete,
-   * mas a mensagem já tinha chegado de verdade) — ver comentário completo em
-   * `scanCatchupMessages` (webviewPreload.ts). Usa a MESMA lista de
-   * deduplicação de `recordLiveMessage` (`processedLiveMessageIds`) — um
-   * `data-id` só pode gerar 1 evento na vida do app, não importa se veio do
-   * canal ao vivo ou de um catch-up. `bucket` vem do divisor de data
-   * ("Hoje"/"Ontem") já visível na conversa, não de um timestamp exato —
-   * por isso resolve o dia via `todayKey()`/`yesterdayKey()`, não `dayKey`.
-   */
-  recordCatchupMessages(accountId: string, chatKey: string, items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
+  recordChatMessages(accountId: string, chatKey: string, items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
     let addedAny = false;
     const now = Date.now();
     for (const item of items) {
-      if (!this.markProcessedLive(accountId, item.dataId)) continue;
+      const processed = this.data.processedLiveMessageIds[accountId] ?? [];
+      if (processed.includes(item.dataId)) continue;
+      processed.push(item.dataId);
+      this.data.processedLiveMessageIds[accountId] =
+        processed.length > MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT
+          ? processed.slice(processed.length - MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT)
+          : processed;
       const day = item.bucket === 'yesterday' ? yesterdayKey() : todayKey();
       this.data.events.push({ t: now, day, a: accountId, k: chatKey, c: 1 });
       addedAny = true;
@@ -356,18 +345,6 @@ export class ChatActivityStore {
     if (!addedAny) return;
     this.prune();
     this.persist();
-  }
-
-  /** Marca um `data-id` como processado pelo canal de evento (ao vivo ou catch-up). Retorna `false` se já estava. */
-  private markProcessedLive(accountId: string, dataId: string): boolean {
-    const processed = this.data.processedLiveMessageIds[accountId] ?? [];
-    if (processed.includes(dataId)) return false;
-    processed.push(dataId);
-    this.data.processedLiveMessageIds[accountId] =
-      processed.length > MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT
-        ? processed.slice(processed.length - MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT)
-        : processed;
-    return true;
   }
 
   /** Conta descarregada (suspensa, ou app fechando) — cancela leituras pendentes e força novo grace period ao recarregar. */

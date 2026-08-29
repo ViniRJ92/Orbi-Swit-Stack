@@ -132,17 +132,27 @@ app.whenReady().then(() => {
 
   viewManager = new ViewManager(win, accountStore);
   viewManager.setStatusChangeListener(() => pushAccountsUpdate());
-  // Fase 30 (reescrita): mensagens novas chegam por EVENTO (MutationObserver
-  // dentro da própria página, ver webviewPreload.ts), não por polling — o
-  // processo principal só reage quando algo de fato acontece. Alimenta os
-  // DOIS relatórios que dependem de mensagens recebidas em tempo real:
+  // Fase 30.6 (versão definitiva): mensagens chegam por EVENTO (MutationObserver
+  // dentro da própria página, ver webviewPreload.ts), nunca por polling — o
+  // processo principal só reage quando a conversa aberta muda de verdade
+  // (mensagem nova, troca de conversa, ou rolagem revelando histórico). Cada
+  // item já vem classificado como Hoje/Ontem (nunca mais antigo) e
+  // deduplicado por `data-id`. Alimenta os DOIS relatórios:
   // analyticsStore (Volume total/Instância líder, por CONTA) sempre;
   // chatActivityStore (Hoje x Ontem, por CONTATO) só para conversas
   // individuais — grupos nunca entram nesse segundo relatório.
-  viewManager.setNewMessageListener((accountId, chatKey, isGroup, dataId, ts) => {
-    analyticsStore?.recordNewMessage(accountId, dataId, ts);
+  viewManager.setChatMessagesListener((accountId, chatKey, isGroup, items) => {
+    const now = Date.now();
+    for (const item of items) {
+      // Volume total não trabalha com "bucket", trabalha com timestamp real
+      // (o seletor de período do Analytics filtra por intervalo) — usa
+      // "agora" para Hoje e "agora menos 1 dia" para Ontem, aproximação
+      // razoável já que só o dia importa para esse relatório específico.
+      const ts = item.bucket === 'yesterday' ? now - 24 * 60 * 60 * 1000 : now;
+      analyticsStore?.recordNewMessage(accountId, item.dataId, ts);
+    }
     if (!isGroup && chatKey) {
-      chatActivityStore?.recordLiveMessage(accountId, chatKey, dataId, ts);
+      chatActivityStore?.recordChatMessages(accountId, chatKey, items);
     }
   });
   viewManager.setChatOpenStateListener((accountId, open, chatKey, isGroup) => {
@@ -158,15 +168,6 @@ app.whenReady().then(() => {
     } else {
       analyticsStore?.onAccountChatClosed(accountId);
       chatActivityStore?.onChatClosed(accountId);
-    }
-  });
-  // Fase 30.5: mensagens de Hoje/Ontem que já estavam carregadas quando a
-  // conversa abriu (ver comentário completo em webviewPreload.ts) — só
-  // conta pro relatório por contato (chatActivityStore); Volume total já
-  // reflete essas contas pelo canal de badge normal, sem precisar disso.
-  viewManager.setCatchupMessagesListener((accountId, chatKey, isGroup, items) => {
-    if (!isGroup && chatKey) {
-      chatActivityStore?.recordCatchupMessages(accountId, chatKey, items);
     }
   });
 
@@ -290,10 +291,10 @@ app.whenReady().then(() => {
   // de só o título — não precisa (nem deve) rodar a cada atualização de
   // status para não gerar overhead desnecessário.
   //
-  // Fase 30 (reescrita): o canal de "conversa aberta" do analyticsStore NÃO
-  // faz mais parte deste polling — ele é alimentado por evento, empurrado
-  // pelo próprio webviewPreload.ts assim que uma mensagem chega (ver
-  // viewManager.setNewMessageListener/setChatOpenStateListener, ligados
+  // Fase 30.6: o canal de "conversa aberta" (Volume total E Hoje/Ontem) NÃO
+  // faz mais parte deste polling — é alimentado por evento, empurrado pelo
+  // próprio webviewPreload.ts assim que a conversa aberta muda (ver
+  // viewManager.setChatMessagesListener/setChatOpenStateListener, ligados
   // acima). Aqui só cuidamos de destravar o canal de badge (`analyticsStore
   // .onAccountChatClosed`) quando a conta é descarregada — a view sendo
   // destruída derruba o listener de evento sem avisar, então isso evita a
