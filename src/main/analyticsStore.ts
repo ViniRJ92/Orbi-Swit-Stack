@@ -1,16 +1,19 @@
 /**
  * Coleta discreta de métricas de "movimento" por conta para alimentar a aba
- * Analytics — SEM NUNCA ler conteúdo de conversas. A única fonte de dado é o
- * contador de mensagens não lidas que o próprio accountManager/viewManager já
- * calcula a partir do título da página (a mesma heurística usada pelo selo da
- * bandeja e pelas notificações nativas, ver unreadBadge.ts/notificationManager.ts
- * — nada aqui é novo em termos de "o que é observado", só passa a existir um
- * histórico local com timestamp em vez de descartar o dado a cada atualização.
+ * Analytics — NUNCA lê o texto, remetente ou mídia de nenhuma mensagem. Duas
+ * fontes alimentam o mesmo histórico de eventos, nunca simultaneamente para a
+ * mesma conta (ver Fase 30 abaixo para os detalhes de como isso é garantido):
  *
- * Cada evento registrado é só `{ timestamp, accountId, delta }`, onde `delta`
- * é o quanto o contador de não lidas subiu desde a última observação. Isso dá
- * uma aproximação honesta de "quantas mensagens chegaram" sem jamais tocar em
- * texto de conversa, remetente, ou qualquer dado do WhatsApp/Gmail em si.
+ *  1. O contador de mensagens não lidas que o próprio accountManager/
+ *     viewManager já calcula a partir do título da página (a mesma
+ *     heurística usada pelo selo da bandeja e pelas notificações nativas, ver
+ *     unreadBadge.ts/notificationManager.ts) — nada aqui é novo em termos de
+ *     "o que é observado", só passa a existir um histórico local com
+ *     timestamp em vez de descartar o dado a cada atualização. Cada evento
+ *     registrado é só `{ timestamp, accountId, delta }`, onde `delta` é o
+ *     quanto o contador de não lidas subiu desde a última observação.
+ *  2. (Fase 30) O identificador opaco (`data-id`) de cada mensagem já visível
+ *     na conversa que estiver aberta no momento — nunca o conteúdo dela.
  *
  * Fase 13 (baseline persistida + grace period na reativação): a última
  * contagem observada por conta (`lastSeen`) vivia só em memória — reiniciar
@@ -24,6 +27,30 @@
  * por qualquer motivo) a primeira leitura seguinte é tratada como um "grace
  * period": só resincroniza a base salva com o valor atual do título, nunca
  * gera um evento de incremento.
+ *
+ * Fase 30 (leitura da conversa aberta — corrige sub-registro da conta ativa):
+ * o método de badge acima SÓ enxerga mensagens que ficam marcadas como não
+ * lidas. Uma conta que o usuário está de fato olhando em tempo real tem suas
+ * mensagens marcadas como lidas pelo próprio WhatsApp quase instantaneamente
+ * — o título nunca chega a subir, nenhum delta é gerado, e o total daquela
+ * conta podia ficar em 0 (inclusive sumindo da lista/liderança do Analytics,
+ * já que `buildSummary` só lista contas com `total > 0`). Autorizado
+ * explicitamente pelo usuário (2026-08-29): um segundo canal,
+ * `observeOpenChatMessages()`, alimentado por `viewManager.getOpenChatMessages()`
+ * (leitura passiva do `data-id` de cada bolha já visível na conversa aberta,
+ * nunca o texto), complementa o método de badge SEM substituí-lo — só entra
+ * em ação para a conta que tem uma conversa aberta detectável no momento, e
+ * desliga o método de badge para essa mesma conta enquanto isso dura (ver
+ * `openChatAccounts` abaixo), para as duas fontes nunca contarem a mesma
+ * mensagem duas vezes. Deduplicação aqui é por identidade (cada `data-id` só
+ * gera 1 evento na vida do app), não por delta — ver `processedMessageIds`.
+ *
+ * Nota: esta é uma métrica DIFERENTE da Fase 28 (relatório "Hoje x Ontem" por
+ * conversa, ver chatActivityStore.ts) — aqui o total é por CONTA (alimenta
+ * `byAccount`/`leader`/`totalVolume` deste arquivo), não por conversa
+ * individual. As duas convivem sem conflito: leem sinais diferentes
+ * (título/badge da conta vs. lista lateral vs. conversa aberta) e escrevem em
+ * arquivos/stores diferentes (`analytics.json` vs. `chatActivity.json`).
  *
  * Fase 15 (debounce de estabilização — causa raiz real da dupla contagem):
  * a Fase 13 presumia que a PRIMEIRA leitura de título após `loaded: true`
@@ -73,6 +100,12 @@ const MAX_EVENTS = 20_000;
 // um estado intermediário da renderização da página.
 const SETTLE_MS = 2500;
 
+// Fase 30: teto de IDs de mensagem lembrados por conta — só precisa cobrir a
+// janela de rolagem realista de uma conversa (o objetivo é nunca contar de
+// novo uma bolha que já foi vista, não guardar todo o histórico de mensagens
+// desde sempre). Mesmo espírito do MAX_EVENTS acima.
+const MAX_PROCESSED_IDS_PER_ACCOUNT = 3000;
+
 interface AnalyticsEvent {
   /** Época em ms (Date.now()) do momento em que o aumento de não lidas foi detectado. */
   t: number;
@@ -91,6 +124,13 @@ interface StoreShape {
    * correta de delta descrita no comentário de topo do arquivo.
    */
   lastSeen: Record<string, number>;
+  /**
+   * Fase 30: `data-id` de cada mensagem já contabilizada pelo canal de
+   * conversa aberta, por conta — persistido para que reiniciar o app (ou só
+   * rolar a conversa pra cima e ela reaparecer no DOM) nunca conte a mesma
+   * mensagem 2 vezes. Capado por conta (ver MAX_PROCESSED_IDS_PER_ACCOUNT).
+   */
+  processedMessageIds: Record<string, string[]>;
 }
 
 /** Leitura de não lidas aguardando estabilizar antes de virar grace period ou delta (Fase 15). */
@@ -113,6 +153,12 @@ export class AnalyticsStore {
   // Fase 15: leituras aguardando `SETTLE_MS` sem mudar de valor antes de
   // serem aceitas como reais — ver comentário de topo do arquivo.
   private readonly settling: Map<string, SettlingEntry> = new Map();
+  // Fase 30: contas com uma conversa aberta detectável agora mesmo — só em
+  // memória de propósito (reinicia junto com o app, que já refaz a detecção
+  // no poll seguinte). Enquanto uma conta estiver aqui, `observe()` ignora
+  // completamente as leituras de título dela, para o canal de badge nunca
+  // competir com o canal de conversa aberta pela mesma mensagem.
+  private readonly openChatAccounts: Set<string> = new Set();
 
   constructor() {
     this.filePath = path.join(app.getPath('userData'), STORE_FILE);
@@ -140,13 +186,17 @@ export class AnalyticsStore {
           // observado nenhuma conta ainda, o que é seguro: a primeira
           // observação de cada conta vira grace period, sem gerar delta).
           const lastSeen = parsed.lastSeen && typeof parsed.lastSeen === 'object' ? parsed.lastSeen : {};
-          return { events: parsed.events, lastSeen };
+          // `processedMessageIds` não existia antes da Fase 30 — arquivos
+          // salvos por versões anteriores simplesmente não têm o campo.
+          const processedMessageIds =
+            parsed.processedMessageIds && typeof parsed.processedMessageIds === 'object' ? parsed.processedMessageIds : {};
+          return { events: parsed.events, lastSeen, processedMessageIds };
         }
       }
     } catch (err) {
       console.error('[AnalyticsStore] Falha ao ler analytics.json, iniciando vazio:', err);
     }
-    return { events: [], lastSeen: {} };
+    return { events: [], lastSeen: {}, processedMessageIds: {} };
   }
 
   private persist(): void {
@@ -211,6 +261,14 @@ export class AnalyticsStore {
         continue;
       }
 
+      // Fase 30: enquanto o canal de conversa aberta estiver ativo para esta
+      // conta, o canal de badge fica completamente de fora — ver comentário
+      // de `openChatAccounts` e de `observeOpenChatMessages` abaixo.
+      if (this.openChatAccounts.has(status.id)) {
+        this.cancelSettling(status.id);
+        continue;
+      }
+
       const isGrace = !this.syncedSinceLoad.has(status.id);
       const current = this.settling.get(status.id);
 
@@ -263,11 +321,67 @@ export class AnalyticsStore {
     }
   }
 
+  /**
+   * Fase 30 — canal alternativo baseado no `data-id` de cada mensagem já
+   * visível na conversa ABERTA no momento (ver viewManager.getOpenChatMessages),
+   * em vez do delta do contador de não lidas do título. Chamado só quando
+   * `hasOpenChat` veio `true` daquela leitura — por isso já marca a conta
+   * como "com conversa aberta" (`openChatAccounts`), desligando o canal de
+   * badge pra ela em `observe()` até a conversa fechar (ver
+   * `onAccountChatClosed`). Isso é o que garante que as duas fontes nunca
+   * contem a mesma mensagem: enquanto uma está ativa para a conta, a outra
+   * está desligada para ela.
+   *
+   * Deduplicação por identidade, não por delta: cada `data-id` só pode gerar
+   * 1 evento na vida do app (ou até ser expulso do teto por conta, ver
+   * MAX_PROCESSED_IDS_PER_ACCOUNT) — reler a mesma bolha em polls seguintes
+   * (o normal, já que ela continua visível na tela) nunca soma de novo.
+   */
+  observeOpenChatMessages(accountId: string, messages: { id: string }[]): void {
+    this.openChatAccounts.add(accountId);
+    if (messages.length === 0) return;
+
+    const processed = this.data.processedMessageIds[accountId] ?? [];
+    const processedSet = new Set(processed);
+    let addedAny = false;
+
+    for (const msg of messages) {
+      if (processedSet.has(msg.id)) continue;
+      processedSet.add(msg.id);
+      processed.push(msg.id);
+      this.data.events.push({ t: Date.now(), a: accountId, c: 1 });
+      addedAny = true;
+    }
+
+    if (!addedAny) return;
+
+    this.data.processedMessageIds[accountId] =
+      processed.length > MAX_PROCESSED_IDS_PER_ACCOUNT
+        ? processed.slice(processed.length - MAX_PROCESSED_IDS_PER_ACCOUNT)
+        : processed;
+    this.prune();
+    this.persist();
+  }
+
+  /**
+   * Fase 30 — chamado quando a leitura da conversa aberta não encontrou
+   * nenhuma conversa aberta para esta conta (ou ela foi descarregada).
+   * Devolve a conta para o canal de badge normal a partir da próxima
+   * observação de título. Não apaga `processedMessageIds` — os IDs já vistos
+   * continuam valendo pra sempre (ou até o teto por conta), mesmo que a
+   * conversa seja reaberta depois.
+   */
+  onAccountChatClosed(accountId: string): void {
+    this.openChatAccounts.delete(accountId);
+  }
+
   /** Esquece uma conta removida, para não gerar um pico falso se um novo id reaproveitar o mesmo nome depois. */
   forget(accountId: string): void {
     this.cancelSettling(accountId);
     delete this.data.lastSeen[accountId];
+    delete this.data.processedMessageIds[accountId];
     this.syncedSinceLoad.delete(accountId);
+    this.openChatAccounts.delete(accountId);
     this.persist();
   }
 
@@ -283,8 +397,9 @@ export class AnalyticsStore {
   clear(): void {
     for (const entry of this.settling.values()) clearTimeout(entry.timer);
     this.settling.clear();
-    this.data = { events: [], lastSeen: {} };
+    this.data = { events: [], lastSeen: {}, processedMessageIds: {} };
     this.syncedSinceLoad.clear();
+    this.openChatAccounts.clear();
     this.persist();
   }
 

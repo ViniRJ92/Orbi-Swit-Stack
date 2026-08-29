@@ -1,18 +1,18 @@
 /**
- * Aba Analytics: visão de "movimento" por conta (mensagens novas detectadas
- * pelo contador de não lidas — nunca conteúdo de conversa, ver
- * analyticsStore.ts no processo principal), agora com filtros de período
+ * Aba Analytics: visão de "movimento" por conta (mensagens novas recebidas,
+ * detectadas pelo contador de não lidas e, para a conversa aberta no
+ * momento, pelo identificador de cada mensagem — nunca o texto/remetente,
+ * ver analyticsStore.ts no processo principal), agora com filtros de período
  * avançados (atalhos + intervalo customizado + comparação com o período
  * anterior), alertas do sistema em tempo real e cards de saúde da conexão.
  *
  * Decisão de escopo: os dados de "mensagens enviadas" e "status de entrega"
- * (enviada/entregue/lida/falha) NÃO são coletados por este app — a única
- * fonte de dado observada é o contador de não lidas do próprio WhatsApp Web
- * (ver header de analyticsStore.ts), e capturar status de entrega exigiria
- * inspecionar os ticks/DOM interno de cada mensagem, o que vai contra as
- * restrições do projeto (nada de scraping além do já existente). Por isso o
- * bloco "Recebidas vs. Enviadas" / "Status de Entrega" pedido no upgrade de
- * UI/UX foi deliberadamente omitido desta versão.
+ * (enviada/entregue/lida/falha) NÃO são coletados por este app — capturar
+ * status de entrega exigiria inspecionar os ticks de cada mensagem, o que
+ * vai além do que foi autorizado (ver header de analyticsStore.ts para o que
+ * é lido hoje e por quê). Por isso o bloco "Recebidas vs. Enviadas" / "Status
+ * de Entrega" pedido no upgrade de UI/UX foi deliberadamente omitido desta
+ * versão.
  *
  * Fase 28: a seção "Atividade por instância — Hoje/Ontem" (ver
  * DailyActivityCard abaixo) substituiu os dois KPIs soltos da Fase 17

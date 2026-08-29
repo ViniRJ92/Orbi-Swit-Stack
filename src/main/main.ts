@@ -252,14 +252,32 @@ app.whenReady().then(() => {
   // ciclo de "não lidas por conta" acima, porque lê o DOM da página em vez
   // de só o título — não precisa (nem deve) rodar a cada atualização de
   // status para não gerar overhead desnecessário.
+  //
+  // Fase 30: no mesmo ciclo, também lê a conversa ABERTA de cada conta (ver
+  // viewManager.getOpenChatMessages) e alimenta o analyticsStore por ela —
+  // corrige o sub-registro da conta que o usuário está usando em tempo real
+  // (ver comentário de topo de analyticsStore.ts). `onAccountChatClosed` é
+  // chamado sempre que não há conversa aberta detectável, devolvendo a conta
+  // para o canal de badge normal.
   setInterval(() => {
-    if (!accountManager || !viewManager || !chatActivityStore) return;
+    if (!accountManager || !viewManager || !chatActivityStore || !analyticsStore) return;
     const statuses = accountManager.buildStatuses();
     for (const status of statuses) {
       if (!status.loaded) {
         chatActivityStore.onAccountUnloaded(status.id);
+        analyticsStore.onAccountChatClosed(status.id);
         continue;
       }
+      viewManager
+        .getOpenChatMessages(status.id)
+        .then(({ hasOpenChat, messages }) => {
+          if (hasOpenChat) {
+            analyticsStore?.observeOpenChatMessages(status.id, messages);
+          } else {
+            analyticsStore?.onAccountChatClosed(status.id);
+          }
+        })
+        .catch(() => {});
       viewManager
         .getChatEntries(status.id)
         .then((entries) => chatActivityStore?.observe(status.id, entries))

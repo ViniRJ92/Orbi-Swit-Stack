@@ -37,6 +37,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Quando uma atualizacao fica disponivel, uma notificacao do Windows avisa na hora, sem precisar abrir Configuracoes para checar manualmente.',
     '- Esta tela de novidades: a partir de agora, toda vez que uma versao nova trouxer mudancas relevantes, ela aparece automaticamente na primeira abertura.',
   ].join('\n'),
+  '0.33.0': [
+    'Analytics: correcao da instancia mais usada',
+    '',
+    '- Corrigido um caso em que a instancia com mais atividade real podia nao aparecer na lista/lideranca do Analytics.',
+    '- Causa: mensagens de uma conversa que voce ja esta olhando na hora sao marcadas como lidas quase na mesma hora, entao o contador de nao lidas nunca chegava a refletir esse movimento.',
+    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
