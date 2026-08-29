@@ -138,54 +138,36 @@ A interface foi construída para que o usuário consiga administrar diversas ope
 
 ## 🏗️ Arquitetura
 
-A estrutura do projeto foi organizada para manter os principais domínios da aplicação separados.
+Aplicativo desktop Electron + TypeScript. Cada instância é uma sessão isolada do Chromium (`session.fromPartition`), com o conteúdo web renderizado numa `WebContentsView` própria — sem API não oficial, sem bot, sem automação de mensagens e sem engenharia reversa: só a interface oficial de cada serviço, dentro de uma sessão isolada.
 
 ```text
 Orbi-Swit-Stack/
 │
 ├── src/
-│   ├── components/
-│   │   ├── sidebar/
-│   │   ├── modals/
-│   │   ├── cards/
-│   │   └── ui/
+│   ├── main/                    # processo principal (Electron), empacotado com esbuild
+│   │   ├── accountStore.ts      # persistência de metadados das contas (JSON)
+│   │   ├── accountManager.ts    # troca de conta, suspensão automática/manual
+│   │   ├── viewManager.ts       # isolamento por partition, leituras passivas do DOM
+│   │   ├── windowManager.ts     # janela principal, bounds da view nativa
+│   │   ├── analyticsStore.ts    # Analytics: volume/instância líder
+│   │   ├── chatActivityStore.ts # Analytics: relatório Hoje x Ontem por conversa
+│   │   ├── settingsStore.ts / groupStore.ts / updateManager.ts / releaseNotes.ts
+│   │   ├── ipcRouter.ts         # todos os comandos expostos à UI, num só lugar
+│   │   └── preload.ts / webviewPreload.ts
 │   │
-│   ├── whatsapp/
-│   │   ├── sessions/
-│   │   ├── connection/
-│   │   ├── qr/
-│   │   └── status/
-│   │
-│   ├── analytics/
-│   │   ├── metrics/
-│   │   ├── charts/
-│   │   └── filters/
-│   │
-│   ├── webview/
-│   │   ├── applications/
-│   │   └── navigation/
-│   │
-│   └── core/
-│       ├── state/
-│       ├── storage/
-│       └── configuration/
+│   └── renderer/                # interface React (Vite)
+│       ├── components/          # Sidebar, Header, modais, Analytics, etc.
+│       ├── store/useAppStore.ts # estado global (Zustand)
+│       └── types.ts
 │
-├── assets/
-│   ├── icons/
-│   ├── images/
-│   └── screenshots/
-│
-├── docs/
-│
-├── .github/
-│   └── workflows/
-│
+├── assets/                       # ícones do app
+├── scripts/                       # build-main.mjs (esbuild), gen_icon.py
 ├── package.json
-├── README.md
-└── ...
+├── status_doc.md                 # changelog interno detalhado, por fase
+└── README.md
 ```
 
-> A estrutura acima representa a organização conceitual do projeto. Os diretórios podem evoluir conforme a arquitetura da aplicação amadurece.
+Toda nova capacidade exposta ao renderer segue o mesmo padrão de 4 camadas: store/manager no processo principal → handler em `ipcRouter.ts` → ponte em `preload.ts` → tipagem + estado no renderer (`types.ts` / `useAppStore.ts`).
 
 ---
 
@@ -196,11 +178,12 @@ Orbi-Swit-Stack/
 | **Multi-Instance Hub**   | Gerenciamento das instâncias         | 🟢 Ativo       |
 | **Workspace Sidebar**    | Agrupamento e organização            | 🟢 Ativo       |
 | **Connection Manager**   | Controle de conexão e sessões        | 🟢 Ativo       |
-| **Analytics**            | Métricas e indicadores               | 🟡 Em evolução |
+| **Analytics**            | Volume por instância, líder, relatório Hoje x Ontem | 🟢 Ativo |
 | **Web Apps**             | Aplicações web integradas            | 🟢 Ativo       |
 | **QR Connection**        | Autenticação das instâncias WhatsApp | 🟢 Ativo       |
-| **Auto-Reconnect**       | Reconexão automática                 | 🟡 Em evolução |
-| **Desktop Distribution** | Build e distribuição desktop         | 🟡 Planejado   |
+| **Auto-Suspend**         | Suspensão automática por ociosidade/perfil de desempenho | 🟢 Ativo |
+| **Auto-Update**          | Checagem/download/instalação de atualizações via GitHub Releases | 🟢 Ativo |
+| **Desktop Distribution** | Instalador Windows (NSIS) via electron-builder | 🟢 Ativo |
 
 ---
 
@@ -208,31 +191,34 @@ Orbi-Swit-Stack/
 
 ### Interface
 
-* HTML5
-* CSS3
-* JavaScript ES6+
+* React 19 + TypeScript
+* Tailwind CSS 4
+* Zustand (estado global)
+* Framer Motion (animações)
+* Vite (build do renderer)
 
 ### Desktop
 
 * Electron
-* Node.js
+* `session.fromPartition` para isolamento por conta
+* esbuild (empacotamento do processo principal)
+* electron-builder (instalador Windows/NSIS)
+* electron-updater (atualização automática via GitHub Releases)
 
-### Dados e comunicação
+### Persistência
 
-* LocalStorage
-* REST APIs
-* WebSockets
+* JSON local em `userData` (contas, grupos, configurações, Analytics) — sem banco de dados externo
+* Sessões (cookies/localStorage/IndexedDB) isoladas e persistidas pelo próprio Electron, por partition
 
 ### Visualização
 
-* Chart.js
+* Recharts (gráficos do Analytics)
 
 ### Desenvolvimento
 
-* Git
-* GitHub
-* Claude Code
-* Ferramentas de Inteligência Artificial
+* TypeScript (`tsc --noEmit` para checagem de tipos em main e renderer)
+* Git / GitHub
+* Claude Code / Inteligência Artificial como apoio de engenharia
 
 ---
 
@@ -262,7 +248,7 @@ npm install
 npm start
 ```
 
-> Dependendo da versão e da configuração do projeto, algumas interfaces também podem ser executadas diretamente em ambiente de desenvolvimento utilizando ferramentas como o Live Server.
+Isso roda o build completo (`tsc` + esbuild + Vite) e abre o Electron. Para gerar o instalador Windows: `npm run dist:win` (gera `.exe` + `latest.yml` em `release/`).
 
 ---
 
@@ -285,26 +271,41 @@ O projeto está em evolução contínua.
 * [x] Status individual de conexão
 * [x] Fluxo de QR Code
 * [x] Indicadores de conexão
-* [ ] Reconexão automática avançada
-* [ ] Gerenciamento avançado de sessões
+* [x] Suspensão automática por ociosidade (perfis de desempenho configuráveis)
+* [ ] Reconexão automática avançada além da suspensão/reativação atual
 
 ### Analytics
 
-* [x] Analytics básico
-* [x] Volume de atividade
-* [x] Identificação de picos
-* [ ] Comparação entre períodos
-* [ ] Indicadores avançados de entrega
-* [ ] Histórico detalhado por instância
-* [ ] Dashboard operacional completo
+* [x] Volume por instância e identificação da instância líder
+* [x] Detecção de mensagens novas por evento em tempo real (não por polling)
+* [x] Relatório fixo "Hoje x Ontem" por instância
+* [x] Comparação com período anterior
+* [x] Picos de atividade por horário
+* [ ] Indicadores de status de entrega (fora de escopo — exigiria inspecionar ticks/DOM interno de cada mensagem)
+* [ ] Dashboard operacional completo (histórico além de Hoje/Ontem)
 
 ### Desktop
 
 * [x] Workspace integrado
 * [x] Aplicações web
-* [ ] Sistema de atualização automática
-* [ ] Gerenciamento avançado de configurações
-* [ ] Empacotamento e distribuição final
+* [x] Sistema de atualização automática (GitHub Releases, checagem periódica + notificação nativa)
+* [x] Tela "O que há de novo" por versão
+* [x] Configurações em abas (aparência, instâncias, desempenho, backup, atualizações)
+* [x] Empacotamento e distribuição (instalador Windows via electron-builder)
+
+---
+
+## 🗒️ Histórico de Versões
+
+Changelog técnico completo, fase a fase, em [`status_doc.md`](status_doc.md). Resumo:
+
+| Versão | Destaque |
+| --- | --- |
+| v0.33.1 | Correção: canal de conversa aberta do Analytics reescrito para event-driven (elimina risco de duplicidade) |
+| v0.33.0 | Segundo canal de contagem para a conta usada em tempo real (corrige instância líder sumindo da lista) |
+| v0.32.0 | Checagem periódica de atualização, notificação nativa, tela "O que há de novo" |
+| v0.31.0 | Analytics: relatório "Hoje x Ontem" por instância |
+| v0.30.x | Auto-atualização via GitHub Releases, correções de empacotamento |
 
 ---
 
