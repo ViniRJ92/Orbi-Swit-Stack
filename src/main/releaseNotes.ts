@@ -82,6 +82,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Toda mudanca na conversa agora reclassifica o que esta visivel pelo divisor de data (Hoje/Ontem), nunca pelo instante em que apareceu na tela.',
     '- Sem leitura de texto, remetente ou midia em nenhum momento.',
   ].join('\n'),
+  '0.33.7': [
+    'Corrige quedas de sessao na conta mais ativa e zeros no Analytics',
+    '',
+    '- Corrigido: a conta com mais mensagens chegando podia ficar sobrecarregada e cair a sessao de verdade com o WhatsApp ("sessao caiu ou QR Code expirou"), mesmo estando tudo certo - causa: uma verificacao interna rodava sem limite a cada mudanca na tela, e contas muito ativas geram muitas mudancas por segundo. Agora essa verificacao e agrupada, sem perder nenhuma deteccao.',
+    '- Isso tambem explicava contas com atividade real nao aparecendo no Analytics: a sobrecarga impedia o rastreamento de se firmar antes da sessao cair.',
+    '- Modo de desempenho "Personalizado": deixou de suspender contas por tempo parado quando o limite de contas carregadas escolhido nao esta sendo atingido - so reconecta do zero quando o limite de fato exige liberar espaco.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

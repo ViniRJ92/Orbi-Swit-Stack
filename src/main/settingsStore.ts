@@ -35,10 +35,15 @@ export const PERFORMANCE_PRESETS: Record<Exclude<PerformanceMode, 'custom'>, { m
   performance: { maxLoadedAccounts: 10, idleSuspendMinutes: 30 },
 };
 
-// Tempo de ociosidade usado pelo perfil "Personalizado" — não é configurável
-// pelo usuário nesta rodada (só a quantidade de instâncias simultâneas foi
-// pedida como campo livre); mesmo valor do perfil "Equilibrado".
-const CUSTOM_IDLE_SUSPEND_MINUTES = 15;
+// Perfil "Personalizado": sem suspensão automática por ociosidade — só o
+// limite de contas simultâneas (campo livre) se aplica. Motivo: suspender
+// por ociosidade destrói e recria a WebContents da conta (ver
+// accountManager.ts/viewManager.ts), forçando o WhatsApp Web a reconectar do
+// zero; para quem já escolheu um limite alto de propósito (ex.: 20 contas
+// para só 13 reais), essa reconexão forçada gera instabilidade real de
+// sessão sem nenhum ganho de RAM/CPU, já que a conta nunca chega perto do
+// limite configurado.
+const CUSTOM_IDLE_SUSPEND_MINUTES = Infinity;
 export const CUSTOM_MAX_LOADED_MIN = 1;
 export const CUSTOM_MAX_LOADED_MAX = 30;
 const CUSTOM_MAX_LOADED_DEFAULT = 6;

@@ -274,11 +274,29 @@ function syncChatPanelState(): void {
   attachMessageObserver(findMessagePanel(main));
 }
 
+// Fase 30.7 (2026-08-29, correcao de desempenho): syncChatPanelState() faz
+// varias buscas no DOM (extractChatKey) e rodava sem debounce, disparada por
+// TODA mutacao em document.body. Numa conta parada isso e raro, mas numa
+// conta com bastante mensagem chegando o WhatsApp mexe no DOM dezenas de
+// vezes por segundo (relogio, confirmacao de leitura, digitando) - com varias
+// contas carregadas ao mesmo tempo em segundo plano, isso gerava carga real
+// de CPU o suficiente pra travar o processo da conta mais ativa e derrubar a
+// conexao de verdade dela com o WhatsApp (bug real identificado em uso ao
+// vivo, 2026-08-29 - a conta com mais atividade era a que caia). Agrupada no
+// mesmo debounce de reportWhatsAppDebounced: perde no maximo 400ms de
+// latencia de deteccao, sem nunca perder um evento (o setInterval de 1s e o
+// MutationObserver do painel de mensagens continuam cobrindo o resto).
+let panelSyncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+function syncChatPanelStateDebounced(): void {
+  if (panelSyncDebounceTimer) clearTimeout(panelSyncDebounceTimer);
+  panelSyncDebounceTimer = setTimeout(syncChatPanelState, 400);
+}
+
 function startWhatsApp(): void {
   report(detectWhatsAppLoggedIn());
   const observer = new MutationObserver(() => {
     reportWhatsAppDebounced();
-    syncChatPanelState();
+    syncChatPanelStateDebounced();
   });
   observer.observe(document.body, { childList: true, subtree: true });
   // Rede de segurança independente do debounce, caso o observer perca algum estado.
