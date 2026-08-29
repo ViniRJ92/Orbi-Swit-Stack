@@ -91,8 +91,13 @@ export class ViewManager {
   private loadErrorState: Map<string, boolean> = new Map();
   private onShortcut?: (input: Electron.Input) => void;
   // Fase 30 (reescrita) — ver comentário de topo de webviewPreload.ts.
-  private onNewMessage?: (accountId: string, dataId: string, ts: number) => void;
-  private onChatOpenStateChange?: (accountId: string, open: boolean) => void;
+  private onNewMessage?: (accountId: string, chatKey: string | null, isGroup: boolean, dataId: string, ts: number) => void;
+  private onChatOpenStateChange?: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void;
+  // Qual conversa (nome + se é grupo) está aberta agora em cada conta —
+  // atualizado por `mw:chat-open-state`, consultado quando `mw:new-message`
+  // chega (esse evento não repete o nome a cada mensagem, só no momento em
+  // que a conversa abre/troca).
+  private currentChat: Map<string, { chatKey: string | null; isGroup: boolean }> = new Map();
 
   constructor(
     window: BrowserWindow,
@@ -113,15 +118,21 @@ export class ViewManager {
     ipcMain.on('mw:new-message', (event, payload: { dataId: string; ts: number }) => {
       const accountId = this.webContentsIdToAccount.get(event.sender.id);
       if (!accountId || !payload?.dataId) return;
-      this.onNewMessage?.(accountId, payload.dataId, payload.ts ?? Date.now());
+      const chat = this.currentChat.get(accountId);
+      this.onNewMessage?.(accountId, chat?.chatKey ?? null, chat?.isGroup ?? false, payload.dataId, payload.ts ?? Date.now());
     });
     // Fase 30 (reescrita) — avisa quando a conversa aberta desta conta
-    // aparece/desaparece (usado para ligar/desligar o canal de badge
-    // enquanto uma conversa está sendo observada em tempo real).
-    ipcMain.on('mw:chat-open-state', (event, payload: { open: boolean }) => {
+    // aparece/desaparece/troca (usado para ligar/desligar o canal de badge
+    // enquanto uma conversa está sendo observada em tempo real, e para saber
+    // a quem atribuir as mensagens novas que chegarem em seguida).
+    ipcMain.on('mw:chat-open-state', (event, payload: { open: boolean; chatKey: string | null; isGroup: boolean }) => {
       const accountId = this.webContentsIdToAccount.get(event.sender.id);
       if (!accountId) return;
-      this.onChatOpenStateChange?.(accountId, !!payload?.open);
+      const open = !!payload?.open;
+      const chatKey = open ? payload?.chatKey ?? null : null;
+      const isGroup = open ? !!payload?.isGroup : false;
+      this.currentChat.set(accountId, { chatKey, isGroup });
+      this.onChatOpenStateChange?.(accountId, open, chatKey, isGroup);
     });
   }
 
@@ -130,12 +141,14 @@ export class ViewManager {
   }
 
   /** Fase 30 (reescrita) — chamado a cada mensagem nova detectada por evento na conversa aberta de qualquer conta. */
-  setNewMessageListener(cb: (accountId: string, dataId: string, ts: number) => void): void {
+  setNewMessageListener(
+    cb: (accountId: string, chatKey: string | null, isGroup: boolean, dataId: string, ts: number) => void
+  ): void {
     this.onNewMessage = cb;
   }
 
-  /** Fase 30 (reescrita) — chamado sempre que a conversa aberta de uma conta aparece/desaparece. */
-  setChatOpenStateListener(cb: (accountId: string, open: boolean) => void): void {
+  /** Fase 30 (reescrita) — chamado sempre que a conversa aberta de uma conta aparece/desaparece/troca. */
+  setChatOpenStateListener(cb: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void): void {
     this.onChatOpenStateChange = cb;
   }
 
@@ -302,6 +315,7 @@ export class ViewManager {
     this.views.delete(accountId);
     this.loggedInState.delete(accountId);
     this.loadErrorState.delete(accountId);
+    this.currentChat.delete(accountId);
     if (this.activeAccountId === accountId) {
       this.activeAccountId = null;
     }

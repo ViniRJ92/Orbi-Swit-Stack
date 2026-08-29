@@ -57,6 +57,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Corrigido um caso em que abrir uma conversa contava o historico inteiro dela como mensagens novas.',
     '- Sem leitura de texto, remetente ou midia em nenhum momento.',
   ].join('\n'),
+  '0.33.3': [
+    'Analytics: Hoje/Ontem por instancia agora em tempo real',
+    '',
+    '- O relatorio "Atividade de hoje/ontem" passa a contar a conversa aberta pelo mesmo mecanismo em tempo real do Volume total, em vez de so pela lista lateral.',
+    '- Cobre o caso de responder um cliente ao vivo: mensagens trocadas numa conversa aberta agora entram na contagem do dia certo.',
+    '- Sem leitura de texto, remetente ou midia em nenhum momento - so o identificador da mensagem e o nome ja visivel no cabecalho da conversa.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

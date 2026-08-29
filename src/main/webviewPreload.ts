@@ -92,6 +92,15 @@ function reportWhatsAppDebounced(): void {
  * contar o histórico da conversa como mensagem nova, que era o problema
  * relatado. Ver o comentário de `attachMessageObserver` para o detalhe.
  *
+ * Identificação da conversa (2026-08-29): além do `data-id`/timestamp, cada
+ * evento de "conversa aberta" agora também carrega o NOME lido do cabeçalho
+ * (`chatKey`, ver `extractChatKey`) e se é um grupo (`isGroup`) — necessário
+ * para o relatório "Hoje x Ontem" por pessoa (chatActivityStore.ts) saber a
+ * quem atribuir cada mensagem, do mesmo jeito que a leitura da lista lateral
+ * (getChatEntries) já fazia. `syncChatPanelState` reage a essa mudança de
+ * nome mesmo quando `#main` continua o mesmo elemento entre duas conversas
+ * diferentes — ver comentário de `currentChatKey` abaixo.
+ *
  * Continua NUNCA lendo texto, remetente ou mídia de nenhuma mensagem — só o
  * atributo `data-id` (identificador opaco) de cada bolha, exatamente como a
  * leitura da lista lateral (getChatEntries) já fazia. Mensagens enviadas
@@ -104,6 +113,13 @@ function reportWhatsAppDebounced(): void {
  */
 let chatMessageObserver: MutationObserver | null = null;
 let mainPanelPresent = false;
+// Nome da conversa atualmente rastreada — não só a presença de `#main`, que
+// pode continuar montado (mesmo elemento) quando o usuário troca de uma
+// conversa pra outra sem fechar o painel; sem isso, trocar de contato não
+// reiniciaria a baseline e o histórico da conversa nova seria capturado como
+// mensagem nova (o mesmo bug de carregamento, só que disparado por troca de
+// conversa em vez de abertura inicial).
+let currentChatKey: string | null = null;
 const seenMessageIds = new Set<string>();
 
 function findMessagePanel(main: Element): Element {
@@ -130,8 +146,31 @@ function reportNewMessage(dataId: string, ts: number): void {
   ipcRenderer.send('mw:new-message', { dataId, ts });
 }
 
-function reportChatOpenState(open: boolean): void {
-  ipcRenderer.send('mw:chat-open-state', { open });
+/**
+ * `chatKey` identifica QUAL conversa está aberta (nome do contato/grupo,
+ * lido do cabeçalho da conversa — mesmo campo/seletor que a lista lateral já
+ * usa) — necessário para o relatório "Hoje x Ontem" por pessoa
+ * (chatActivityStore.ts) saber a quem atribuir cada mensagem nova, exatamente
+ * como a leitura da lista lateral já fazia. `isGroup` segue a mesma regra de
+ * sempre: grupos nunca entram nesse relatório.
+ */
+function reportChatOpenState(open: boolean, chatKey: string | null, isGroup: boolean): void {
+  ipcRenderer.send('mw:chat-open-state', { open, chatKey, isGroup });
+}
+
+/**
+ * Lê só o NOME já visível no cabeçalho da conversa aberta — nunca telefone,
+ * status ou qualquer outro dado. Mesmo padrão de seletor (`span[title]`) já
+ * usado em `getChatEntries` (viewManager.ts) para a lista lateral, aplicado
+ * aqui ao cabeçalho em vez da linha da lista.
+ */
+function extractChatKey(main: Element): { key: string | null; isGroup: boolean } {
+  const header = main.querySelector('header');
+  if (!header) return { key: null, isGroup: false };
+  const nameEl = header.querySelector('span[title]');
+  const raw = nameEl ? (nameEl.getAttribute('title') || nameEl.textContent || '').trim() : '';
+  const isGroup = !!header.querySelector('[data-icon="default-group"], [aria-label*="grupo" i], [aria-label*="group" i]');
+  return { key: raw.length > 0 ? raw : null, isGroup };
 }
 
 let armMessageTimer: ReturnType<typeof setTimeout> | null = null;
@@ -196,15 +235,32 @@ function attachMessageObserver(panel: Element): void {
   }, MESSAGE_ARM_DELAY_MS);
 }
 
-/** Liga/desliga o observador de mensagens conforme o painel de conversa aparece/some/troca. */
+/**
+ * Liga/desliga o observador de mensagens conforme o painel de conversa
+ * aparece/some/troca. Roda a CADA tick (não só quando a presença de `#main`
+ * muda) porque `#main` pode continuar o mesmo elemento entre duas conversas
+ * diferentes — o que de fato identifica "a conversa mudou" é o nome lido do
+ * cabeçalho (`chatKey`), não a existência do container.
+ */
 function syncChatPanelState(): void {
   const main = document.querySelector('#main');
-  const nowPresent = !!main;
-  if (nowPresent === mainPanelPresent) return;
-  mainPanelPresent = nowPresent;
-  reportChatOpenState(nowPresent);
+  if (!main) {
+    if (mainPanelPresent) {
+      mainPanelPresent = false;
+      currentChatKey = null;
+      reportChatOpenState(false, null, false);
+      detachMessageObserver();
+    }
+    return;
+  }
+  const { key, isGroup } = extractChatKey(main);
+  const changed = !mainPanelPresent || key !== currentChatKey;
+  if (!changed) return;
+  mainPanelPresent = true;
+  currentChatKey = key;
+  reportChatOpenState(true, key, isGroup);
   detachMessageObserver();
-  if (main) attachMessageObserver(findMessagePanel(main));
+  attachMessageObserver(findMessagePanel(main));
 }
 
 function startWhatsApp(): void {

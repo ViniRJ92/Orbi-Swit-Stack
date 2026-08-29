@@ -134,15 +134,30 @@ app.whenReady().then(() => {
   viewManager.setStatusChangeListener(() => pushAccountsUpdate());
   // Fase 30 (reescrita): mensagens novas chegam por EVENTO (MutationObserver
   // dentro da própria página, ver webviewPreload.ts), não por polling — o
-  // processo principal só reage quando algo de fato acontece.
-  viewManager.setNewMessageListener((accountId, dataId, ts) => {
+  // processo principal só reage quando algo de fato acontece. Alimenta os
+  // DOIS relatórios que dependem de mensagens recebidas em tempo real:
+  // analyticsStore (Volume total/Instância líder, por CONTA) sempre;
+  // chatActivityStore (Hoje x Ontem, por CONTATO) só para conversas
+  // individuais — grupos nunca entram nesse segundo relatório.
+  viewManager.setNewMessageListener((accountId, chatKey, isGroup, dataId, ts) => {
     analyticsStore?.recordNewMessage(accountId, dataId, ts);
+    if (!isGroup && chatKey) {
+      chatActivityStore?.recordLiveMessage(accountId, chatKey, dataId, ts);
+    }
   });
-  viewManager.setChatOpenStateListener((accountId, open) => {
+  viewManager.setChatOpenStateListener((accountId, open, chatKey, isGroup) => {
     if (open) {
       analyticsStore?.markChatOpen(accountId);
+      // Sempre limpa o que estava rastreado antes (troca de conversa, ou
+      // virou um grupo) antes de decidir se a nova conversa entra no canal
+      // de evento do chatActivityStore.
+      chatActivityStore?.onChatClosed(accountId);
+      if (!isGroup && chatKey) {
+        chatActivityStore?.markChatOpen(accountId, chatKey);
+      }
     } else {
       analyticsStore?.onAccountChatClosed(accountId);
+      chatActivityStore?.onChatClosed(accountId);
     }
   });
 

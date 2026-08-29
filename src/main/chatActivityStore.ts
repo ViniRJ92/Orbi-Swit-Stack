@@ -54,6 +54,26 @@
  * mensagens sao de qual dia. Isso nao afeta o uso normal (app rodando
  * continuamente, minimizado na bandeja), so o caso de ficar dias fechado.
  *
+ * Fase 30 (2026-08-29) — segundo canal, por EVENTO, para a conversa ABERTA:
+ * o canal acima (lista lateral, badge de não lidas por conversa) tem o MESMO
+ * problema estrutural do badge de conta inteira em analyticsStore.ts — uma
+ * conversa que o usuário está de fato respondendo em tempo real é marcada
+ * como lida pelo WhatsApp quase instantaneamente, então o contador de não
+ * lidas daquela conversa específica nunca chega a subir, e mensagens
+ * trocadas ao vivo nunca eram contadas. `markChatOpen()`/`recordLiveMessage()`
+ * (alimentados por `viewManager.setChatOpenStateListener`/
+ * `setNewMessageListener`, que por sua vez vêm do `MutationObserver` de
+ * `webviewPreload.ts` — nunca polling) cobrem exatamente essa lacuna: cada
+ * `data-id` de mensagem já visível na conversa aberta vira 1 evento na hora
+ * exata da chegada (timestamp real, não mais rótulo "Hoje"/"Ontem" por
+ * texto), atribuído ao NOME lido do cabeçalho da conversa (`chatKey`).
+ *
+ * As duas fontes nunca contam a mesma conversa ao mesmo tempo: enquanto uma
+ * conta+conversa está em `openChats` (evento ativo), `observe()` (lista
+ * lateral) ignora especificamente aquela conversa — as OUTRAS conversas da
+ * mesma conta continuam sendo seguidas normalmente pela lista lateral, já
+ * que só a conversa aberta tem o problema de nunca marcar não lida.
+ *
  * Orbi Swit Stack -- Criado por Vinicius Braga
  */
 import { app } from 'electron';
@@ -66,6 +86,11 @@ const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_EVENTS = 20_000;
 const SETTLE_MS = 2500;
 const SEPARATOR = ' ';
+// Fase 30: teto de IDs de mensagem (canal de evento) lembrados por conta —
+// só precisa cobrir a janela de rolagem realista de uma conversa. Mesmo
+// espírito do MAX_EVENTS acima e do MAX_PROCESSED_IDS_PER_ACCOUNT de
+// analyticsStore.ts.
+const MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT = 3000;
 
 /** Uma linha da lista de conversas, ja filtrada/lida por viewManager.getChatEntries(). */
 export interface ChatEntry {
@@ -92,6 +117,8 @@ interface ChatEvent {
 interface StoreShape {
   events: ChatEvent[];
   lastSeen: Record<string, Record<string, number>>;
+  /** Fase 30 — `data-id` de cada mensagem já contabilizada pelo canal de evento (conversa aberta), por conta. */
+  processedLiveMessageIds: Record<string, string[]>;
 }
 
 /** Chave local "AAAA-MM-DD" para uma data -- usa o fuso horario do proprio computador do usuario. */
@@ -137,6 +164,10 @@ export class ChatActivityStore {
   private data: StoreShape;
   private readonly syncedSinceLoad: Set<string> = new Set();
   private readonly settling: Map<string, SettlingEntry> = new Map();
+  // Fase 30 — accountId -> chatKey da conversa com o canal de evento ativo
+  // agora mesmo. Enquanto uma (conta, conversa) está aqui, `observe()`
+  // (lista lateral) ignora especificamente essa conversa.
+  private readonly openChats: Map<string, string> = new Map();
 
   constructor() {
     this.filePath = path.join(app.getPath('userData'), STORE_FILE);
@@ -151,13 +182,19 @@ export class ChatActivityStore {
         const parsed = JSON.parse(raw) as Partial<StoreShape>;
         if (Array.isArray(parsed.events)) {
           const lastSeen = parsed.lastSeen && typeof parsed.lastSeen === 'object' ? parsed.lastSeen : {};
-          return { events: parsed.events, lastSeen };
+          // `processedLiveMessageIds` não existia antes da Fase 30 — arquivos
+          // salvos por versões anteriores simplesmente não têm o campo.
+          const processedLiveMessageIds =
+            parsed.processedLiveMessageIds && typeof parsed.processedLiveMessageIds === 'object'
+              ? parsed.processedLiveMessageIds
+              : {};
+          return { events: parsed.events, lastSeen, processedLiveMessageIds };
         }
       }
     } catch (err) {
       console.error('[ChatActivityStore] Falha ao ler chatActivity.json, iniciando vazio:', err);
     }
-    return { events: [], lastSeen: {} };
+    return { events: [], lastSeen: {}, processedLiveMessageIds: {} };
   }
 
   private persist(): void {
@@ -191,6 +228,11 @@ export class ChatActivityStore {
       if (entry.isGroup) continue;
       const chatKey = entry.key;
       if (!chatKey) continue;
+      // Fase 30: esta conversa específica tem o canal de evento ativo agora
+      // (é a que está aberta na tela) — o badge da lista lateral nunca sobe
+      // pra ela enquanto isso dura, então nem vale a pena processar a
+      // leitura aqui; evita também qualquer risco de dupla contagem.
+      if (this.openChats.get(accountId) === chatKey) continue;
       const compositeK = compositeKey(accountId, chatKey);
 
       const isGrace = !this.syncedSinceLoad.has(compositeK);
@@ -247,6 +289,55 @@ export class ChatActivityStore {
     }
   }
 
+  /**
+   * Fase 30 — chamado quando `viewManager` reporta que uma conversa
+   * (não-grupo) abriu numa conta (evento `mw:chat-open-state`, originado do
+   * `webviewPreload.ts`). Ativa o canal de evento para essa conversa
+   * específica, desligando `observe()` (lista lateral) só para ela — as
+   * outras conversas da mesma conta continuam normalmente.
+   */
+  markChatOpen(accountId: string, chatKey: string): void {
+    this.openChats.set(accountId, chatKey);
+    const compositeK = compositeKey(accountId, chatKey);
+    const pending = this.settling.get(compositeK);
+    if (pending) {
+      clearTimeout(pending.timer);
+      this.settling.delete(compositeK);
+    }
+  }
+
+  /**
+   * Fase 30 — chamado quando a conversa aberta de uma conta fecha, troca
+   * para outra, ou a conta é descarregada. Devolve a conversa que estava
+   * ativa para o canal de lista lateral normal.
+   */
+  onChatClosed(accountId: string): void {
+    this.openChats.delete(accountId);
+  }
+
+  /**
+   * Fase 30 — 1 chamada por mensagem nova detectada por evento na conversa
+   * aberta (nunca por polling — ver comentário de topo do arquivo e de
+   * `webviewPreload.ts`). `ts` é o timestamp real do instante da inserção no
+   * DOM, usado diretamente para decidir o dia (`dayKey`) — elimina a
+   * limitação de "rótulo Hoje/Ontem por texto" que o canal de lista lateral
+   * ainda tem. Deduplicação por identidade (`data-id`), não por delta —
+   * mesmo padrão de `processedMessageIds` em analyticsStore.ts.
+   */
+  recordLiveMessage(accountId: string, chatKey: string, dataId: string, ts: number): void {
+    const processed = this.data.processedLiveMessageIds[accountId] ?? [];
+    if (processed.includes(dataId)) return;
+
+    processed.push(dataId);
+    this.data.events.push({ t: ts, day: dayKey(new Date(ts)), a: accountId, k: chatKey, c: 1 });
+    this.data.processedLiveMessageIds[accountId] =
+      processed.length > MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT
+        ? processed.slice(processed.length - MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT)
+        : processed;
+    this.prune();
+    this.persist();
+  }
+
   /** Conta descarregada (suspensa, ou app fechando) — cancela leituras pendentes e força novo grace period ao recarregar. */
   onAccountUnloaded(accountId: string): void {
     const prefix = `${accountId}${SEPARATOR}`;
@@ -259,12 +350,14 @@ export class ChatActivityStore {
     for (const compositeK of Array.from(this.syncedSinceLoad)) {
       if (compositeK.startsWith(prefix)) this.syncedSinceLoad.delete(compositeK);
     }
+    this.openChats.delete(accountId);
   }
 
   /** Conta removida de vez — apaga a baseline salva, para não gerar pico falso se um novo id reaproveitar o nome. */
   forget(accountId: string): void {
     this.onAccountUnloaded(accountId);
     delete this.data.lastSeen[accountId];
+    delete this.data.processedLiveMessageIds[accountId];
     this.persist();
   }
 
@@ -273,7 +366,8 @@ export class ChatActivityStore {
     for (const entry of this.settling.values()) clearTimeout(entry.timer);
     this.settling.clear();
     this.syncedSinceLoad.clear();
-    this.data = { events: [], lastSeen: {} };
+    this.openChats.clear();
+    this.data = { events: [], lastSeen: {}, processedLiveMessageIds: {} };
     this.persist();
   }
 
