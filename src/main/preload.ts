@@ -55,8 +55,12 @@ const api = {
   exportBackup: () => ipcRenderer.invoke('mw:export-backup'),
   importBackup: () => ipcRenderer.invoke('mw:import-backup'),
   openLogsFolder: () => ipcRenderer.invoke('mw:open-logs-folder'),
-  getAnalyticsSummary: (range: AnalyticsRange) => ipcRenderer.invoke('mw:get-analytics-summary', range),
-  getChatActivityDaily: () => ipcRenderer.invoke('mw:get-chat-activity-daily'),
+  // Fase 43: `groupId` opcional restringe o relatório a um agrupamento.
+  getAnalyticsSummary: (range: AnalyticsRange, groupId?: string | null) =>
+    ipcRenderer.invoke('mw:get-analytics-summary', range, groupId ?? null),
+  getChatActivityDaily: (groupId?: string | null) => ipcRenderer.invoke('mw:get-chat-activity-daily', groupId ?? null),
+  exportAnalyticsCsv: (range: AnalyticsRange, groupId?: string | null) =>
+    ipcRenderer.invoke('mw:export-analytics-csv', range, groupId ?? null),
   clearAnalytics: () => ipcRenderer.invoke('mw:clear-analytics'),
   onAccountsChanged: (cb: (payload: AccountsChangedPayload) => void) => {
     const listener = (_evt: unknown, payload: AccountsChangedPayload) => cb(payload);

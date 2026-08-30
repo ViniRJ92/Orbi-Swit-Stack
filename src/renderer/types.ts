@@ -129,6 +129,11 @@ export interface DiagnosticsInfo {
   suspendedAccounts: number;
   logDir: string;
   logSizeBytes: number;
+  /** Fase 43 — medição real do Electron, somando todos os processos do app. */
+  memoryBytes: number;
+  /** Soma do uso de CPU de todos os processos. Pode passar de 100% com vários núcleos. */
+  cpuPercent: number;
+  processCount: number;
 }
 
 export interface BackupResult {
@@ -268,9 +273,15 @@ export interface OrbiSwitStackApi {
   exportBackup: () => Promise<BackupResult>;
   importBackup: () => Promise<BackupResult>;
   openLogsFolder: () => Promise<boolean>;
-  getAnalyticsSummary: (range: AnalyticsRange) => Promise<AnalyticsSummary>;
+  /** Fase 43: `groupId` opcional restringe o relatório a um agrupamento (Praça Seca, Taquara). */
+  getAnalyticsSummary: (range: AnalyticsRange, groupId?: string | null) => Promise<AnalyticsSummary>;
   /** Fase 28: relatório fixo de Hoje x Ontem por instância — independente do período geral do Analytics. */
-  getChatActivityDaily: () => Promise<ChatActivityDailySummary>;
+  getChatActivityDaily: (groupId?: string | null) => Promise<ChatActivityDailySummary>;
+  /** Fase 43: salva o período selecionado em CSV, pela mesma agregação que a tela mostra. */
+  exportAnalyticsCsv: (
+    range: AnalyticsRange,
+    groupId?: string | null
+  ) => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
   clearAnalytics: () => Promise<boolean>;
   onAccountsChanged: (cb: (payload: AccountsChangedPayload) => void) => () => void;
   onOpenCommandPalette: (cb: () => void) => () => void;

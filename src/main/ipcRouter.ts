@@ -71,6 +71,14 @@ export interface IpcRouterDeps {
   resetMessageTracking: () => void;
 }
 
+/** Fase 43 — "2026-08-30" para compor o nome do arquivo exportado. */
+function dateStampForFile(ts: number): string {
+  const d = new Date(ts);
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
 export function registerIpcHandlers(deps: IpcRouterDeps): void {
   const { accountStore, accountManager, groupStore, settingsStore, analyticsStore, chatActivityStore } = deps;
 
@@ -252,6 +260,23 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   ipcMain.handle('mw:get-diagnostics', () => {
     const list = accountManager.list();
     const statuses = accountManager.buildStatuses();
+    // Fase 43 — consumo real de memória e CPU, somando TODOS os processos do
+    // app (a janela principal, cada instância carregada, GPU, utilitários).
+    // `app.getAppMetrics()` é a medição do próprio Electron, não estimativa.
+    // `workingSetSize` vem em KB; `percentCPUUsage` é por processo e pode
+    // passar de 100 no total quando há vários núcleos ocupados.
+    let memoryBytes = 0;
+    let cpuPercent = 0;
+    let processCount = 0;
+    try {
+      for (const m of app.getAppMetrics()) {
+        memoryBytes += (m.memory?.workingSetSize ?? 0) * 1024;
+        cpuPercent += m.cpu?.percentCPUUsage ?? 0;
+        processCount++;
+      }
+    } catch (err) {
+      logger.warn(`Não foi possível medir memória/CPU: ${String(err)}`);
+    }
     return {
       appVersion: app.getVersion(),
       totalAccounts: list.length,
@@ -259,6 +284,9 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
       suspendedAccounts: statuses.filter((s) => s.suspended).length,
       logDir: logger.getLogDir(),
       logSizeBytes: logger.getLogSizeBytes(),
+      memoryBytes,
+      cpuPercent: Math.round(cpuPercent * 10) / 10,
+      processCount,
     };
   });
 
@@ -390,8 +418,25 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   // chatActivityStore.buildAnalyticsSummary). Antes vinha de
   // analyticsStore.buildSummary, que conta pelo badge da conta inteira: os
   // dois blocos da mesma tela nunca fechavam entre si.
-  ipcMain.handle('mw:get-analytics-summary', (_evt, range: AnalyticsRange) => {
-    const accounts = accountManager.list().map((a) => ({ id: a.id, name: a.name, color: a.color }));
+  /**
+   * Fase 43 — `groupId` opcional restringe o relatório a um agrupamento
+   * (Praça Seca, Taquara). Filtrar a LISTA DE CONTAS aqui é suficiente: as
+   * duas agregações só consideram contas que recebem nesta lista.
+   * `null`/ausente = todas as contas.
+   */
+  function accountsForGroup(groupId?: string | null) {
+    const all = accountManager.list();
+    const filtered = groupId ? all.filter((a) => accountStore.get(a.id)?.groupId === groupId) : all;
+    return filtered.map((a) => ({ id: a.id, name: a.name, color: a.color }));
+  }
+
+  // Fase 32: fonte ÚNICA do painel — a mesma contagem por mensagem que
+  // alimenta "Atividade de hoje/ontem" (ver
+  // chatActivityStore.buildAnalyticsSummary). Antes vinha de
+  // analyticsStore.buildSummary, que conta pelo badge da conta inteira: os
+  // dois blocos da mesma tela nunca fechavam entre si.
+  ipcMain.handle('mw:get-analytics-summary', (_evt, range: AnalyticsRange, groupId?: string | null) => {
+    const accounts = accountsForGroup(groupId);
     const empty: AnalyticsSummary = {
       range,
       totalVolume: 0,
@@ -407,10 +452,49 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
 
   // Fase 28: relatório fixo de Hoje x Ontem por instância — não depende do
   // seletor de período geral do Analytics (ver chatActivityStore.ts).
-  ipcMain.handle('mw:get-chat-activity-daily', () => {
-    const accounts = accountManager.list().map((a) => ({ id: a.id, name: a.name, color: a.color }));
-    const empty = { totalConversations: 0, totalMessages: 0, byAccount: [] };
+  ipcMain.handle('mw:get-chat-activity-daily', (_evt, groupId?: string | null) => {
+    const accounts = accountsForGroup(groupId);
+    const empty = { totalConversations: 0, totalMessages: 0, totalReceived: 0, totalSent: 0, byAccount: [] };
     return chatActivityStore?.buildDailyReport(accounts) ?? { today: empty, yesterday: empty };
+  });
+
+  /**
+   * Fase 43 — exporta o período selecionado em CSV. Gerado no processo
+   * principal a partir da MESMA agregação que a tela mostra, então o arquivo
+   * nunca diverge do que está na frente do usuário.
+   */
+  ipcMain.handle('mw:export-analytics-csv', async (_evt, range: AnalyticsRange, groupId?: string | null) => {
+    const accounts = accountsForGroup(groupId);
+    const summary = chatActivityStore?.buildAnalyticsSummary(range, accounts);
+    if (!summary || summary.byAccount.length === 0) return { canceled: false, error: 'Nenhum movimento no período selecionado.' };
+
+    const start = new Date(range.startTs).toLocaleDateString('pt-BR');
+    const end = new Date(range.endTs).toLocaleDateString('pt-BR');
+    // Ponto e vírgula: é o separador que o Excel em português espera.
+    const linhas = [
+      `Periodo;${start} a ${end}`,
+      '',
+      'Instancia;Recebidas;Enviadas;Total',
+      ...summary.byAccount.map((a) => `${a.name.replace(/;/g, ',')};${a.received};${a.sent};${a.total}`),
+      `TOTAL;${summary.totalReceived};${summary.totalSent};${summary.totalVolume}`,
+    ];
+
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Exportar Analytics',
+      defaultPath: `analytics-${dateStampForFile(range.startTs)}-a-${dateStampForFile(range.endTs)}.csv`,
+      filters: [{ name: 'CSV', extensions: ['csv'] }],
+    });
+    if (canceled || !filePath) return { canceled: true };
+
+    try {
+      // BOM na frente: sem ele o Excel abre os acentos errados.
+      fs.writeFileSync(filePath, '﻿' + linhas.join('\r\n'), 'utf-8');
+      logger.info(`Analytics exportado para ${filePath}`);
+      return { canceled: false, filePath };
+    } catch (err) {
+      logger.error(`Falha ao exportar Analytics: ${String(err)}`);
+      return { canceled: false, error: 'Não foi possível salvar o arquivo.' };
+    }
   });
 
   ipcMain.handle('mw:clear-analytics', () => {

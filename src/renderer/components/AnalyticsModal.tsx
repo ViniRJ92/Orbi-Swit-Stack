@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   BarChart3,
   CalendarRange,
+  Download,
   RefreshCw,
   TrendingUp,
   Users,
@@ -271,8 +272,23 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [chatDaily, setChatDaily] = useState<ChatActivityDailySummary | null>(null);
+  // Fase 43 — `null` = todos os agrupamentos.
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const groups = useAppStore((s) => s.groups);
 
   const prevStatusesRef = useRef<Map<string, AccountStatus>>(new Map());
+
+  /** Fase 43 — salva o período selecionado em CSV, respeitando o agrupamento. */
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const result = await window.multiwhats.exportAnalyticsCsv(currentRange(), groupFilter);
+      if (result.error) window.alert(result.error);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   // Recalculada a cada chamada (nunca memoizada só a partir da seleção da
   // UI) — ver comentário de topo de analyticsRange.ts sobre por que isso é
@@ -294,11 +310,11 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       setLoading(true);
       try {
         const range = currentRange();
-        const result = await window.multiwhats.getAnalyticsSummary(range);
+        const result = await window.multiwhats.getAnalyticsSummary(range, groupFilter);
         if (cancelled) return;
         setSummary(result);
         if (compare) {
-          const prevResult = await window.multiwhats.getAnalyticsSummary(previousRange(range));
+          const prevResult = await window.multiwhats.getAnalyticsSummary(previousRange(range), groupFilter);
           if (!cancelled) setPrevSummary(prevResult);
         } else if (!cancelled) {
           setPrevSummary(null);
@@ -314,7 +330,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, quick, customStart, customEnd, compare]);
+  }, [open, quick, customStart, customEnd, compare, groupFilter]);
 
   // Fase 28: relatório fixo de Hoje x Ontem — busca independente do
   // seletor de período geral acima (não faz sentido esse relatório
@@ -324,7 +340,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
     let cancelled = false;
     const loadDaily = async () => {
       try {
-        const result = await window.multiwhats.getChatActivityDaily();
+        const result = await window.multiwhats.getChatActivityDaily(groupFilter);
         if (!cancelled) setChatDaily(result);
       } catch {
         // Silencioso — a UI só mostra "sem novas interações" se isto falhar.
@@ -336,7 +352,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       cancelled = true;
       clearInterval(interval);
     };
-  }, [open]);
+  }, [open, groupFilter]);
 
   // Fase 34.1 — Esc fecha o Analytics. Enquanto era um modal, isso vinha
   // pronto do componente Modal; virando página, precisou ser reimplementado
@@ -531,7 +547,36 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
           mesma dos cards abaixo. `justify-self-end` alinha pela grade, não
           por espaço sobrando de flex, que era o que fazia o switch escapar.
         */}
-        <label className="flex shrink-0 items-center justify-self-end gap-2 text-[12px] font-medium text-text-dim">
+        <div className="flex shrink-0 items-center justify-self-end gap-3">
+          {/* Fase 43 — filtro por agrupamento (Praça Seca, Taquara). */}
+          {groups.length > 0 && (
+            <select
+              value={groupFilter ?? ''}
+              onChange={(e) => setGroupFilter(e.target.value || null)}
+              className="rounded-lg border border-border bg-input px-2.5 py-1.5 text-[12px] text-text outline-none focus:border-accent"
+              aria-label="Filtrar por agrupamento"
+            >
+              <option value="">Todos os agrupamentos</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Fase 43 — exporta o período em CSV, pela mesma agregação da tela. */}
+          <button
+            onClick={exportCsv}
+            disabled={exporting}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-dim transition-colors hover:border-border-strong hover:bg-surface-hover hover:text-text disabled:opacity-50"
+            title="Salvar o período selecionado em CSV"
+          >
+            <Download size={13} />
+            {exporting ? 'Salvando…' : 'CSV'}
+          </button>
+
+        <label className="flex shrink-0 items-center gap-2 text-[12px] font-medium text-text-dim">
           Comparar com período anterior
           <button
             role="switch"
@@ -549,6 +594,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
             />
           </button>
         </label>
+        </div>
       </div>
 
       {/* Sub-topo: alertas do sistema em tempo real */}

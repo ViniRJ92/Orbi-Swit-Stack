@@ -814,6 +814,27 @@ function BackupDiagnosticsTab({
             </div>
           </div>
         )}
+        {/*
+          Fase 43 — consumo real de memória e CPU, medido pelo próprio
+          Electron somando todos os processos do app. A CPU pode passar de
+          100% porque cada núcleo ocupado conta separado.
+        */}
+        {diagnostics && (
+          <div className="mb-3 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl border border-border px-2 py-3">
+              <div className="text-[20px] font-bold leading-tight text-text">{formatBytes(diagnostics.memoryBytes)}</div>
+              <div className="mt-0.5 text-[12px] text-text-dim">memória</div>
+            </div>
+            <div className="rounded-xl border border-border px-2 py-3">
+              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.cpuPercent}%</div>
+              <div className="mt-0.5 text-[12px] text-text-dim">CPU</div>
+            </div>
+            <div className="rounded-xl border border-border px-2 py-3">
+              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.processCount}</div>
+              <div className="mt-0.5 text-[12px] text-text-dim">processos</div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           <SecondaryButton onClick={() => window.multiwhats.openLogsFolder()} icon={<FileText size={14} />}>
             Abrir pasta de logs

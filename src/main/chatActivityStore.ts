@@ -568,8 +568,14 @@ export class ChatActivityStore {
     const receivedByAccount = new Map<string, number>();
     const sentByAccount = new Map<string, number>();
     const hourly = new Array(24).fill(0) as number[];
+    // Fase 43: `accounts` já vem filtrada quando há um agrupamento
+    // selecionado. `byAccount` sairia certo sozinho, mas o gráfico de
+    // horários somava TODAS as contas — por isso o filtro precisa valer aqui
+    // também.
+    const allowed = new Set(accounts.map((a) => a.id));
 
     for (const e of this.data.events) {
+      if (!allowed.has(e.a)) continue;
       // Comparação de string funciona porque a chave é AAAA-MM-DD (ordem
       // lexicográfica = ordem cronológica).
       if (e.day < startDay || e.day > endDay) continue;

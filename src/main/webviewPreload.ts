@@ -240,7 +240,17 @@ function isOutgoing(node: Element, dataId: string): boolean {
  * enviadas pelo próprio usuário.
  */
 function scanChatMessages(panel: Element): ScannedMessage[] {
-  const nodes = Array.from(panel.querySelectorAll('[data-id], span[aria-label], div[role="button"] span'));
+  // CORREÇÃO (2026-08-30, confirmada nos dados reais): o seletor anterior
+  // procurava o divisor de data em `span[aria-label]` e `div[role="button"]
+  // span`. O divisor comum do WhatsApp ("Hoje", "Ontem") não tem `aria-label`
+  // nem fica dentro de um botão, então nunca era encontrado. Consequência: as
+  // primeiras mídias logo abaixo do divisor herdavam o dia da última mensagem
+  // datada anterior, que é do dia de ONTEM, e sumiam do relatório de hoje.
+  //
+  // Agora percorre também elementos-folha (sem filhos), que é onde o texto do
+  // divisor de fato mora. A checagem de folha vem antes de ler o texto, para
+  // não pagar `textContent` em contêineres grandes.
+  const nodes = Array.from(panel.querySelectorAll('[data-id], span, div'));
   let bucket: 'today' | 'yesterday' | 'other' = 'other';
   const out: ScannedMessage[] = [];
 
@@ -275,6 +285,9 @@ function scanChatMessages(panel: Element): ScannedMessage[] {
       out.push({ dataId, bucket: effectiveBucket, direction });
       continue;
     }
+    // Só elementos-folha podem ser o divisor. Filtrar antes evita ler o texto
+    // de contêineres inteiros a cada varredura.
+    if (node.childElementCount > 0) continue;
     const text = (node.textContent || '').trim();
     if (text.length > 0 && text.length <= 12 && DATE_DIVIDER_RE.test(text)) {
       const lower = text.toLowerCase();

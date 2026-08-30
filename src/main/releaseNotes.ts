@@ -237,6 +237,15 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Os números gravados antes desta versão estão errados: mensagens suas aparecem como recebidas. Use "Limpar dados do Analytics" em Configurações para recomeçar com a contagem certa.',
   ].join('\n'),
+  '0.39.0': [
+    'Filtro por agrupamento, exportar CSV e uso de memória',
+    '',
+    '• Filtro por agrupamento no Analytics. Dá para ver o relatório só da Praça Seca, só da Taquara, ou de todos. Vale para os cards, a atividade do dia e os gráficos.',
+    '• Botão CSV salva o período selecionado em arquivo, com uma linha por instância e a linha de total. Sai da mesma contagem que está na tela, então o arquivo nunca diverge do relatório. Abre direto no Excel, com acentos corretos.',
+    '• Diagnóstico em Configurações agora mostra memória, CPU e quantidade de processos do app. É a medição do próprio Electron, não estimativa. A CPU pode passar de 100% porque cada núcleo ocupado conta separado.',
+    '',
+    'Correção: as primeiras imagens e figurinhas logo abaixo do divisor "Hoje" eram contadas como sendo de ontem. A busca pelo divisor de data usava um seletor que não casava com o divisor comum do WhatsApp.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
