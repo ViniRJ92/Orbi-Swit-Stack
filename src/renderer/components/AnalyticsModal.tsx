@@ -397,8 +397,14 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
-      {/* Barra superior: atalhos rápidos + intervalo customizado + comparação */}
-      <div className="flex shrink-0 flex-wrap items-center gap-3">
+      {/*
+        Barra superior: atalhos rápidos + intervalo customizado + comparação.
+        Fase 39: `w-full` + `pb-1` garantem que esta linha ocupe exatamente a
+        mesma largura dos cards abaixo e nunca encoste neles — o switch de
+        comparação, por ficar no extremo direito, era o primeiro a aparentar
+        invadir a borda do card de baixo.
+      */}
+      <div className="flex w-full shrink-0 flex-wrap items-center gap-3 pb-1">
         <div className="flex items-center gap-1.5 rounded-lg bg-input p-1">
           {PERIODS.map((p) => (
             <button

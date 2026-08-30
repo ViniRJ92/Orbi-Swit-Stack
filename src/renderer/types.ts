@@ -269,6 +269,8 @@ export interface OrbiSwitStackApi {
   downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
   onUpdateStatusChanged: (cb: (state: UpdateState) => void) => () => void;
+  /** Fase 39: mensagem nova com a janela visível — alimenta o toast do app (MessageToast.tsx). */
+  onNewMessages: (cb: (payload: { accountId: string; accountName: string; count: number }) => void) => () => void;
   /** Fase 29: decide/consulta se o modal "O que há de novo" deve abrir para a versão atual. */
   getWhatsNew: () => Promise<WhatsNewResult>;
   /** Fase 29: marca a versão atual como já vista — não mostra o modal de novo para ela. */

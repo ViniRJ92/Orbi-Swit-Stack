@@ -6,6 +6,7 @@ import { MessageCircle, Plus } from 'lucide-react';
 import { useAppStore } from './store/useAppStore';
 import { useTheme } from './useTheme';
 import { Header } from './components/Header';
+import { MessageToast } from './components/MessageToast';
 import { Sidebar } from './components/Sidebar';
 import { AboutModal } from './components/AboutModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -181,6 +182,8 @@ export function App() {
       <AddAccountWizard open={addAccountOpen} onClose={() => setAddAccountOpen(false)} />
       <AccountsDashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      {/* Fase 39: aviso de mensagem nova desenhado pelo app (janela visível). */}
+      <MessageToast />
     </>
   );
 

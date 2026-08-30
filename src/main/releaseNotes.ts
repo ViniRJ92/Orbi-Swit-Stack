@@ -179,6 +179,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     '- Com varias instancias, os nomes no grafico "Movimento por instancia" ficavam sobrepostos e ilegiveis. Agora o grafico cresce conforme a quantidade de instancias e o card rola por dentro quando nao couber - nenhum nome some nem se sobrepoe.',
   ].join('\n'),
+  '0.37.0': [
+    'Aviso de mensagem nova com a cara do app',
+    '',
+    '- Ate agora o unico aviso era a caixa do Windows, desenhada pelo sistema - o app nao tinha como ajustar tamanho, cantos, icone nem espacamento dela.',
+    '- Novo aviso proprio, no canto inferior direito da janela: compacto, cantos arredondados e mesma identidade visual do resto da interface. Clicar nele abre a instancia; some sozinho em 5 segundos.',
+    '- A caixa do Windows continua aparecendo quando a janela do app esta minimizada ou na bandeja - nessa situacao um aviso dentro da janela nao seria visto.',
+    '- Corrigido tambem o espacamento da chave "Comparar com periodo anterior", no Analytics, que encostava na borda dos cards abaixo.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

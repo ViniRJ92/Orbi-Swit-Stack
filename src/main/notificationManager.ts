@@ -50,6 +50,21 @@ export class NotificationManager {
       const acc = this.accountStore.get(status.id);
       if (!acc) continue;
 
+      // Fase 39 — se a janela do app está visível, quem avisa é o toast
+      // desenhado pelo próprio app (MessageToast.tsx), que segue a identidade
+      // visual da interface. A notificação nativa do Windows fica só para
+      // quando a janela está escondida ou minimizada na bandeja — aí um aviso
+      // dentro da janela não seria visto por ninguém.
+      const windowVisible = !!win && win.isVisible() && !win.isMinimized();
+      if (windowVisible) {
+        win.webContents.send('mw:new-messages', {
+          accountId: status.id,
+          accountName: acc.name,
+          count: status.unreadCount - previous,
+        });
+        continue;
+      }
+
       if (Notification.isSupported()) {
         const notification = new Notification({
           title: `${this.appName} · ${acc.name}`,

@@ -84,6 +84,12 @@ const api = {
     ipcRenderer.on('mw:open-settings-updates', listener);
     return () => ipcRenderer.removeListener('mw:open-settings-updates', listener);
   },
+  /** Fase 39 — mensagem nova com a janela visível: avisa pelo toast do app (ver MessageToast.tsx). */
+  onNewMessages: (cb: (payload: { accountId: string; accountName: string; count: number }) => void) => {
+    const listener = (_evt: unknown, payload: { accountId: string; accountName: string; count: number }) => cb(payload);
+    ipcRenderer.on('mw:new-messages', listener);
+    return () => ipcRenderer.removeListener('mw:new-messages', listener);
+  },
 };
 
 contextBridge.exposeInMainWorld('multiwhats', api);
