@@ -67,6 +67,8 @@ export interface IpcRouterDeps {
   setSidebarWidth: (width: number) => void;
   setSidebarPosition: (position: SidebarPosition) => void;
   setIconSize: (size: IconSize) => void;
+  /** Fase 33.2 — faz cada instância esquecer quais balões já reportou (usado ao limpar o Analytics). */
+  resetMessageTracking: () => void;
 }
 
 export function registerIpcHandlers(deps: IpcRouterDeps): void {
@@ -412,6 +414,13 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   ipcMain.handle('mw:clear-analytics', () => {
     analyticsStore.clear();
     chatActivityStore?.clear();
+    // Fase 33.2: zera também a memória DENTRO de cada instância (quais balões
+    // já foram reportados). Sem isto o "limpar" seria parcial e a conversa
+    // aberta no momento ficaria sem ser contada até trocar de conversa ou
+    // recarregar — atrapalhando justamente o uso deste botão, que é começar
+    // um teste do zero e acompanhar a contagem desde o começo.
+    deps.resetMessageTracking();
+    logger.info('Dados do Analytics limpos (histórico + rastreamento em memória das instâncias).');
     return true;
   });
 

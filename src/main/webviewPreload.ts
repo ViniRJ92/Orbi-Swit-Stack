@@ -334,6 +334,18 @@ function syncChatPanelStateDebounced(): void {
   panelSyncDebounceTimer = setTimeout(syncChatPanelState, 400);
 }
 
+// Fase 33.2 — "Limpar dados do Analytics" zera o processo principal; sem
+// isto a página continuaria lembrando quais balões já reportou e a conversa
+// aberta no momento só voltaria a ser contada ao trocar de conversa ou
+// recarregar. Depois de esquecer, uma varredura imediata reporta de novo o
+// que está visível, já contra o histórico zerado.
+ipcRenderer.on('mw:reset-message-tracking', () => {
+  seenMessageIds.clear();
+  currentChatKey = null;
+  mainPanelPresent = false;
+  syncChatPanelState();
+});
+
 function startWhatsApp(): void {
   report(detectWhatsAppLoggedIn());
   const observer = new MutationObserver(() => {

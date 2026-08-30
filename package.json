@@ -1,6 +1,6 @@
 {
   "name": "orbi-swit-stack",
-  "version": "0.35.2",
+  "version": "0.35.3",
   "description": "Orbi Swit Stack: hub para centralizar múltiplas contas e serviços web (WhatsApp, Gmail, navegador e mais) em sessões isoladas. Criado por Vinicius Braga.",
   "author": "Vinicius Braga",
   "creator": "Vinicius Braga",

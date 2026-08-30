@@ -160,6 +160,20 @@ export class ViewManager {
     this.onChatMessages = cb;
   }
 
+  /**
+   * Fase 33.2 — manda cada instância esquecer quais balões já reportou.
+   * Usado pelo "Limpar dados do Analytics": sem isto, a página aberta
+   * continuaria lembrando o que já enviou e a conversa em exibição não seria
+   * recontada até trocar de conversa ou recarregar, deixando um buraco logo
+   * no começo de um teste feito do zero.
+   */
+  resetMessageTracking(): void {
+    for (const managed of this.views.values()) {
+      managed.view.webContents.send('mw:reset-message-tracking');
+    }
+    this.currentChat.clear();
+  }
+
   /** Fase 30 (reescrita) — chamado sempre que a conversa aberta de uma conta aparece/desaparece/troca. */
   setChatOpenStateListener(cb: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void): void {
     this.onChatOpenStateChange = cb;

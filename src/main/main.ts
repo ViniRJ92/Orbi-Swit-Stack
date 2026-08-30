@@ -267,6 +267,7 @@ app.whenReady().then(() => {
     setSidebarWidth: (width) => windowManager?.setSidebarWidth(width),
     setSidebarPosition: (position) => windowManager?.setSidebarPosition(position),
     setIconSize: (size) => windowManager?.setIconSize(size),
+    resetMessageTracking: () => viewManager?.resetMessageTracking(),
   });
 
   app.on('render-process-gone', (_event, _wc, details) => {

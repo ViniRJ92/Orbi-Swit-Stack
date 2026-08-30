@@ -138,6 +138,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Corrigido: uma conversa ja aberta uma vez no dia deixaria de contar as mensagens que chegassem nela depois, caso voce nao a abrisse de novo. Agora o aviso de nao lidas segue contando entre uma abertura e outra, e cada nova abertura reescreve o dia pelo que os baloes mostram.',
     '- Os numeros ja gravados por versoes anteriores nunca sao apagados por esta correcao - podem estar inflados, mas nada de real e destruido.',
   ].join('\n'),
+  '0.35.3': [
+    '"Limpar dados do Analytics" agora zera de verdade',
+    '',
+    '- Antes o botao limpava o historico salvo, mas cada instancia aberta continuava lembrando quais mensagens ja tinha reportado - entao a conversa que estivesse aberta na hora so voltava a ser contada depois de trocar de conversa ou recarregar, comecando o acompanhamento com um buraco.',
+    '- Agora limpar zera tambem essa memoria dentro de cada instancia e recomeca a leitura na hora, do zero.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
