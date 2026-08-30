@@ -249,14 +249,14 @@ function InstanceRow({
       <td className="px-2 py-2">
         <div className="flex items-center gap-0.5">
           <button
-            className="rounded-md p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
             title={isSuspended ? 'Ativar instância' : 'Suspender instância'}
             onClick={() => (isSuspended ? switchAccount(account.id) : suspendAccount(account.id))}
           >
             {isSuspended ? <Play size={14} /> : <Pause size={14} />}
           </button>
           <button
-            className="rounded-md p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
             title="Escolher imagem"
             onClick={handlePickIcon}
           >
@@ -264,7 +264,7 @@ function InstanceRow({
           </button>
           {account.iconDataUrl && (
             <button
-              className="rounded-md p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+              className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
               title="Usar ícone padrão do serviço"
               onClick={() => resetAccountIcon(account.id)}
             >
@@ -272,7 +272,7 @@ function InstanceRow({
             </button>
           )}
           <button
-            className="rounded-md p-1.5 text-text-faint transition-colors hover:bg-danger/10 hover:text-danger"
+            className="rounded-lg p-1.5 text-text-faint transition-colors hover:bg-danger/10 hover:text-danger"
             title="Excluir instância"
             onClick={() => removeAccountWithConfirm(account.id, account.name)}
           >
@@ -792,19 +792,25 @@ function BackupDiagnosticsTab({
       </Section>
 
       <Section title="Diagnóstico">
+        {/*
+          Fase 41: hierarquia visual — o número é o dado, então ganha destaque
+          (20px, peso 700, cor principal) e o rótulo recua para 12px em cinza
+          secundário. Antes os dois tinham peso parecido e o olho não sabia
+          onde pousar.
+        */}
         {diagnostics && (
           <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-lg border border-border px-2 py-2">
-              <div className="text-base font-semibold text-text">{diagnostics.totalAccounts}</div>
-              <div className="text-[10px] text-text-faint">instâncias</div>
+            <div className="rounded-xl border border-border px-2 py-3">
+              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.totalAccounts}</div>
+              <div className="mt-0.5 text-[12px] text-text-dim">instâncias</div>
             </div>
-            <div className="rounded-lg border border-border px-2 py-2">
-              <div className="text-base font-semibold text-text">{diagnostics.loadedAccounts}</div>
-              <div className="text-[10px] text-text-faint">carregadas</div>
+            <div className="rounded-xl border border-border px-2 py-3">
+              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.loadedAccounts}</div>
+              <div className="mt-0.5 text-[12px] text-text-dim">carregadas</div>
             </div>
-            <div className="rounded-lg border border-border px-2 py-2">
-              <div className="text-base font-semibold text-text">{formatBytes(diagnostics.logSizeBytes)}</div>
-              <div className="text-[10px] text-text-faint">log</div>
+            <div className="rounded-xl border border-border px-2 py-3">
+              <div className="text-[20px] font-bold leading-tight text-text">{formatBytes(diagnostics.logSizeBytes)}</div>
+              <div className="mt-0.5 text-[12px] text-text-dim">log</div>
             </div>
           </div>
         )}
@@ -817,7 +823,7 @@ function BackupDiagnosticsTab({
           </SecondaryButton>
         </div>
         {logLines && (
-          <pre className="mt-2.5 max-h-40 overflow-y-auto rounded-lg border border-border bg-input p-2.5 text-[10px] leading-relaxed text-text-dim">
+          <pre className="mw-scroll mt-2.5 max-h-40 overflow-y-auto rounded-xl border border-border bg-input p-2.5 pr-3 text-[10px] leading-relaxed text-text-dim">
             {logLines.length > 0 ? logLines.join('\n') : 'Sem entradas no log ainda.'}
           </pre>
         )}
@@ -1088,8 +1094,14 @@ export function SettingsModal({
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={
+              // Fase 41: aba ativa com contraste maior — o verde claro sobre
+              // verde claro dificultava identificar de relance onde se está.
+              // Fundo mais forte, texto em `semibold` e uma barra vertical de
+              // destaque à esquerda.
               'relative flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors ' +
-              (activeTab === tab.key ? 'bg-accent/10 font-medium text-accent' : 'text-text-dim hover:bg-surface-hover hover:text-text')
+              (activeTab === tab.key
+                ? 'bg-accent/20 font-semibold text-accent before:absolute before:left-0 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2 before:rounded-r before:bg-accent'
+                : 'text-text-dim hover:bg-surface-hover hover:text-text')
             }
           >
             {tab.icon}
@@ -1099,7 +1111,12 @@ export function SettingsModal({
         ))}
       </nav>
 
-      <div className="min-w-0 flex-1 overflow-y-auto px-5 py-5">
+      {/*
+        Fase 41: `pr-3` afasta o conteúdo da barra de rolagem (antes ela
+        encostava nos campos e switches da direita) e `pb-6` garante respiro
+        no rodapé de todas as abas, que colavam na borda de baixo.
+      */}
+      <div className="mw-scroll min-w-0 flex-1 overflow-y-auto py-5 pb-6 pl-5 pr-3">
         {activeTab === 'general' && (
           <GeneralAppearanceTab
             startup={startup}

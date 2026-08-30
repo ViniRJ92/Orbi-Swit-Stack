@@ -16,15 +16,18 @@ export function AboutModal({ open, onClose, appInfo }: { open: boolean; onClose:
         <h3 className="text-lg font-semibold text-text">Orbi Swit Stack</h3>
         <p className="mt-0.5 text-xs text-text-faint">Versão {appInfo?.version ?? ''}</p>
 
-        <p className="mt-4 text-sm leading-relaxed text-text-dim">
-          O <strong className="font-semibold text-text">Orbi Swit Stack</strong> foi idealizado para centralizar e elevar a
-          gestão de múltiplos ambientes virtuais. O nome <strong className="font-semibold text-text">Orbi</strong> faz
-          referência ao ecossistema onde todas as suas contas orbitam em perfeita sintonia em um único lugar. A tecnologia{' '}
-          <strong className="font-semibold text-text">SwitStack</strong> une os conceitos de alternância (
-          <em>Switch</em>) rápida de janelas com o empilhamento (<em>Stack</em>) produtivo de instâncias, oferecendo total
-          controle e fluidez para o seu fluxo de trabalho.
+        {/*
+          Fase 41: texto institucional enxuto, no lugar do parágrafo longo que
+          explicava a origem do nome. `leading-7` dá mais respiro entre as
+          linhas do que o `leading-relaxed` anterior.
+        */}
+        <p className="mt-4 max-w-md text-sm leading-7 text-text-dim">
+          O <strong className="font-semibold text-text">Orbi Swit Stack</strong> foi criado para centralizar e acelerar a
+          gestão das suas instâncias em um só lugar, oferecendo controle total e produtividade para o seu fluxo de
+          trabalho.
         </p>
 
+        {/* Fase 41: `mt-4` (16px) separa a assinatura do texto acima. */}
         <div className="mt-4 rounded-full border border-border px-4 py-1.5 text-sm text-text">
           Criado por <strong className="font-semibold text-accent">{appInfo?.creator ?? 'Vinicius Braga'}</strong>
         </div>

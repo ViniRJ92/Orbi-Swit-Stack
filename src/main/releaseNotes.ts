@@ -5,12 +5,12 @@
  * Decisão de arquitetura: o texto fica cadastrado localmente aqui, dentro
  * do próprio instalador, em vez de ser buscado da API de Releases do
  * GitHub em tempo de execução. Motivo: o repositório do projeto está
- * marcado como privado (ver Fase 28.1 do status do projeto) — a API
+ * marcado como privado (ver Fase 28.1 do status do projeto), e a API
  * pública do GitHub não enxerga releases de um repositório privado sem um
- * token de acesso, e embutir um token só para isso seria menos seguro sem
+ * token de acesso. Embutir um token só para isso seria menos seguro sem
  * necessidade (o mesmo trade-off já documentado para o auto-update em si).
  * Buscar do GitHub também exigiria rede disponível só para mostrar um
- * texto que já sabemos de antemão — desnecessário.
+ * texto que já sabemos de antemão.
  *
  * Uso: a cada nova versão publicada, adicionar uma entrada aqui com a
  * mesma chave usada em `package.json` -> version. Se o repositório se
@@ -18,187 +18,214 @@
  * buscar da API do GitHub em vez desta tabela, sem mudar o contrato de
  * IPC (`mw:get-whats-new`/`mw:ack-whats-new`) usado pelo renderer.
  *
+ * Fase 41: padrão de escrita destes textos, a pedido do usuário.
+ *  • Marcador de lista é sempre "•", nunca hífen.
+ *  • Nada de hífen ou travessão emendando orações no meio da frase. Usar
+ *    vírgula, ponto final, ou reescrever.
+ *  • Frases curtas e diretas. "Adicionada opção para X", não "O sistema
+ *    agora permite que o usuário realize X".
+ *  • Sem conectivos de encheção ("Além disso", "Vale ressaltar", "Note
+ *    que", "Portanto").
+ *  • Acentuação e pontuação corretas.
+ *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
 
 export const RELEASE_NOTES: Record<string, string> = {
   '0.31.0': [
-    'Analytics: relatorio "Hoje x Ontem" por instancia',
+    'Analytics: relatório "Hoje x Ontem" por instância',
     '',
-    '- Novas secoes "Atividade de hoje" e "Atividade de ontem", mostrando por instancia o numero de novas interacoes e de mensagens novas.',
-    '- Contagem incremental sem duplicidade: mensagens ja vistas nao sao recontadas ao so navegar entre as instancias.',
-    '- Sem rastreamento de nomes ou telefones de contatos, so numeros agregados por instancia.',
-    '- Modal de Analytics ampliada, com mais espaco e rolagem vertical.',
+    '• Novas seções "Atividade de hoje" e "Atividade de ontem", com o número de interações e de mensagens novas por instância.',
+    '• Contagem incremental, sem duplicidade. Navegar entre instâncias não reconta o que já foi visto.',
+    '• Sem rastreamento de nomes ou telefones, só números por instância.',
+    '• Modal do Analytics ampliada, com mais espaço e rolagem vertical.',
   ].join('\n'),
   '0.32.0': [
-    'Atualizacoes mais visiveis',
+    'Atualizações mais visíveis',
     '',
-    '- O app agora verifica novas versoes tambem periodicamente enquanto fica aberto, alem da checagem de sempre ao iniciar.',
-    '- Quando uma atualizacao fica disponivel, uma notificacao do Windows avisa na hora, sem precisar abrir Configuracoes para checar manualmente.',
-    '- Esta tela de novidades: a partir de agora, toda vez que uma versao nova trouxer mudancas relevantes, ela aparece automaticamente na primeira abertura.',
+    '• O app passa a verificar novas versões também enquanto fica aberto, não só ao iniciar.',
+    '• Quando uma atualização fica disponível, uma notificação do Windows avisa na hora.',
+    '• Esta tela de novidades. Toda versão com mudanças relevantes passa a mostrá-la na primeira abertura.',
   ].join('\n'),
   '0.33.0': [
-    'Analytics: correcao da instancia mais usada',
+    'Analytics: correção da instância mais usada',
     '',
-    '- Corrigido um caso em que a instancia com mais atividade real podia nao aparecer na lista/lideranca do Analytics.',
-    '- Causa: mensagens de uma conversa que voce ja esta olhando na hora sao marcadas como lidas quase na mesma hora, entao o contador de nao lidas nunca chegava a refletir esse movimento.',
-    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+    '• Corrigido um caso em que a instância com mais atividade real não aparecia na liderança do Analytics.',
+    '• Causa: mensagens de uma conversa aberta são marcadas como lidas quase na hora, então o contador de não lidas nunca refletia esse movimento.',
+    '• Sem leitura de texto, remetente ou mídia.',
   ].join('\n'),
   '0.33.1': [
-    'Analytics: correcao de duplicidade ao trocar de instancia',
+    'Analytics: correção de duplicidade ao trocar de instância',
     '',
-    '- Corrigido um caso em que reabrir o app ou trocar de instancia podia contar mensagens repetidas no Analytics.',
-    '- O contador de mensagens da conversa aberta agora reage ao instante exato em que uma mensagem nova chega, em vez de reler a tela periodicamente.',
-    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+    '• Corrigido um caso em que reabrir o app ou trocar de instância contava mensagens repetidas.',
+    '• O contador da conversa aberta passa a reagir ao instante em que a mensagem chega, em vez de reler a tela periodicamente.',
+    '• Sem leitura de texto, remetente ou mídia.',
   ].join('\n'),
   '0.33.2': [
-    'Analytics: correcao do historico contado como mensagem nova',
+    'Analytics: correção do histórico contado como mensagem nova',
     '',
-    '- Corrigido um caso em que abrir uma conversa contava o historico inteiro dela como mensagens novas.',
-    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+    '• Corrigido um caso em que abrir uma conversa contava o histórico inteiro dela como mensagens novas.',
+    '• Sem leitura de texto, remetente ou mídia.',
   ].join('\n'),
   '0.33.3': [
-    'Analytics: Hoje/Ontem por instancia agora em tempo real',
+    'Analytics: Hoje e Ontem em tempo real',
     '',
-    '- O relatorio "Atividade de hoje/ontem" passa a contar a conversa aberta pelo mesmo mecanismo em tempo real do Volume total, em vez de so pela lista lateral.',
-    '- Cobre o caso de responder um cliente ao vivo: mensagens trocadas numa conversa aberta agora entram na contagem do dia certo.',
-    '- Sem leitura de texto, remetente ou midia em nenhum momento - so o identificador da mensagem e o nome ja visivel no cabecalho da conversa.',
+    '• O relatório "Atividade de hoje/ontem" passa a contar a conversa aberta pelo mesmo mecanismo em tempo real do Volume total, não só pela lista lateral.',
+    '• Cobre o caso de responder um cliente ao vivo. Mensagens trocadas numa conversa aberta entram na contagem do dia certo.',
+    '• Sem leitura de texto, remetente ou mídia.',
   ].join('\n'),
   '0.33.4': [
-    'Analytics: correcao na identificacao do contato',
+    'Analytics: correção na identificação do contato',
     '',
-    '- Corrigido um caso em que o nome do contato da conversa aberta nao era identificado corretamente, impedindo o relatorio Hoje/Ontem de contar a mensagem.',
+    '• Corrigido um caso em que o nome do contato da conversa aberta não era identificado, impedindo o relatório de contar a mensagem.',
   ].join('\n'),
   '0.33.5': [
-    'Analytics: recupera mensagens de hoje/ontem ja carregadas',
+    'Analytics: recupera mensagens de hoje e ontem já carregadas',
     '',
-    '- Mensagens de hoje ou ontem que ja estavam na tela ao abrir a conversa (por exemplo, se a conversa foi aberta antes desta atualizacao) agora entram na contagem, sem nunca recontar o que ja passou dessa janela.',
-    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+    '• Mensagens de hoje ou ontem que já estavam na tela ao abrir a conversa agora entram na contagem, sem recontar o que já passou dessa janela.',
+    '• Sem leitura de texto, remetente ou mídia.',
   ].join('\n'),
   '0.33.6': [
     'Analytics: corrige rolagem confundida com mensagem nova',
     '',
-    '- Rolar a conversa pra ver historico antigo podia ser confundido com mensagem nova chegando - corrigido.',
-    '- Toda mudanca na conversa agora reclassifica o que esta visivel pelo divisor de data (Hoje/Ontem), nunca pelo instante em que apareceu na tela.',
-    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+    '• Rolar a conversa para ver histórico antigo podia ser confundido com mensagem nova chegando. Corrigido.',
+    '• Toda mudança na conversa passa a reclassificar o que está visível pelo divisor de data (Hoje/Ontem), nunca pelo instante em que apareceu na tela.',
+    '• Sem leitura de texto, remetente ou mídia.',
   ].join('\n'),
   '0.33.7': [
-    'Corrige quedas de sessao na conta mais ativa e zeros no Analytics',
+    'Corrige quedas de sessão na conta mais ativa',
     '',
-    '- Corrigido: a conta com mais mensagens chegando podia ficar sobrecarregada e cair a sessao de verdade com o WhatsApp ("sessao caiu ou QR Code expirou"), mesmo estando tudo certo - causa: uma verificacao interna rodava sem limite a cada mudanca na tela, e contas muito ativas geram muitas mudancas por segundo. Agora essa verificacao e agrupada, sem perder nenhuma deteccao.',
-    '- Isso tambem explicava contas com atividade real nao aparecendo no Analytics: a sobrecarga impedia o rastreamento de se firmar antes da sessao cair.',
-    '- Modo de desempenho "Personalizado": deixou de suspender contas por tempo parado quando o limite de contas carregadas escolhido nao esta sendo atingido - so reconecta do zero quando o limite de fato exige liberar espaco.',
+    '• Corrigido: a conta com mais mensagens chegando podia ficar sobrecarregada e cair a sessão com o WhatsApp, mesmo estando tudo certo.',
+    '• Causa: uma verificação interna rodava sem limite a cada mudança na tela, e contas muito ativas geram muitas mudanças por segundo. Agora essa verificação é agrupada, sem perder nenhuma detecção.',
+    '• Isso também explicava contas com atividade real ausentes do Analytics. A sobrecarga impedia o rastreamento de se firmar antes da sessão cair.',
+    '• Modo de desempenho "Personalizado": deixou de suspender contas por tempo parado quando o limite de contas carregadas não está sendo atingido.',
   ].join('\n'),
   '0.33.8': [
-    'Analytics: corrige conversas grandes nao contadas',
+    'Analytics: corrige conversas grandes não contadas',
     '',
-    '- Corrigido: conversas com bastante historico podiam nao ter nenhuma mensagem de hoje/ontem contada, mesmo com atividade real - causa: a contagem dependia do marcador "Hoje"/"Ontem" continuar visivel na tela, e o WhatsApp Web remove esse marcador da tela quando ha muita mensagem acima dele.',
-    '- Agora cada mensagem carrega a propria data (mesmo dado que a funcao "copiar" do WhatsApp ja usa), entao a contagem funciona independente de quanto historico a conversa tem ou de quanto voce rolou a tela.',
-    '- Sem leitura de texto, remetente ou midia em nenhum momento.',
+    '• Corrigido: conversas com bastante histórico podiam não ter nenhuma mensagem de hoje ou ontem contada, mesmo com atividade real.',
+    '• Causa: a contagem dependia do marcador "Hoje"/"Ontem" continuar visível, e o WhatsApp Web remove esse marcador quando há muita mensagem acima dele.',
+    '• Agora cada mensagem carrega a própria data, o mesmo dado que a função "copiar" do WhatsApp já usa. A contagem funciona independente do tamanho da conversa.',
+    '• Sem leitura de texto, remetente ou mídia.',
   ].join('\n'),
   '0.34.0': [
-    'Login nos servicos + botao de recarregar (F5)',
+    'Login nos serviços e botão de recarregar',
     '',
-    '- Corrigido o erro "Failed to open popup window" (TikTok e outros): o login social ("Continuar com Google/Facebook/Apple") precisa abrir uma janela de login, e o app recusava todas. Agora essa janela abre na MESMA sessao isolada da instancia, sem quebrar o isolamento entre contas.',
-    '- Corrigido tambem o bloqueio da propria tela de login: quando o servico te manda pro site do provedor (Google, Facebook, Apple, Microsoft), a navegacao era barrada pela lista de dominios permitidos. Esses dominios de login agora sao aceitos em todos os servicos, menos WhatsApp (que nao tem login social e segue com a trava mais estrita).',
-    '- Novo botao de recarregar no topo, e atalhos F5 e Ctrl+R, para recarregar a instancia que esta em exibicao.',
+    '• Corrigido o erro "Failed to open popup window" no TikTok e outros. O login social precisa abrir uma janela, e o app recusava todas. Agora ela abre na mesma sessão isolada da instância.',
+    '• Corrigido também o bloqueio da própria tela de login. Quando o serviço encaminha para o site do provedor (Google, Facebook, Apple, Microsoft), a navegação era barrada pela lista de domínios permitidos. Esses domínios agora são aceitos em todos os serviços, menos WhatsApp.',
+    '• Novo botão de recarregar no topo, com atalhos F5 e Ctrl+R.',
     '',
-    'Limitacao conhecida (nao e falha do app): o Google bloqueia login de conta Google dentro de navegadores embutidos como este - por isso Gmail, Google Calendar, Google Earth e "Continuar com Google" mostram "esse navegador ou app pode nao ser seguro". Nos servicos que oferecem outras formas de entrar (e-mail/telefone, Facebook, Apple), essas funcionam.',
+    'Limitação conhecida, que não é falha do app: o Google bloqueia login de conta Google dentro de navegadores embutidos como este. Por isso Gmail, Google Calendar, Google Earth e "Continuar com Google" mostram "esse navegador ou app pode não ser seguro". Nos serviços com outras formas de entrar, como e-mail, telefone, Facebook ou Apple, o login funciona.',
   ].join('\n'),
   '0.34.1': [
-    'Servicos do Google que exigem login sairam da lista',
+    'Serviços do Google que exigem login saíram da lista',
     '',
-    '- Gmail, Google Calendar, Google Earth e Gemini nao aparecem mais ao adicionar uma conta: todos exigem entrar com conta Google, e o Google recusa esse login dentro de aplicativos como este (sem opcao de continuar mesmo assim). Criar essas instancias so gerava uma aba que nunca ia conseguir logar.',
-    '- "Pesquisa Google" continua na lista e funciona normalmente - buscar no Google nao exige login.',
-    '- Instancias desses servicos que voce ja tenha criado continuam abrindo como antes; nada foi apagado.',
-    '- Nos servicos que nao sao WhatsApp, o status agora diz "Aberto" em vez de "Conectado". Fora do WhatsApp o app so sabe que a pagina carregou, nao se voce esta logado - dizer "Conectado" aparecia ate quando o login tinha falhado.',
+    '• Gmail, Google Calendar, Google Earth e Gemini não aparecem mais ao adicionar uma conta. Todos exigem entrar com conta Google, e o Google recusa esse login dentro de aplicativos como este.',
+    '• "Pesquisa Google" continua na lista e funciona normalmente. Buscar no Google não exige login.',
+    '• Instâncias desses serviços que você já criou continuam abrindo como antes. Nada foi apagado.',
+    '• Fora do WhatsApp, o status agora diz "Aberto" em vez de "Conectado". O app só sabe que a página carregou, não se você está logado.',
   ].join('\n'),
   '0.35.0': [
-    'Analytics em tela cheia e numeros que fecham entre si',
+    'Analytics em tela cheia, com números que fecham',
     '',
-    '- O Analytics deixou de ser uma janelinha e virou pagina inteira, usando toda a largura e altura.',
-    '- Numeros unificados: "Volume total", "Instancia lider", "Media por conta", "Movimento por instancia" e "Horarios de pico" agora vem da MESMA contagem por mensagem que ja alimentava "Atividade de hoje/ontem". Antes eram dois sistemas diferentes na mesma tela (um contava pelo aviso de nao lidas da conta inteira, outro mensagem por mensagem), e por isso os blocos nunca batiam.',
-    '- Consequencia esperada: o "Volume total" fica menor do que voce via antes. O numero antigo estava inflado; o novo e a soma exata do que aparece por instancia.',
-    '- O periodo "Hoje" agora casa exatamente com o card "Atividade de hoje".',
-    '- Corrigido o grafico "Movimento por instancia", que escondia o nome de algumas instancias (aparecia barra sem nome).',
-    '- Grupos continuam fora da contagem, como ja era na atividade diaria.',
+    '• O Analytics deixou de ser uma janela flutuante e virou página inteira, usando toda a largura e altura.',
+    '• Números unificados. "Volume total", "Instância líder", "Média por conta", "Movimento por instância" e "Horários de pico" passam a vir da mesma contagem por mensagem que já alimentava "Atividade de hoje/ontem".',
+    '• Antes eram dois sistemas diferentes na mesma tela, um contando pelo aviso de não lidas da conta inteira e outro mensagem por mensagem. Por isso os blocos nunca batiam.',
+    '• O "Volume total" fica menor do que você via antes. O número antigo estava inflado.',
+    '• O período "Hoje" passa a casar exatamente com o card "Atividade de hoje".',
+    '• Corrigido o gráfico "Movimento por instância", que escondia o nome de algumas instâncias.',
+    '• Grupos continuam fora da contagem.',
   ].join('\n'),
   '0.35.1': [
     'Corrige mensagens contadas em dobro ao abrir a conversa',
     '',
-    '- Este era o motivo dos numeros inflados. Quando chegavam mensagens numa conversa que voce ainda nao tinha aberto, o app contava pelo aviso de nao lidas. Ao abrir a conversa depois, ele lia os baloes e contava as MESMAS mensagens outra vez - 5 mensagens viravam 10.',
-    '- Agora a leitura balao a balao vira a verdade daquela conversa naquele dia: o que o aviso de nao lidas tinha estimado antes e descartado, em vez de somar por cima. Abrir a conversa passa a corrigir o numero, nunca dobrar.',
+    '• Este era o motivo dos números inflados. Quando chegavam mensagens numa conversa ainda não aberta, o app contava pelo aviso de não lidas. Ao abrir a conversa depois, lia os balões e contava as mesmas mensagens outra vez. Cinco viravam dez.',
+    '• Agora a leitura balão a balão vira a verdade daquela conversa naquele dia. O que o aviso de não lidas tinha estimado é descartado, em vez de somar por cima.',
     '',
-    'Importante: os dados ja gravados antes desta versao continuam inflados, porque foram contados com o erro. Se quiser recomecar com numeros limpos, use "Limpar dados do Analytics" em Configuracoes.',
+    'Os dados gravados antes desta versão continuam inflados. Para recomeçar com números limpos, use "Limpar dados do Analytics" em Configurações.',
   ].join('\n'),
   '0.35.2': [
-    'Ajustes de seguranca na correcao da contagem',
+    'Ajustes de segurança na correção da contagem',
     '',
-    '- Corrigido: depois de usar "Limpar dados do Analytics", as conversas que voce ja tinha aberto no dia parariam de ser contadas ate o dia seguinte.',
-    '- Corrigido: uma conversa ja aberta uma vez no dia deixaria de contar as mensagens que chegassem nela depois, caso voce nao a abrisse de novo. Agora o aviso de nao lidas segue contando entre uma abertura e outra, e cada nova abertura reescreve o dia pelo que os baloes mostram.',
-    '- Os numeros ja gravados por versoes anteriores nunca sao apagados por esta correcao - podem estar inflados, mas nada de real e destruido.',
+    '• Corrigido: depois de usar "Limpar dados do Analytics", as conversas já abertas no dia parariam de ser contadas até o dia seguinte.',
+    '• Corrigido: uma conversa já aberta uma vez no dia deixaria de contar as mensagens que chegassem depois, caso você não a abrisse de novo. O aviso de não lidas volta a contar entre uma abertura e outra.',
+    '• Os números já gravados nunca são apagados por esta correção. Podem estar inflados, mas nada de real é destruído.',
   ].join('\n'),
   '0.35.3': [
     '"Limpar dados do Analytics" agora zera de verdade',
     '',
-    '- Antes o botao limpava o historico salvo, mas cada instancia aberta continuava lembrando quais mensagens ja tinha reportado - entao a conversa que estivesse aberta na hora so voltava a ser contada depois de trocar de conversa ou recarregar, comecando o acompanhamento com um buraco.',
-    '- Agora limpar zera tambem essa memoria dentro de cada instancia e recomeca a leitura na hora, do zero.',
+    '• Antes o botão limpava o histórico salvo, mas cada instância aberta continuava lembrando quais mensagens já tinha reportado. A conversa aberta na hora só voltava a ser contada depois de trocar de conversa ou recarregar.',
+    '• Agora limpar zera também essa memória dentro de cada instância e recomeça a leitura na hora.',
   ].join('\n'),
   '0.35.4': [
-    'Contagem passa a ler as notificacoes que ja estao na tela',
+    'Contagem passa a ler as notificações que já estão na tela',
     '',
-    '- Antes, ao limpar os dados (ou na primeira vez que o app rodava), as mensagens nao lidas que ja estavam na lista viravam apenas "ponto de partida" e nunca eram contadas - so voltavam a contar se voce abrisse cada conversa manualmente. Na pratica, limpar os dados jogava fora a atividade do dia.',
-    '- Agora o app le o numero de nao lidas de cada conversa junto com o rotulo de dia que o WhatsApp mostra do lado ("hoje"/"ontem") e ja registra aquilo como mensagens daquele dia. Conversa com rotulo mais antigo que ontem nao entra.',
-    '- Ao abrir a conversa, esse numero estimado e apagado e regravado pelo total real dos baloes, como ja era.',
-    '- Reabrir o app nao conta nada de novo: so semeia conversa que ainda nao tinha registro nenhum.',
+    '• Antes, ao limpar os dados ou na primeira vez que o app rodava, as mensagens não lidas já presentes na lista viravam apenas ponto de partida e nunca eram contadas. Na prática, limpar os dados jogava fora a atividade do dia.',
+    '• Agora o app lê o número de não lidas de cada conversa junto com o rótulo de dia que o WhatsApp mostra ao lado, e registra aquilo como mensagens daquele dia. Conversa com rótulo mais antigo que ontem não entra.',
+    '• Ao abrir a conversa, esse número estimado é apagado e regravado pelo total real dos balões.',
+    '• Reabrir o app não conta nada de novo. Só semeia conversa que ainda não tinha registro.',
   ].join('\n'),
   '0.35.5': [
     'Ajustes na tela do Analytics',
     '',
-    '- Corrigido o botao "Comparar com periodo anterior", que vazava para fora da area da pagina e ficava sobreposto na borda direita.',
-    '- A tecla Esc agora fecha o Analytics (voltou junto com a mudanca para pagina inteira).',
+    '• Corrigido o botão "Comparar com período anterior", que vazava para fora da área da página.',
+    '• A tecla Esc volta a fechar o Analytics.',
   ].join('\n'),
   '0.36.0': [
-    'Suas proprias mensagens deixam de ser contadas',
+    'Suas próprias mensagens deixam de ser contadas',
     '',
-    '- O filtro que deveria excluir as mensagens enviadas por voce existia desde o inicio, mas nunca funcionou: ele procurava um formato de identificador que esta versao do WhatsApp Web nao usa. Na pratica, tudo que voce enviava entrava no relatorio como se tivesse sido recebido.',
-    '- Descoberto conferindo os identificadores realmente gravados no seu computador - nenhum deles tinha a marca que o codigo procurava.',
-    '- Agora a separacao usa a marcacao que o proprio WhatsApp coloca na bolha para alinhar mensagem enviada a direita e recebida a esquerda.',
+    '• O filtro que deveria excluir as mensagens enviadas por você existia desde o início, mas nunca funcionou. Ele procurava um formato de identificador que esta versão do WhatsApp Web não usa. Tudo que você enviava entrava no relatório como recebido.',
+    '• Descoberto conferindo os identificadores realmente gravados no seu computador. Nenhum tinha a marca que o código procurava.',
+    '• A separação passa a usar a marcação que o próprio WhatsApp coloca na bolha para alinhar enviada à direita e recebida à esquerda.',
     '',
-    'Importante: os numeros ja gravados incluem suas mensagens e continuam inflados. Use "Limpar dados do Analytics" em Configuracoes para recomecar com a contagem correta.',
+    'Os números já gravados incluem suas mensagens e continuam inflados. Use "Limpar dados do Analytics" para recomeçar.',
   ].join('\n'),
   '0.36.1': [
-    'Conta o dia inteiro, nao so o que coube na tela',
+    'Conta o dia inteiro, não só o que coube na tela',
     '',
-    '- Corrigido o caso da conversa com bastante movimento: ao abrir, o WhatsApp desenha so as mensagens mais recentes, e as demais mensagens de hoje nem chegavam a existir na pagina - por isso nao eram contadas. Agora o app percorre a conversa para tras ate passar de ontem, conta tudo de hoje e ontem, e volta a tela para onde voce estava. Nunca vai alem de ontem.',
-    '- Voce vai ver a conversa se mover por alguns segundos ao abri-la. E esse processo acontecendo.',
-    '- A identificacao de quem enviou ficou mais firme: alem do lado em que a mensagem aparece, agora tambem usa o indicador de entrega (relogio, tique simples, tique duplo), que so existe nas mensagens enviadas por voce.',
+    '• Corrigido o caso da conversa com bastante movimento. Ao abrir, o WhatsApp desenha só as mensagens mais recentes, e as demais mensagens de hoje nem chegavam a existir na página.',
+    '• Agora o app percorre a conversa para trás até passar de ontem, conta tudo de hoje e ontem, e devolve a tela para onde você estava. Nunca vai além de ontem.',
+    '• Você verá a conversa se mover por alguns segundos ao abri-la. É esse processo acontecendo.',
+    '• A identificação de quem enviou ficou mais firme. Além do lado em que a mensagem aparece, agora também usa o indicador de entrega, que só existe nas mensagens enviadas por você.',
   ].join('\n'),
   '0.36.2': [
-    'Corrige nomes encavalados no grafico por instancia',
+    'Corrige nomes encavalados no gráfico por instância',
     '',
-    '- Com varias instancias, os nomes no grafico "Movimento por instancia" ficavam sobrepostos e ilegiveis. Agora o grafico cresce conforme a quantidade de instancias e o card rola por dentro quando nao couber - nenhum nome some nem se sobrepoe.',
+    '• Com várias instâncias, os nomes no gráfico "Movimento por instância" ficavam sobrepostos e ilegíveis. O gráfico agora cresce conforme a quantidade de instâncias, e o card rola por dentro quando não couber.',
   ].join('\n'),
   '0.37.0': [
     'Aviso de mensagem nova com a cara do app',
     '',
-    '- Ate agora o unico aviso era a caixa do Windows, desenhada pelo sistema - o app nao tinha como ajustar tamanho, cantos, icone nem espacamento dela.',
-    '- Novo aviso proprio, no canto inferior direito da janela: compacto, cantos arredondados e mesma identidade visual do resto da interface. Clicar nele abre a instancia; some sozinho em 5 segundos.',
-    '- A caixa do Windows continua aparecendo quando a janela do app esta minimizada ou na bandeja - nessa situacao um aviso dentro da janela nao seria visto.',
-    '- Corrigido tambem o espacamento da chave "Comparar com periodo anterior", no Analytics, que encostava na borda dos cards abaixo.',
+    '• Até agora o único aviso era a caixa do Windows, desenhada pelo sistema. O app não tinha como ajustar tamanho, cantos, ícone nem espaçamento dela.',
+    '• Novo aviso próprio, no canto inferior direito da janela. Compacto, com cantos arredondados e a mesma identidade visual do resto da interface. Clicar nele abre a instância, e ele some sozinho em 5 segundos.',
+    '• A caixa do Windows continua aparecendo quando a janela está minimizada ou na bandeja.',
+    '• Corrigido o espaçamento da chave "Comparar com período anterior", que encostava na borda dos cards abaixo.',
   ].join('\n'),
   '0.38.0': [
-    'Recebidas x Enviadas, e atividade do dia em tabela',
+    'Recebidas e enviadas separadas, atividade do dia em tabela',
     '',
-    '- "Atividade de hoje" e "Atividade de ontem" viraram tabela: Instancia | Interacoes | Recebidas | Enviadas | Total, com linha de TOTAL no rodape.',
-    '- As mensagens enviadas por voce deixaram de ser descartadas e passaram a ser contadas em coluna separada, sem se misturar com as recebidas.',
-    '- "Interacoes" continua contando so quem falou com voce: mandar mensagem para alguem que nao respondeu nao vira interacao.',
-    '- O grafico "Movimento por instancia" virou barra empilhada, mostrando quanto de cada instancia foi recebido e quanto foi enviado.',
-    '- O card "Volume total" agora mostra a divisao logo abaixo do numero.',
+    '• "Atividade de hoje" e "Atividade de ontem" viraram tabela: Instância, Interações, Recebidas, Enviadas e Total, com linha de total no rodapé.',
+    '• As mensagens enviadas por você deixaram de ser descartadas e passaram a ser contadas em coluna separada.',
+    '• "Interações" continua contando só quem falou com você. Mandar mensagem para alguém que não respondeu não vira interação.',
+    '• O gráfico "Movimento por instância" virou barra empilhada, mostrando quanto de cada instância foi recebido e quanto foi enviado.',
+    '• O card "Volume total" mostra a divisão logo abaixo do número.',
     '',
-    'Limite importante da coluna "Enviadas": so e possivel ler o que foi enviado numa conversa ABERTA. Em conversa que voce nao abriu, o WhatsApp nao mostra nada sobre envios, entao a coluna fica em 0 - o que significa "nao foi possivel capturar", nao necessariamente "nao houve envio".',
+    'Limite da coluna "Enviadas": só é possível ler o que foi enviado numa conversa aberta. Em conversa fechada o WhatsApp não mostra nada sobre envios, então a coluna fica em 0. Isso significa "não foi possível capturar", não necessariamente "não houve envio".',
     '',
-    'Os numeros ja gravados nao tem essa separacao e aparecem todos como recebidos. Para o relatorio ficar coerente, use "Limpar dados do Analytics" em Configuracoes.',
+    'Os números já gravados não têm essa separação e aparecem todos como recebidos. Para o relatório ficar coerente, use "Limpar dados do Analytics".',
+  ].join('\n'),
+  '0.38.1': [
+    'Acertos visuais na interface',
+    '',
+    '• A chave "Comparar com período anterior" passava da borda direita dos cards. Agora termina alinhada com eles.',
+    '• Filtros da barra lateral em uma única linha. Ao estreitar a barra eles quebravam e cortavam a linha de cima. Se não couberem, a faixa desliza na horizontal.',
+    '• O filtro "Com erro" virou "Erro", para ocupar menos espaço.',
+    '• Barra de rolagem mais fina e discreta em todas as listas, com folga para não encostar nos campos da direita.',
+    '• Respiro maior no rodapé das abas de Configurações e da tela de contas. Os botões colavam na borda de baixo.',
+    '• Cards do Diagnóstico com número em destaque e rótulo menor em cinza.',
+    '• Aba selecionada em Configurações com mais contraste, mais fácil de identificar de relance.',
+    '• Tela "Sobre" com texto mais curto e mais espaço entre as linhas.',
+    '• Notas de versão reescritas: frases mais diretas, acentuação corrigida e marcadores padronizados.',
   ].join('\n'),
 };
 
@@ -209,9 +236,9 @@ export interface WhatsNewResult {
   notes: string | null;
   /**
    * `true` quando a versão atual é diferente da última versão que o
-   * usuário já viu (`lastSeenVersion` persistida) — inclui tanto "acabou
-   * de atualizar" quanto "primeira vez que abre o app" (nesse caso
-   * `lastSeenVersion` chega como string vazia).
+   * usuário já viu (`lastSeenVersion` persistida). Inclui tanto "acabou
+   * de atualizar" quanto "primeira vez que abre o app", caso em que
+   * `lastSeenVersion` chega como string vazia.
    */
   shouldShow: boolean;
 }
@@ -225,8 +252,8 @@ export interface WhatsNewResult {
 export function resolveWhatsNew(currentVersion: string, lastSeenVersion: string): WhatsNewResult {
   const notes = RELEASE_NOTES[currentVersion] ?? null;
   const isNewVersion = currentVersion !== lastSeenVersion;
-  // Só mostra o modal se: é uma versão diferente da última vista E existe
-  // texto cadastrado para ela. Uma versão sem notas (ex.: só correção
-  // interna) não interrompe o usuário com um modal vazio.
+  // Só mostra o modal se a versão é diferente da última vista E existe texto
+  // cadastrado para ela. Uma versão sem notas, como uma correção interna,
+  // não interrompe o usuário com um modal vazio.
   return { version: currentVersion, notes, shouldShow: isNewVersion && notes !== null };
 }

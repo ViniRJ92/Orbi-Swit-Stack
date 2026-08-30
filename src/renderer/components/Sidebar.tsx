@@ -462,7 +462,9 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
                     key={f.key}
                     onClick={() => setFilter(f.key)}
                     className={
-                      'rounded-full px-1.5 py-0.5 text-[10px] transition-colors ' +
+                      // Fase 41: `whitespace-nowrap` para o rótulo nunca
+                      // quebrar dentro do próprio botão nesta barra baixa.
+                      'shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] transition-colors ' +
                       (filter === f.key ? 'bg-accent/15 text-accent' : 'text-text-dim hover:bg-surface-hover')
                     }
                   >
@@ -568,13 +570,22 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             className="w-full rounded-lg border border-border bg-input py-1.5 pl-7 pr-2 text-xs text-text placeholder:text-text-faint focus:border-accent"
           />
         </div>
-        <div className="mt-2 flex flex-wrap gap-1">
+        {/*
+          Fase 41: os filtros ficavam em `flex-wrap` e, ao estreitar a barra
+          lateral, quebravam para uma segunda linha — a de cima aparecia
+          cortada. Agora ficam sempre numa única linha (`flex-nowrap`) e, se
+          não couberem, a faixa desliza na horizontal. A barra de rolagem fica
+          escondida (`mw-scroll-hidden`) para não roubar altura nem poluir uma
+          faixa tão fina. `shrink-0` em cada botão faz a faixa deslizar em vez
+          de espremer o texto.
+        */}
+        <div className="mw-scroll-hidden mt-2 flex flex-nowrap gap-1 overflow-x-auto">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={
-                'rounded-full px-2.5 py-1 text-[11px] transition-colors ' +
+                'shrink-0 rounded-full px-2 py-1 text-[11px] transition-colors ' +
                 (filter === f.key ? 'bg-accent/15 text-accent' : 'text-text-dim hover:bg-surface-hover')
               }
             >

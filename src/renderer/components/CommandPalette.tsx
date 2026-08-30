@@ -95,7 +95,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[10px] text-text-faint">Esc</kbd>
             </div>
 
-            <div className="max-h-[320px] overflow-y-auto p-1.5">
+            <div className="mw-scroll max-h-[320px] overflow-y-auto p-1.5 pr-2.5">
               {results.length === 0 ? (
                 <div className="px-3 py-6 text-center text-xs text-text-faint">{hint}</div>
               ) : (

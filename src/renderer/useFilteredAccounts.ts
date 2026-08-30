@@ -12,7 +12,10 @@ export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'Todas' },
   { key: 'online', label: 'Conectadas' },
   { key: 'suspended', label: 'Suspensas' },
-  { key: 'error', label: 'Com erro' },
+  // Fase 41: era "Com erro". Encurtado para caber na barra lateral estreita —
+  // com o texto longo os filtros quebravam para uma segunda linha, e a linha
+  // de cima ("Todas") aparecia cortada.
+  { key: 'error', label: 'Erro' },
 ];
 
 export function matchesFilter(filter: FilterKey, status: AccountStatus | undefined): boolean {

@@ -86,7 +86,10 @@ export function Modal({
                 <X size={16} />
               </button>
             </div>
-            <div className={contentClassName ?? 'overflow-y-auto px-5 py-5'}>{children}</div>
+            {/* Fase 41: padrão de todos os modais — rolagem discreta, folga à
+                direita para a barra não encostar no conteúdo, e respiro no
+                rodapé para os botões não colarem na borda de baixo. */}
+            <div className={contentClassName ?? 'mw-scroll overflow-y-auto py-5 pb-6 pl-5 pr-3'}>{children}</div>
           </motion.div>
         </motion.div>
       )}

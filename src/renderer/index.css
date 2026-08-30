@@ -98,6 +98,44 @@ body,
   background: transparent;
 }
 
+/* Fase 41 — barra de rolagem discreta para listas densas (Configurações,
+   tabelas de instâncias). Mais fina que a padrão, sempre arredondada, e com
+   uma margem interna própria para o polegar não encostar na borda da caixa
+   nem nos campos da direita. Escurece só no hover, para não competir com o
+   conteúdo. */
+.mw-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-border-strong) 70%, transparent) transparent;
+}
+.mw-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.mw-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-border-strong) 60%, transparent);
+  border-radius: 999px;
+}
+.mw-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+.mw-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+/* Fase 41 — rolagem funcional, barra invisível. Usado na faixa de filtros da
+   barra lateral: quando a barra fica estreita os filtros deslizam na
+   horizontal, mas uma barra de rolagem ali roubaria altura de uma faixa que
+   já é fina e ficaria visualmente pesada. */
+.mw-scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mw-scroll-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-accent) 35%, transparent);
 }

@@ -464,8 +464,21 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
         mesma largura dos cards abaixo e nunca encoste neles — o switch de
         comparação, por ficar no extremo direito, era o primeiro a aparentar
         invadir a borda do card de baixo.
+
+        Fase 41: `flex-wrap` + `ml-auto` não resolveram — o switch continuava
+        terminando alguns pixels além da borda direita dos cards. Motivo: num
+        flex com quebra, `ml-auto` alinha pela linha do flex, que pode ficar
+        mais larga que o container quando um item tem largura fixa e não pode
+        encolher. Trocado por GRADE de três colunas
+        (conteúdo | espaço elástico | conteúdo): a coluna da direita termina
+        exatamente na borda do container, a mesma dos cards, sem depender de
+        como os itens se acomodam.
       */}
-      <div className="flex w-full shrink-0 flex-wrap items-center gap-3 pb-1">
+      <div className="grid w-full shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pb-1">
+        {/* Coluna 1: seletor de período + intervalo customizado. `min-w-0`
+            permite que ela encolha, para a coluna da direita nunca ser
+            empurrada além da borda. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 rounded-lg bg-input p-1">
           {PERIODS.map((p) => (
             <button
@@ -511,16 +524,14 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
             />
           </div>
         )}
+        </div>
 
         {/*
-          `shrink-0`: sem isto o flex encolhia este bloco abaixo da largura do
-          próprio conteúdo (itens de flex encolhem por padrão), e o botão do
-          switch — que tem largura fixa — vazava para fora da área da página,
-          sobrepondo a borda direita. Com `shrink-0` ele mantém o tamanho e,
-          quando não cabe, o `flex-wrap` do pai joga a linha inteira para
-          baixo, que é o comportamento certo.
+          Coluna 2: termina exatamente na borda direita do container — a
+          mesma dos cards abaixo. `justify-self-end` alinha pela grade, não
+          por espaço sobrando de flex, que era o que fazia o switch escapar.
         */}
-        <label className="ml-auto flex shrink-0 items-center gap-2 text-[12px] font-medium text-text-dim">
+        <label className="flex shrink-0 items-center justify-self-end gap-2 text-[12px] font-medium text-text-dim">
           Comparar com período anterior
           <button
             role="switch"
