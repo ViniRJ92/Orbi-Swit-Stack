@@ -20,21 +20,28 @@ const COLOR_CHOICES = ['#25D366', '#128C7E', '#34B7F1', '#F1A208', '#9B59B6', '#
 // Fase 23: serviços de IA adicionados a pedido do usuário (mesmo padrão
 // visual — ver o comentário no topo de ServiceIcon.tsx sobre os 3 que não
 // tinham traçado oficial disponível).
+// Fase 31.1 (2026-08-30): Gmail, Google Calendar, Google Earth e Gemini
+// saíram desta lista. Motivo: todos exigem entrar com uma conta Google, e o
+// Google recusa esse login dentro de navegadores embutidos (é a tela "esse
+// navegador ou app pode não ser seguro") — sem opção de continuar mesmo
+// assim, por ser uma proteção deliberada contra captura de senha. Oferecer
+// esses serviços aqui só criava instância que nunca ia conseguir logar.
+// "Pesquisa Google" (`chrome`) CONTINUA na lista: buscar no Google não exige
+// login nenhum e funciona normalmente.
+// As definições desses serviços seguem existindo em services.ts/types.ts de
+// propósito — assim qualquer instância que o usuário já tenha criado antes
+// continua abrindo normalmente em vez de virar outra coisa.
 const SERVICE_GRID: AccountService[] = [
   'whatsapp',
   'instagram',
-  'gmail',
   'tiktok',
   'facebook',
   'messenger',
-  'googlecalendar',
-  'earth',
   'chrome',
   'custom',
   'threads',
   'x',
   'openai',
-  'gemini',
   'deepseek',
   'copilot',
   'perplexity',

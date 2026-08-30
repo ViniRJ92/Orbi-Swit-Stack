@@ -105,6 +105,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Limitacao conhecida (nao e falha do app): o Google bloqueia login de conta Google dentro de navegadores embutidos como este - por isso Gmail, Google Calendar, Google Earth e "Continuar com Google" mostram "esse navegador ou app pode nao ser seguro". Nos servicos que oferecem outras formas de entrar (e-mail/telefone, Facebook, Apple), essas funcionam.',
   ].join('\n'),
+  '0.34.1': [
+    'Servicos do Google que exigem login sairam da lista',
+    '',
+    '- Gmail, Google Calendar, Google Earth e Gemini nao aparecem mais ao adicionar uma conta: todos exigem entrar com conta Google, e o Google recusa esse login dentro de aplicativos como este (sem opcao de continuar mesmo assim). Criar essas instancias so gerava uma aba que nunca ia conseguir logar.',
+    '- "Pesquisa Google" continua na lista e funciona normalmente - buscar no Google nao exige login.',
+    '- Instancias desses servicos que voce ja tenha criado continuam abrindo como antes; nada foi apagado.',
+    '- Nos servicos que nao sao WhatsApp, o status agora diz "Aberto" em vez de "Conectado". Fora do WhatsApp o app so sabe que a pagina carregou, nao se voce esta logado - dizer "Conectado" aparecia ate quando o login tinha falhado.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
