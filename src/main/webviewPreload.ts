@@ -189,8 +189,31 @@ function classifyByOwnDate(node: Element): 'today' | 'yesterday' | 'other' | nul
  * corrigível olhando o relatório; parar de contar passa despercebido.
  */
 function isOutgoing(node: Element, dataId: string): boolean {
-  if (/^true[_-]/i.test(dataId)) return true; // formato antigo, mantido por segurança
-  return !!node.closest('.message-out, [data-is-outgoing="true"]');
+  // Sinal 1 — formato antigo do identificador (`true_...`). Mantido porque não
+  // custa nada, embora não apareça mais nas versões atuais.
+  if (/^true[_-]/i.test(dataId)) return true;
+
+  // Sinal 2 — a classe de alinhamento da bolha. Mensagem enviada vai para a
+  // direita (`message-out`), recebida para a esquerda (`message-in`).
+  const row = node.closest('.message-out, .message-in, [data-is-outgoing]');
+  if (row) {
+    if (row.classList.contains('message-out')) return true;
+    if (row.classList.contains('message-in')) return false;
+    if (row.getAttribute('data-is-outgoing') === 'true') return true;
+    if (row.getAttribute('data-is-outgoing') === 'false') return false;
+  }
+
+  // Sinal 3 (reserva) — só a SUA mensagem tem indicador de entrega: o
+  // relógio de "enviando", o tique simples de entregue e o tique duplo de
+  // lido. Mensagem recebida nunca mostra nenhum dos três. Serve de rede
+  // caso a classe de alinhamento do sinal 2 mude de nome numa atualização
+  // do WhatsApp Web.
+  const container = node.closest('[data-id]') || node;
+  if (container.querySelector('[data-icon="msg-check"], [data-icon="msg-dblcheck"], [data-icon="msg-time"]')) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -234,6 +257,77 @@ function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | '
 function reportChatMessages(items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
   if (items.length === 0) return;
   ipcRenderer.send('mw:chat-messages', { items });
+}
+
+/**
+ * Fase 37 (2026-08-30) — CARREGAR HOJE E ONTEM POR INTEIRO.
+ *
+ * Buraco real que isto fecha: ao abrir uma conversa, o WhatsApp Web só
+ * desenha as mensagens mais recentes (lista virtualizada). Numa conversa com
+ * bastante movimento, boa parte das mensagens DE HOJE simplesmente não está
+ * na página — não tem identificador, não tem nada — e por isso nunca era
+ * contada. Era o caso do Jorge Pereira: mensagens de hoje visíveis na
+ * conversa, e o relatório sem elas.
+ *
+ * Como resolve: rola o painel para cima em passos, o que faz o WhatsApp
+ * carregar mais mensagens, e PARA assim que encontrar a primeira mensagem
+ * mais antiga que ontem. Nunca carrega o histórico inteiro — o alvo é
+ * exatamente a janela pedida (hoje e ontem), nada além.
+ *
+ * A posição da tela é devolvida ao ponto onde estava, medindo a distância
+ * até o fim da conversa (que não muda quando mensagens antigas entram por
+ * cima). Ainda assim o movimento é perceptível enquanto acontece.
+ *
+ * Roda uma vez por conversa aberta, não a cada varredura.
+ */
+const HISTORY_MAX_STEPS = 15;
+const HISTORY_STEP_MS = 350;
+let historyLoadRunning = false;
+
+function findScroller(panel: Element): HTMLElement | null {
+  const candidates = [panel, ...Array.from(panel.querySelectorAll('div'))] as HTMLElement[];
+  for (const el of candidates) {
+    if (el.scrollHeight > el.clientHeight + 40) {
+      const style = getComputedStyle(el);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') return el;
+    }
+  }
+  return null;
+}
+
+/** Já existe na página alguma mensagem mais antiga que ontem? Então hoje e ontem estão completos. */
+function hasLoadedBeyondYesterday(panel: Element): boolean {
+  const nodes = panel.querySelectorAll('[data-id]');
+  for (const node of Array.from(nodes)) {
+    if (classifyByOwnDate(node) === 'other') return true;
+  }
+  return false;
+}
+
+async function loadTodayAndYesterday(panel: Element, onProgress: () => void): Promise<void> {
+  if (historyLoadRunning) return;
+  const scroller = findScroller(panel);
+  if (!scroller) return;
+
+  historyLoadRunning = true;
+  // Distância até o fim: referência estável mesmo quando entram mensagens
+  // antigas no topo (que empurram tudo para baixo).
+  const distanceFromBottom = scroller.scrollHeight - scroller.scrollTop;
+
+  try {
+    for (let step = 0; step < HISTORY_MAX_STEPS; step++) {
+      if (hasLoadedBeyondYesterday(panel)) break;
+      const heightBefore = scroller.scrollHeight;
+      scroller.scrollTop = 0;
+      await new Promise((resolve) => setTimeout(resolve, HISTORY_STEP_MS));
+      onProgress(); // conta o que acabou de entrar, sem esperar terminar tudo
+      // Nada novo carregou: chegou no começo da conversa.
+      if (scroller.scrollHeight === heightBefore) break;
+    }
+  } finally {
+    scroller.scrollTop = Math.max(0, scroller.scrollHeight - distanceFromBottom);
+    historyLoadRunning = false;
+  }
 }
 
 /**
@@ -314,6 +408,9 @@ function attachMessageObserver(panel: Element): void {
   scan(); // varredura imediata: cobre o que já estiver carregado agora mesmo
   chatMessageObserver = new MutationObserver(scanDebounced);
   chatMessageObserver.observe(panel, { childList: true, subtree: true });
+  // Fase 37: em seguida completa hoje e ontem, carregando o que o WhatsApp
+  // não desenhou de início. Vai contando a cada passo, não só no fim.
+  void loadTodayAndYesterday(panel, scan);
 }
 
 /**

@@ -167,6 +167,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Importante: os numeros ja gravados incluem suas mensagens e continuam inflados. Use "Limpar dados do Analytics" em Configuracoes para recomecar com a contagem correta.',
   ].join('\n'),
+  '0.36.1': [
+    'Conta o dia inteiro, nao so o que coube na tela',
+    '',
+    '- Corrigido o caso da conversa com bastante movimento: ao abrir, o WhatsApp desenha so as mensagens mais recentes, e as demais mensagens de hoje nem chegavam a existir na pagina - por isso nao eram contadas. Agora o app percorre a conversa para tras ate passar de ontem, conta tudo de hoje e ontem, e volta a tela para onde voce estava. Nunca vai alem de ontem.',
+    '- Voce vai ver a conversa se mover por alguns segundos ao abri-la. E esse processo acontecendo.',
+    '- A identificacao de quem enviou ficou mais firme: alem do lado em que a mensagem aparece, agora tambem usa o indicador de entrega (relogio, tique simples, tique duplo), que so existe nas mensagens enviadas por voce.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
