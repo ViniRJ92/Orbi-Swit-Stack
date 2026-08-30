@@ -152,6 +152,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Ao abrir a conversa, esse numero estimado e apagado e regravado pelo total real dos baloes, como ja era.',
     '- Reabrir o app nao conta nada de novo: so semeia conversa que ainda nao tinha registro nenhum.',
   ].join('\n'),
+  '0.35.5': [
+    'Ajustes na tela do Analytics',
+    '',
+    '- Corrigido o botao "Comparar com periodo anterior", que vazava para fora da area da pagina e ficava sobreposto na borda direita.',
+    '- A tecla Esc agora fecha o Analytics (voltou junto com a mudanca para pagina inteira).',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

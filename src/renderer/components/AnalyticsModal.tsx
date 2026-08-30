@@ -284,6 +284,19 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
     };
   }, [open]);
 
+  // Fase 34.1 — Esc fecha o Analytics. Enquanto era um modal, isso vinha
+  // pronto do componente Modal; virando página, precisou ser reimplementado
+  // aqui. A WebContentsView da instância fica escondida enquanto esta página
+  // está aberta, então o foco de teclado é desta janela e o listener pega.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
   // Alertas em tempo real: detecta transições de status (não faz nenhuma
   // leitura nova — usa exatamente os mesmos campos de AccountStatus que já
   // chegam via onAccountsChanged) e gera um banner dispensável por evento.
@@ -432,14 +445,22 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
         )}
 
-        <label className="ml-auto flex items-center gap-2 text-[12px] font-medium text-text-dim">
+        {/*
+          `shrink-0`: sem isto o flex encolhia este bloco abaixo da largura do
+          próprio conteúdo (itens de flex encolhem por padrão), e o botão do
+          switch — que tem largura fixa — vazava para fora da área da página,
+          sobrepondo a borda direita. Com `shrink-0` ele mantém o tamanho e,
+          quando não cabe, o `flex-wrap` do pai joga a linha inteira para
+          baixo, que é o comportamento certo.
+        */}
+        <label className="ml-auto flex shrink-0 items-center gap-2 text-[12px] font-medium text-text-dim">
           Comparar com período anterior
           <button
             role="switch"
             aria-checked={compare}
             onClick={() => setCompare((v) => !v)}
             className={
-              'relative h-5 w-9 rounded-full transition-colors ' + (compare ? 'accent-gradient' : 'bg-input')
+              'relative h-5 w-9 shrink-0 rounded-full transition-colors ' + (compare ? 'accent-gradient' : 'bg-input')
             }
           >
             <span
