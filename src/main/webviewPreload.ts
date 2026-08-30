@@ -166,6 +166,34 @@ function classifyByOwnDate(node: Element): 'today' | 'yesterday' | 'other' | nul
 }
 
 /**
+ * Fase 35 (2026-08-30) — a mensagem foi ENVIADA PELO USUÁRIO? Essas nunca
+ * entram na contagem (o relatório é de movimento recebido).
+ *
+ * Bug real encontrado em dados de produção: o único teste que existia era o
+ * prefixo `true_` do `data-id`, herdado do formato antigo
+ * (`{true|false}_{chat}_{msg}`). Inspecionando o arquivo salvo do usuário,
+ * os `data-id` reais estavam vindo como identificador puro
+ * (ex.: `3EB09E166A5D3D7D43DE6E`), SEM prefixo nenhum — então o teste nunca
+ * dava positivo e todas as mensagens enviadas pelo próprio usuário estavam
+ * sendo contadas como recebidas, inflando o relatório. O filtro existia
+ * desde o início (pedido explícito do usuário), mas só no papel: nunca
+ * chegou a excluir nada de verdade.
+ *
+ * Correção: usar a classe que o próprio WhatsApp Web coloca na bolha para
+ * alinhá-la à direita (`message-out`) ou à esquerda (`message-in`) — é
+ * marcação de interface visível, não conteúdo de mensagem.
+ *
+ * Direção segura de falha: só EXCLUI quando identifica positivamente que é
+ * enviada. Se um dia essa marcação sumir, volta a contar tudo (o
+ * comportamento de antes) em vez de parar de contar — errar para mais é
+ * corrigível olhando o relatório; parar de contar passa despercebido.
+ */
+function isOutgoing(node: Element, dataId: string): boolean {
+  if (/^true[_-]/i.test(dataId)) return true; // formato antigo, mantido por segurança
+  return !!node.closest('.message-out, [data-is-outgoing="true"]');
+}
+
+/**
  * Caminha TODA a conversa visível agora, em ordem. Prioridade de
  * classificação por bolha: (1) a data própria dela (`data-pre-plain-text`,
  * ver `classifyByOwnDate`), confiável mesmo com virtualização; (2) se essa
@@ -183,7 +211,7 @@ function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | '
     if (node.hasAttribute && node.hasAttribute('data-id')) {
       const dataId = node.getAttribute('data-id') || '';
       if (!dataId || seenMessageIds.has(dataId)) continue;
-      const isSelfSent = /^true[_-]/i.test(dataId);
+      const isSelfSent = isOutgoing(node, dataId);
       const effectiveBucket = isSelfSent ? 'other' : classifyByOwnDate(node) ?? bucket;
       if (isSelfSent) {
         seenMessageIds.add(dataId); // enviada por mim: nunca conta, mas marca vista pra não reprocessar sempre

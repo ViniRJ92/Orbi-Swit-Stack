@@ -158,6 +158,15 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Corrigido o botao "Comparar com periodo anterior", que vazava para fora da area da pagina e ficava sobreposto na borda direita.',
     '- A tecla Esc agora fecha o Analytics (voltou junto com a mudanca para pagina inteira).',
   ].join('\n'),
+  '0.36.0': [
+    'Suas proprias mensagens deixam de ser contadas',
+    '',
+    '- O filtro que deveria excluir as mensagens enviadas por voce existia desde o inicio, mas nunca funcionou: ele procurava um formato de identificador que esta versao do WhatsApp Web nao usa. Na pratica, tudo que voce enviava entrava no relatorio como se tivesse sido recebido.',
+    '- Descoberto conferindo os identificadores realmente gravados no seu computador - nenhum deles tinha a marca que o codigo procurava.',
+    '- Agora a separacao usa a marcacao que o proprio WhatsApp coloca na bolha para alinhar mensagem enviada a direita e recebida a esquerda.',
+    '',
+    'Importante: os numeros ja gravados incluem suas mensagens e continuam inflados. Use "Limpar dados do Analytics" em Configuracoes para recomecar com a contagem correta.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
