@@ -178,10 +178,6 @@ function compositeKey(accountId: string, chatKey: string): string {
   return `${accountId}${SEPARATOR}${chatKey}`;
 }
 
-/** Fase 33 — chave de "esta conversa, neste dia, já foi lida balão a balão". */
-function liveCoverKey(accountId: string, chatKey: string, day: string): string {
-  return `${accountId}${SEPARATOR}${chatKey}${SEPARATOR}${day}`;
-}
 
 export class ChatActivityStore {
   private filePath: string;
@@ -192,19 +188,10 @@ export class ChatActivityStore {
   // agora mesmo. Enquanto uma (conta, conversa) está aqui, `observe()`
   // (lista lateral) ignora especificamente essa conversa.
   private readonly openChats: Map<string, string> = new Map();
-  // Fase 33 — "conta+conversa+dia" que já foi lida balão a balão. A partir do
-  // momento em que entra aqui, o canal de badge (estimativa pela lista
-  // lateral) para de gravar para essa combinação, e o que ele já tinha
-  // gravado foi descartado. Reconstruído no boot a partir dos próprios
-  // eventos marcados como 'l', para a regra sobreviver a reiniciar o app.
-  private readonly liveCoveredDays: Set<string> = new Set();
 
   constructor() {
     this.filePath = path.join(app.getPath('userData'), STORE_FILE);
     this.data = this.load();
-    for (const e of this.data.events) {
-      if (e.s === 'l') this.liveCoveredDays.add(liveCoverKey(e.a, e.k, e.day));
-    }
     if (this.prune()) this.persist();
   }
 
@@ -312,13 +299,10 @@ export class ChatActivityStore {
       }
       const delta = value - previous;
       if (delta > 0) {
-        const day = resolveDay(dateTag);
-        // Fase 33: só grava pelo badge se a leitura por balão ainda não
-        // cobriu esta conversa neste dia. Se já cobriu, o balão é a verdade e
-        // somar o badge por cima seria contar a mesma mensagem duas vezes.
-        if (!this.liveCoveredDays.has(liveCoverKey(accountId, chatKey, day))) {
-          this.data.events.push({ t: Date.now(), day, a: accountId, k: chatKey, c: delta, s: 'b' });
-        }
+        // Fase 33: marcado como 'b' (estimativa por badge). Se a conversa for
+        // aberta depois, `recordChatMessages` descarta estes eventos e
+        // reescreve o dia pelo que os balões mostram.
+        this.data.events.push({ t: Date.now(), day: resolveDay(dateTag), a: accountId, k: chatKey, c: delta, s: 'b' });
       }
     }
 
@@ -368,38 +352,57 @@ export class ChatActivityStore {
   recordChatMessages(accountId: string, chatKey: string, items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
     if (items.length === 0) return;
 
-    // Fase 33 — a leitura por balão passa a ser a VERDADE desta conversa
-    // nestes dias. Tudo que o canal de badge (lista lateral) tinha estimado
-    // para a mesma conversa/dia é descartado agora, em vez de somar por cima:
-    // eram as mesmas mensagens contadas de novo. A partir daqui, o badge
-    // também para de gravar para esta conversa/dia (ver `commitObservation`).
-    const daysTouched = new Set(items.map((i) => (i.bucket === 'yesterday' ? yesterdayKey() : todayKey())));
-    let purgedAny = false;
-    for (const day of daysTouched) {
-      const coverKey = liveCoverKey(accountId, chatKey, day);
-      if (this.liveCoveredDays.has(coverKey)) continue;
-      this.liveCoveredDays.add(coverKey);
-      const before = this.data.events.length;
-      this.data.events = this.data.events.filter(
-        (e) => !(e.a === accountId && e.k === chatKey && e.day === day && e.s !== 'l')
-      );
-      if (this.data.events.length !== before) purgedAny = true;
-    }
-
-    let addedAny = false;
     const now = Date.now();
+    const purgedDays = new Set<string>();
+    let addedAny = false;
+    let purgedAny = false;
+
     for (const item of items) {
       const processed = this.data.processedLiveMessageIds[accountId] ?? [];
+      // Já contabilizada por balão antes (dedup permanente, entre reinícios
+      // do app): nunca conta de novo, aconteça o que acontecer.
       if (processed.includes(item.dataId)) continue;
+      const day = item.bucket === 'yesterday' ? yesterdayKey() : todayKey();
+
+      // Fase 33 — primeira mensagem INÉDITA deste dia nesta varredura: é a
+      // prova de que o badge (estimativa pela lista lateral) pode ter contado
+      // estas mesmas mensagens antes de a conversa ser aberta. A leitura por
+      // balão é a verdade, então o que o badge estimou para esta
+      // conversa+dia é descartado agora, em vez de somar por cima — era daqui
+      // que vinha a dupla contagem (5 mensagens viravam 10).
+      //
+      // Por que só quando há mensagem inédita, e por que sem estado
+      // persistente de "já coberto": entre uma abertura e outra da conversa,
+      // o badge volta a ser a única fonte possível (o WhatsApp Web só
+      // renderiza balões da conversa aberta). Bloquear o badge de vez faria
+      // o app PERDER mensagens que chegassem depois numa conversa que o
+      // usuário não reabrisse. Deste jeito o badge segue contando entre as
+      // aberturas, e cada nova abertura reescreve o dia pelo que os balões
+      // mostram — converge para o número certo sem nunca inflar.
+      if (!purgedDays.has(day)) {
+        purgedDays.add(day);
+        const before = this.data.events.length;
+        // Só descarta o que está EXPLICITAMENTE marcado como estimativa de
+        // badge ('b'). Eventos gravados por versões anteriores a esta não têm
+        // a marca de origem e por isso nunca são apagados: entre eles há
+        // contagens reais por balão (Fases 30–32), e apagá-las seria perder
+        // número verdadeiro — o histórico antigo pode ficar inflado, mas
+        // nunca é destruído por esta correção.
+        this.data.events = this.data.events.filter(
+          (e) => !(e.a === accountId && e.k === chatKey && e.day === day && e.s === 'b')
+        );
+        if (this.data.events.length !== before) purgedAny = true;
+      }
+
       processed.push(item.dataId);
       this.data.processedLiveMessageIds[accountId] =
         processed.length > MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT
           ? processed.slice(processed.length - MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT)
           : processed;
-      const day = item.bucket === 'yesterday' ? yesterdayKey() : todayKey();
       this.data.events.push({ t: now, day, a: accountId, k: chatKey, c: 1, s: 'l' });
       addedAny = true;
     }
+
     if (!addedAny && !purgedAny) return;
     this.prune();
     this.persist();

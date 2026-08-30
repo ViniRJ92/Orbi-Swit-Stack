@@ -131,6 +131,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Importante: os dados ja gravados antes desta versao continuam inflados, porque foram contados com o erro. Se quiser recomecar com numeros limpos, use "Limpar dados do Analytics" em Configuracoes.',
   ].join('\n'),
+  '0.35.2': [
+    'Ajustes de seguranca na correcao da contagem',
+    '',
+    '- Corrigido: depois de usar "Limpar dados do Analytics", as conversas que voce ja tinha aberto no dia parariam de ser contadas ate o dia seguinte.',
+    '- Corrigido: uma conversa ja aberta uma vez no dia deixaria de contar as mensagens que chegassem nela depois, caso voce nao a abrisse de novo. Agora o aviso de nao lidas segue contando entre uma abertura e outra, e cada nova abertura reescreve o dia pelo que os baloes mostram.',
+    '- Os numeros ja gravados por versoes anteriores nunca sao apagados por esta correcao - podem estar inflados, mas nada de real e destruido.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
