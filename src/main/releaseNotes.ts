@@ -252,6 +252,16 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• A bolinha da chave escapava para fora da cápsula. As tentativas anteriores mexeram na posição do bloco na linha, não na chave em si, por isso o defeito continuava.',
     '• A chave foi refeita sem posicionamento absoluto: a bolinha agora anda dentro da área interna e encosta na borda sem ultrapassar.',
   ].join('\n'),
+  '0.39.2': [
+    'Gráficos com mais espaço',
+    '',
+    '• Os cards "Movimento por instância" e "Horários de pico" ganharam altura mínima. Ao diminuir a janela eles eram achatados e as barras ficavam cortadas.',
+    '• Mais espaço à esquerda no gráfico de instâncias, para caber o nome completo sem cortar.',
+    '• Mais espaço entre as barras, e a legenda deixou de ficar colada na primeira delas.',
+    '• Em "Horários de pico", a escala vai um pouco acima do maior valor. O pico ficava colado na borda de cima do card.',
+    '',
+    'Nada foi alterado na contagem nem na soma das mensagens.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

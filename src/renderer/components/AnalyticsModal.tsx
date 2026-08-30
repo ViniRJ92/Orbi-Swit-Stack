@@ -134,9 +134,15 @@ function KpiCard({
   );
 }
 
+/**
+ * Fase 45 — altura mínima de 350px. Antes o card herdava a altura que
+ * sobrasse na página; ao diminuir a janela ele era espremido e as barras e
+ * rótulos apareciam cortados. Agora ele nunca encolhe abaixo desse piso, e a
+ * própria página rola quando não couber.
+ */
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-surface p-5">
+    <div className="flex min-h-[350px] flex-1 flex-col rounded-xl border border-border bg-surface p-5">
       <p className="mb-3 shrink-0 text-[12.5px] font-semibold text-text-dim">{title}</p>
       <div className="min-h-0 flex-1">{children}</div>
     </div>
@@ -705,7 +711,13 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
         <DailyActivityCard title="Atividade de ontem" report={chatDaily?.yesterday} />
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-4">
+      {/*
+        Fase 45: `shrink-0` no lugar de `min-h-0 flex-1`. Antes esta linha
+        dividia o que sobrasse de altura com o resto da página, e ao diminuir
+        a janela os dois cards eram achatados. Agora eles mantêm a altura
+        própria e é a página que rola.
+      */}
+      <div className="flex shrink-0 gap-4">
         <ChartCard title="Movimento por instância">
           {barData.length === 0 ? (
             <EmptyChartState loading={loading} />
@@ -719,16 +731,20 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
               dentro quando não couber. Assim nenhum nome some nem se
               sobrepõe, seja com 2 instâncias ou com 30.
             */
-            <div className="h-full overflow-y-auto">
-              <div style={{ height: Math.max(barData.length * 34 + 28, 170) }}>
+            <div className="mw-scroll h-full overflow-y-auto pr-1">
+              {/* Fase 45: 38px por barra (era 34) e piso maior, para as barras
+                  respirarem e o rótulo nunca encostar na de baixo. */}
+              <div style={{ height: Math.max(barData.length * 38 + 40, 260) }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 12, top: 4, bottom: 4 }}>
+              <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
                 <CartesianGrid horizontal={false} stroke="var(--color-border)" />
                 <XAxis type="number" tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={110}
+                  // Fase 45: 150px (era 110) para caber o nome completo da
+                  // instância sem cortar em "...".
+                  width={150}
                   tick={{ fill: 'var(--color-text-dim)', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
@@ -749,13 +765,15 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
                   fatia arredonda a ponta direita, para a barra parecer uma
                   peça só.
                 */}
+                {/* Fase 45: `height` maior + `paddingBottom` afastam a legenda
+                    da primeira barra, que ficava colada nela. */}
                 <Legend
                   verticalAlign="top"
                   align="right"
-                  height={22}
+                  height={34}
                   iconType="circle"
                   iconSize={8}
-                  wrapperStyle={{ fontSize: 11, color: 'var(--color-text-faint)' }}
+                  wrapperStyle={{ fontSize: 11, color: 'var(--color-text-faint)', paddingBottom: 12 }}
                 />
                 <Bar dataKey="received" stackId="dir" name="Recebidas" maxBarSize={22} fill="var(--color-accent)" />
                 <Bar dataKey="sent" stackId="dir" name="Enviadas" radius={[0, 4, 4, 0]} maxBarSize={22} fill="#8B6FF5" />
@@ -771,7 +789,9 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
             <EmptyChartState loading={loading} />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timelineData} margin={{ left: -12, right: 12, top: 4, bottom: 4 }}>
+              {/* Fase 45: `top: 16` reserva respiro acima da curva, para o
+                  pico não encostar na borda de cima do card. */}
+              <LineChart data={timelineData} margin={{ left: -12, right: 12, top: 16, bottom: 4 }}>
                 <CartesianGrid vertical={false} stroke="var(--color-border)" />
                 <XAxis
                   dataKey="hour"
@@ -780,7 +800,19 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
                   axisLine={false}
                   tickLine={false}
                 />
-                <YAxis tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                {/*
+                  Fase 45: o topo da escala passa a ser 20% acima do maior
+                  valor do período (mínimo 4). Antes o eixo terminava
+                  exatamente no pico, então o valor mais alto ficava colado na
+                  borda e a curva parecia achatada contra o topo.
+                */}
+                <YAxis
+                  tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  domain={[0, (dataMax: number) => Math.max(4, Math.ceil((dataMax || 0) * 1.2))]}
+                />
                 <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={{ color: 'var(--color-text)' }} />
                 <Line
                   type="monotone"
