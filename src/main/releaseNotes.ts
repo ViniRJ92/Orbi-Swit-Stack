@@ -123,6 +123,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Corrigido o grafico "Movimento por instancia", que escondia o nome de algumas instancias (aparecia barra sem nome).',
     '- Grupos continuam fora da contagem, como ja era na atividade diaria.',
   ].join('\n'),
+  '0.35.1': [
+    'Corrige mensagens contadas em dobro ao abrir a conversa',
+    '',
+    '- Este era o motivo dos numeros inflados. Quando chegavam mensagens numa conversa que voce ainda nao tinha aberto, o app contava pelo aviso de nao lidas. Ao abrir a conversa depois, ele lia os baloes e contava as MESMAS mensagens outra vez - 5 mensagens viravam 10.',
+    '- Agora a leitura balao a balao vira a verdade daquela conversa naquele dia: o que o aviso de nao lidas tinha estimado antes e descartado, em vez de somar por cima. Abrir a conversa passa a corrigir o numero, nunca dobrar.',
+    '',
+    'Importante: os dados ja gravados antes desta versao continuam inflados, porque foram contados com o erro. Se quiser recomecar com numeros limpos, use "Limpar dados do Analytics" em Configuracoes.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

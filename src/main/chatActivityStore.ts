@@ -113,6 +113,24 @@ interface ChatEvent {
   a: string;
   k: string;
   c: number;
+  /**
+   * Fase 33 (2026-08-30) — de qual dos dois canais este evento veio:
+   *  - 'l' (live): lido balão a balão, por `data-id` — verdade exata.
+   *  - ausente/'b' (badge): inferido pela variação do contador de não lidas
+   *    na lista lateral, para conversas que nunca foram abertas (o WhatsApp
+   *    Web só renderiza balões da conversa aberta, então não há `data-id`
+   *    para ler nas outras).
+   *
+   * Necessário porque os dois canais contavam a MESMA mensagem duas vezes:
+   * chegavam 5 mensagens numa conversa fechada (badge grava +5) e, ao abrir
+   * a conversa, o canal de balões via 5 `data-id` inéditos e gravava +5 de
+   * novo. Ver `recordChatMessages`, que agora descarta os eventos de badge
+   * daquela conversa/dia assim que a leitura por balão acontece.
+   * Eventos gravados por versões anteriores não têm o campo e são tratados
+   * como 'badge' — é o comportamento seguro, já que são justamente os que
+   * podem ter sido inflados.
+   */
+  s?: 'l' | 'b';
 }
 
 interface StoreShape {
@@ -160,6 +178,11 @@ function compositeKey(accountId: string, chatKey: string): string {
   return `${accountId}${SEPARATOR}${chatKey}`;
 }
 
+/** Fase 33 — chave de "esta conversa, neste dia, já foi lida balão a balão". */
+function liveCoverKey(accountId: string, chatKey: string, day: string): string {
+  return `${accountId}${SEPARATOR}${chatKey}${SEPARATOR}${day}`;
+}
+
 export class ChatActivityStore {
   private filePath: string;
   private data: StoreShape;
@@ -169,10 +192,19 @@ export class ChatActivityStore {
   // agora mesmo. Enquanto uma (conta, conversa) está aqui, `observe()`
   // (lista lateral) ignora especificamente essa conversa.
   private readonly openChats: Map<string, string> = new Map();
+  // Fase 33 — "conta+conversa+dia" que já foi lida balão a balão. A partir do
+  // momento em que entra aqui, o canal de badge (estimativa pela lista
+  // lateral) para de gravar para essa combinação, e o que ele já tinha
+  // gravado foi descartado. Reconstruído no boot a partir dos próprios
+  // eventos marcados como 'l', para a regra sobreviver a reiniciar o app.
+  private readonly liveCoveredDays: Set<string> = new Set();
 
   constructor() {
     this.filePath = path.join(app.getPath('userData'), STORE_FILE);
     this.data = this.load();
+    for (const e of this.data.events) {
+      if (e.s === 'l') this.liveCoveredDays.add(liveCoverKey(e.a, e.k, e.day));
+    }
     if (this.prune()) this.persist();
   }
 
@@ -280,7 +312,13 @@ export class ChatActivityStore {
       }
       const delta = value - previous;
       if (delta > 0) {
-        this.data.events.push({ t: Date.now(), day: resolveDay(dateTag), a: accountId, k: chatKey, c: delta });
+        const day = resolveDay(dateTag);
+        // Fase 33: só grava pelo badge se a leitura por balão ainda não
+        // cobriu esta conversa neste dia. Se já cobriu, o balão é a verdade e
+        // somar o badge por cima seria contar a mesma mensagem duas vezes.
+        if (!this.liveCoveredDays.has(liveCoverKey(accountId, chatKey, day))) {
+          this.data.events.push({ t: Date.now(), day, a: accountId, k: chatKey, c: delta, s: 'b' });
+        }
       }
     }
 
@@ -328,6 +366,26 @@ export class ChatActivityStore {
    * (não um timestamp) decide o dia via `todayKey()`/`yesterdayKey()`.
    */
   recordChatMessages(accountId: string, chatKey: string, items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
+    if (items.length === 0) return;
+
+    // Fase 33 — a leitura por balão passa a ser a VERDADE desta conversa
+    // nestes dias. Tudo que o canal de badge (lista lateral) tinha estimado
+    // para a mesma conversa/dia é descartado agora, em vez de somar por cima:
+    // eram as mesmas mensagens contadas de novo. A partir daqui, o badge
+    // também para de gravar para esta conversa/dia (ver `commitObservation`).
+    const daysTouched = new Set(items.map((i) => (i.bucket === 'yesterday' ? yesterdayKey() : todayKey())));
+    let purgedAny = false;
+    for (const day of daysTouched) {
+      const coverKey = liveCoverKey(accountId, chatKey, day);
+      if (this.liveCoveredDays.has(coverKey)) continue;
+      this.liveCoveredDays.add(coverKey);
+      const before = this.data.events.length;
+      this.data.events = this.data.events.filter(
+        (e) => !(e.a === accountId && e.k === chatKey && e.day === day && e.s !== 'l')
+      );
+      if (this.data.events.length !== before) purgedAny = true;
+    }
+
     let addedAny = false;
     const now = Date.now();
     for (const item of items) {
@@ -339,10 +397,10 @@ export class ChatActivityStore {
           ? processed.slice(processed.length - MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT)
           : processed;
       const day = item.bucket === 'yesterday' ? yesterdayKey() : todayKey();
-      this.data.events.push({ t: now, day, a: accountId, k: chatKey, c: 1 });
+      this.data.events.push({ t: now, day, a: accountId, k: chatKey, c: 1, s: 'l' });
       addedAny = true;
     }
-    if (!addedAny) return;
+    if (!addedAny && !purgedAny) return;
     this.prune();
     this.persist();
   }
