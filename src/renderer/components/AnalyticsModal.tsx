@@ -571,6 +571,17 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
           {barData.length === 0 ? (
             <EmptyChartState loading={loading} />
           ) : (
+            /*
+              Fase 38: com muitas instâncias os nomes do eixo se encavalavam —
+              efeito colateral do `interval={0}` da Fase 32, que passou a
+              forçar TODOS os rótulos a aparecer (antes o Recharts escondia
+              alguns, e barra ficava sem nome). Aqui a altura do gráfico
+              cresce junto com a quantidade de barras, e o card rola por
+              dentro quando não couber. Assim nenhum nome some nem se
+              sobrepõe, seja com 2 instâncias ou com 30.
+            */
+            <div className="h-full overflow-y-auto">
+              <div style={{ height: Math.max(barData.length * 34 + 28, 170) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 12, top: 4, bottom: 4 }}>
                 <CartesianGrid horizontal={false} stroke="var(--color-border)" />
@@ -596,6 +607,8 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
                 <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={22} fill="var(--color-accent)" />
               </BarChart>
             </ResponsiveContainer>
+              </div>
+            </div>
           )}
         </ChartCard>
 

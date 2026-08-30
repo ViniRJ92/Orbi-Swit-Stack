@@ -174,6 +174,11 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Voce vai ver a conversa se mover por alguns segundos ao abri-la. E esse processo acontecendo.',
     '- A identificacao de quem enviou ficou mais firme: alem do lado em que a mensagem aparece, agora tambem usa o indicador de entrega (relogio, tique simples, tique duplo), que so existe nas mensagens enviadas por voce.',
   ].join('\n'),
+  '0.36.2': [
+    'Corrige nomes encavalados no grafico por instancia',
+    '',
+    '- Com varias instancias, os nomes no grafico "Movimento por instancia" ficavam sobrepostos e ilegiveis. Agora o grafico cresce conforme a quantidade de instancias e o card rola por dentro quando nao couber - nenhum nome some nem se sobrepoe.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
