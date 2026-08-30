@@ -128,6 +128,16 @@ function findMessagePanel(main: Element): Element {
 
 const DATE_DIVIDER_RE = /^(hoje|today|ontem|yesterday)$/i;
 
+/**
+ * Fase 40 — uma mensagem lida da conversa aberta.
+ * `direction`: 'in' = chegou do contato; 'out' = enviada pela operação.
+ */
+interface ScannedMessage {
+  dataId: string;
+  bucket: 'today' | 'yesterday';
+  direction: 'in' | 'out';
+}
+
 function pad2(n: number): string {
   return n < 10 ? '0' + n : String(n);
 }
@@ -225,24 +235,24 @@ function isOutgoing(node: Element, dataId: string): boolean {
  * só as de Hoje/Ontem, nunca vistas antes nesta sessão da página, nunca
  * enviadas pelo próprio usuário.
  */
-function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | 'yesterday' }[] {
+function scanChatMessages(panel: Element): ScannedMessage[] {
   const nodes = Array.from(panel.querySelectorAll('[data-id], span[aria-label], div[role="button"] span'));
   let bucket: 'today' | 'yesterday' | 'other' = 'other';
-  const out: { dataId: string; bucket: 'today' | 'yesterday' }[] = [];
+  const out: ScannedMessage[] = [];
 
   for (const node of nodes) {
     if (node.hasAttribute && node.hasAttribute('data-id')) {
       const dataId = node.getAttribute('data-id') || '';
       if (!dataId || seenMessageIds.has(dataId)) continue;
-      const isSelfSent = isOutgoing(node, dataId);
-      const effectiveBucket = isSelfSent ? 'other' : classifyByOwnDate(node) ?? bucket;
-      if (isSelfSent) {
-        seenMessageIds.add(dataId); // enviada por mim: nunca conta, mas marca vista pra não reprocessar sempre
-        continue;
-      }
+      // Fase 40: a mensagem enviada deixou de ser descartada — agora é
+      // reportada com direção 'out', para o relatório poder separar
+      // "Recebidas" de "Enviadas". Continua fora da contagem de interações
+      // (interação é pessoa que FALOU com você).
+      const direction: 'in' | 'out' = isOutgoing(node, dataId) ? 'out' : 'in';
+      const effectiveBucket = classifyByOwnDate(node) ?? bucket;
       if (effectiveBucket === 'other') continue; // mais antiga que ontem: nunca conta, não marca visto (barato reavaliar)
       seenMessageIds.add(dataId);
-      out.push({ dataId, bucket: effectiveBucket });
+      out.push({ dataId, bucket: effectiveBucket, direction });
       continue;
     }
     const text = (node.textContent || '').trim();
@@ -254,7 +264,7 @@ function scanChatMessages(panel: Element): { dataId: string; bucket: 'today' | '
   return out;
 }
 
-function reportChatMessages(items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
+function reportChatMessages(items: ScannedMessage[]): void {
   if (items.length === 0) return;
   ipcRenderer.send('mw:chat-messages', { items });
 }

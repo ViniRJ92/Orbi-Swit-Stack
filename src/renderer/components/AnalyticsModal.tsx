@@ -41,6 +41,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -158,27 +159,80 @@ function DailyActivityCard({ title, report }: { title: string; report: ChatActiv
           {report?.totalConversations ?? 0} interações · {report?.totalMessages ?? 0} mensagens
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+      {/*
+        Fase 40 — tabela no lugar da lista de texto corrido. Colunas
+        numéricas alinhadas à direita e linha TOTAL fixa no rodapé, para
+        comparar instâncias sem precisar ler frase por frase.
+      */}
+      <div className="flex min-h-0 flex-1 flex-col">
         {rows.length === 0 ? (
           <div className="flex flex-1 items-center justify-center text-center text-[12px] font-light text-text-faint">
             Sem novas interações.
           </div>
         ) : (
-          rows.map((a) => (
-            <div
-              key={a.accountId}
-              className="flex items-center justify-between gap-3 rounded-lg bg-surface-hover/60 px-3.5 py-2.5"
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.color }} />
-                <span className="truncate text-[12.5px] font-medium text-text">{a.name}</span>
-              </div>
-              <span className="shrink-0 text-[11.5px] font-light text-text-dim">
-                {a.newConversations} {a.newConversations === 1 ? 'nova interação' : 'novas interações'} — {a.messages}{' '}
-                {a.messages === 1 ? 'mensagem' : 'mensagens'}
-              </span>
+          <>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <table className="w-full table-fixed border-collapse text-[12px]">
+                <colgroup>
+                  <col style={{ width: '36%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                </colgroup>
+                <thead className="sticky top-0 bg-surface">
+                  <tr className="text-[10.5px] font-medium uppercase tracking-wide text-text-faint">
+                    <th className="pb-2 pr-2 text-left font-medium">Instância</th>
+                    <th className="pb-2 px-1.5 text-right font-medium">Interações</th>
+                    <th className="pb-2 px-1.5 text-right font-medium">Recebidas</th>
+                    <th className="pb-2 px-1.5 text-right font-medium">Enviadas</th>
+                    <th className="pb-2 pl-1.5 text-right font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((a) => (
+                    <tr key={a.accountId} className="border-t border-border/60">
+                      <td className="py-2 pr-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.color }} />
+                          <span className="truncate font-medium text-text">{a.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-1.5 text-right tabular-nums text-text-dim">{a.newConversations}</td>
+                      <td className="py-2 px-1.5 text-right tabular-nums text-text-dim">{a.received}</td>
+                      <td className="py-2 px-1.5 text-right tabular-nums text-text-dim">{a.sent}</td>
+                      <td className="py-2 pl-1.5 text-right font-semibold tabular-nums text-text">{a.messages}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))
+            {/* Mesmas larguras da tabela acima para as colunas baterem. */}
+            <table className="w-full shrink-0 table-fixed border-collapse border-t-2 border-border text-[12px]">
+              <colgroup>
+                <col style={{ width: '36%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '15%' }} />
+              </colgroup>
+              <tbody>
+                <tr>
+                  <td className="py-2 pr-2 text-[10.5px] font-semibold uppercase tracking-wide text-text-dim">Total</td>
+                  <td className="py-2 px-1.5 text-right font-semibold tabular-nums text-text">
+                    {report?.totalConversations ?? 0}
+                  </td>
+                  <td className="py-2 px-1.5 text-right font-semibold tabular-nums text-text">
+                    {report?.totalReceived ?? 0}
+                  </td>
+                  <td className="py-2 px-1.5 text-right font-semibold tabular-nums text-text">{report?.totalSent ?? 0}</td>
+                  <td className="py-2 pl-1.5 text-right font-semibold tabular-nums text-text">
+                    {report?.totalMessages ?? 0}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </>
         )}
       </div>
     </div>
@@ -347,7 +401,14 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
   }, [accounts, statuses]);
 
   const barData = useMemo(
-    () => (summary?.byAccount ?? []).map((a) => ({ name: a.name, total: a.total, color: a.color })),
+    () =>
+      (summary?.byAccount ?? []).map((a) => ({
+        name: a.name,
+        total: a.total,
+        received: a.received,
+        sent: a.sent,
+        color: a.color,
+      })),
     [summary]
   );
   const timelineData = useMemo(() => {
@@ -544,7 +605,11 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
           icon={<BarChart3 size={13} />}
           label="Volume total"
           value={String(summary?.totalVolume ?? 0)}
-          detail={volumeDelta ? volumeDelta.text : 'mensagens no período'}
+          // Fase 40: a divisão recebidas/enviadas fica sempre visível aqui,
+          // e a comparação com o período anterior vai junto quando ligada.
+          detail={`${summary?.totalReceived ?? 0} recebidas · ${summary?.totalSent ?? 0} enviadas${
+            volumeDelta ? ` · ${volumeDelta.text}` : ''
+          }`}
           deltaPositive={volumeDelta ? volumeDelta.positive : undefined}
         />
         <KpiCard
@@ -610,7 +675,22 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
                   contentStyle={CHART_TOOLTIP_STYLE}
                   labelStyle={{ color: 'var(--color-text)' }}
                 />
-                <Bar dataKey="total" radius={[0, 4, 4, 0]} maxBarSize={22} fill="var(--color-accent)" />
+                {/*
+                  Fase 40 — barras empilhadas: cada instância mostra quanto
+                  do volume foi recebido e quanto foi enviado. Só a última
+                  fatia arredonda a ponta direita, para a barra parecer uma
+                  peça só.
+                */}
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  height={22}
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 11, color: 'var(--color-text-faint)' }}
+                />
+                <Bar dataKey="received" stackId="dir" name="Recebidas" maxBarSize={22} fill="var(--color-accent)" />
+                <Bar dataKey="sent" stackId="dir" name="Enviadas" radius={[0, 4, 4, 0]} maxBarSize={22} fill="#8B6FF5" />
               </BarChart>
             </ResponsiveContainer>
               </div>

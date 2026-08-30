@@ -395,6 +395,8 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     const empty: AnalyticsSummary = {
       range,
       totalVolume: 0,
+      totalReceived: 0,
+      totalSent: 0,
       leader: null,
       averagePerAccount: 0,
       byAccount: [],

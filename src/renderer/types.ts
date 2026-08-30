@@ -161,11 +161,16 @@ export interface AnalyticsAccountTotal {
   name: string;
   color: string;
   total: number;
+  /** Fase 40 — divisão por direção (ver main/types.ts). */
+  received: number;
+  sent: number;
 }
 
 export interface AnalyticsSummary {
   range: AnalyticsRange;
   totalVolume: number;
+  totalReceived: number;
+  totalSent: number;
   leader: { accountId: string; name: string; total: number } | null;
   averagePerAccount: number;
   byAccount: AnalyticsAccountTotal[];
@@ -179,11 +184,16 @@ export interface ChatActivityAccountDaily {
   color: string;
   newConversations: number;
   messages: number;
+  /** Fase 40 — "sent" só é capturável na conversa aberta; 0 pode significar "não deu para ler". */
+  received: number;
+  sent: number;
 }
 
 export interface ChatActivityDayReport {
   totalConversations: number;
   totalMessages: number;
+  totalReceived: number;
+  totalSent: number;
   byAccount: ChatActivityAccountDaily[];
 }
 

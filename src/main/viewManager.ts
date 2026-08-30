@@ -95,7 +95,7 @@ export class ViewManager {
     accountId: string,
     chatKey: string | null,
     isGroup: boolean,
-    items: { dataId: string; bucket: 'today' | 'yesterday' }[]
+    items: { dataId: string; bucket: 'today' | 'yesterday'; direction: 'in' | 'out' }[]
   ) => void;
   private onChatOpenStateChange?: (accountId: string, open: boolean, chatKey: string | null, isGroup: boolean) => void;
   // Qual conversa (nome + se é grupo) está aberta agora em cada conta —
@@ -122,7 +122,7 @@ export class ViewManager {
     // o desenho completo (nunca reconta histórico, nunca é polling).
     ipcMain.on(
       'mw:chat-messages',
-      (event, payload: { items: { dataId: string; bucket: 'today' | 'yesterday' }[] }) => {
+      (event, payload: { items: { dataId: string; bucket: 'today' | 'yesterday'; direction: 'in' | 'out' }[] }) => {
         const accountId = this.webContentsIdToAccount.get(event.sender.id);
         if (!accountId || !Array.isArray(payload?.items) || payload.items.length === 0) return;
         const chat = this.currentChat.get(accountId);
@@ -154,7 +154,7 @@ export class ViewManager {
       accountId: string,
       chatKey: string | null,
       isGroup: boolean,
-      items: { dataId: string; bucket: 'today' | 'yesterday' }[]
+      items: { dataId: string; bucket: 'today' | 'yesterday'; direction: 'in' | 'out' }[]
     ) => void
   ): void {
     this.onChatMessages = cb;

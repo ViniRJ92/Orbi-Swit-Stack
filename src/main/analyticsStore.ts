@@ -473,9 +473,15 @@ export class AnalyticsStore {
     return {
       range,
       totalVolume,
+      // Fase 40: este store (legado, por badge de conta inteira) não separa
+      // direção — só enxerga o contador de não lidas, que nunca inclui envio.
+      // Desde a Fase 32 ele não alimenta mais o painel; os campos existem só
+      // para satisfazer o mesmo contrato de tipo.
+      totalReceived: totalVolume,
+      totalSent: 0,
       leader,
       averagePerAccount,
-      byAccount,
+      byAccount: byAccount.map((a) => ({ ...a, received: a.total, sent: 0 })),
       timeline: hourly.map((count, hour) => ({ hour, count })),
     };
   }

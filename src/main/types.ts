@@ -97,6 +97,9 @@ export interface AnalyticsAccountTotal {
   name: string;
   color: string;
   total: number;
+  /** Fase 40 — divisão por direção; alimenta o gráfico de barras empilhadas. Ver ChatActivityAccountDaily. */
+  received: number;
+  sent: number;
 }
 
 /**
@@ -106,8 +109,11 @@ export interface AnalyticsAccountTotal {
  */
 export interface AnalyticsSummary {
   range: AnalyticsRange;
-  /** Soma de mensagens novas de todas as contas no período. */
+  /** Soma de mensagens novas de todas as contas no período (recebidas + enviadas). */
   totalVolume: number;
+  /** Fase 40 — a mesma soma, separada por direção. */
+  totalReceived: number;
+  totalSent: number;
   /** Conta com mais movimento no período (null se não houve nenhum evento). */
   leader: { accountId: string; name: string; total: number } | null;
   /** Média de mensagens por conta com alguma atividade no período. */
@@ -132,13 +138,27 @@ export interface ChatActivityAccountDaily {
   color: string;
   /** Quantas pessoas (conversas individuais) diferentes mandaram ao menos 1 mensagem nova NAQUELE dia. */
   newConversations: number;
-  /** Total de mensagens novas dessas pessoas NAQUELE dia (uma pessoa pode gerar várias). */
+  /** Total de mensagens NAQUELE dia (recebidas + enviadas). */
   messages: number;
+  /**
+   * Fase 40 — separação por direção.
+   * `received`: mensagens que chegaram do contato.
+   * `sent`: mensagens enviadas pela operação. Só é possível detectar na
+   * conversa ABERTA — o contador de não lidas da lista lateral não enxerga o
+   * que foi enviado. Em conversa que o usuário não abriu, este campo fica em
+   * 0 de propósito, e não é escondido: 0 aqui significa "não foi possível
+   * capturar", não necessariamente "não houve envio".
+   */
+  received: number;
+  sent: number;
 }
 
 export interface ChatActivityDayReport {
   totalConversations: number;
   totalMessages: number;
+  /** Fase 40 — somatórios da linha TOTAL da tabela. */
+  totalReceived: number;
+  totalSent: number;
   /** Uma entrada por conta com atividade > 0 naquele dia, ordenada da maior para a menor. */
   byAccount: ChatActivityAccountDaily[];
 }

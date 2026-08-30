@@ -131,6 +131,17 @@ interface ChatEvent {
    * podem ter sido inflados.
    */
   s?: 'l' | 'b';
+  /**
+   * Fase 40 — direção da mensagem.
+   *  'in'  = chegou do contato.
+   *  'out' = enviada pela operação. Só existe em evento vindo da conversa
+   *          ABERTA: o contador de não lidas da lista lateral nunca enxerga
+   *          envio, então conversa fechada nunca produz 'out'.
+   * Ausente = gravado por versão anterior, quando não havia separação —
+   * tratado como 'in' na agregação (era o comportamento pretendido lá:
+   * as enviadas deveriam ter sido descartadas).
+   */
+  d?: 'in' | 'out';
 }
 
 interface StoreShape {
@@ -312,6 +323,7 @@ export class ChatActivityStore {
           k: chatKey,
           c: value,
           s: 'b',
+          d: 'in',
         });
         changed = true;
       }
@@ -327,7 +339,7 @@ export class ChatActivityStore {
         // Fase 33: marcado como 'b' (estimativa por badge). Se a conversa for
         // aberta depois, `recordChatMessages` descarta estes eventos e
         // reescreve o dia pelo que os balões mostram.
-        this.data.events.push({ t: Date.now(), day: resolveDay(dateTag), a: accountId, k: chatKey, c: delta, s: 'b' });
+        this.data.events.push({ t: Date.now(), day: resolveDay(dateTag), a: accountId, k: chatKey, c: delta, s: 'b', d: 'in' });
       }
     }
 
@@ -374,7 +386,7 @@ export class ChatActivityStore {
    * mesmo conjunto de mensagens dá exatamente o mesmo resultado. `bucket`
    * (não um timestamp) decide o dia via `todayKey()`/`yesterdayKey()`.
    */
-  recordChatMessages(accountId: string, chatKey: string, items: { dataId: string; bucket: 'today' | 'yesterday' }[]): void {
+  recordChatMessages(accountId: string, chatKey: string, items: { dataId: string; bucket: 'today' | 'yesterday'; direction: 'in' | 'out' }[]): void {
     if (items.length === 0) return;
 
     const now = Date.now();
@@ -424,7 +436,7 @@ export class ChatActivityStore {
         processed.length > MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT
           ? processed.slice(processed.length - MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT)
           : processed;
-      this.data.events.push({ t: now, day, a: accountId, k: chatKey, c: 1, s: 'l' });
+      this.data.events.push({ t: now, day, a: accountId, k: chatKey, c: 1, s: 'l', d: item.direction });
       addedAny = true;
     }
 
@@ -469,30 +481,52 @@ export class ChatActivityStore {
   /** Monta o relatório de um único dia (chave "AAAA-MM-DD") a partir dos eventos já atribuídos a ele. */
   private buildDayReport(day: string, accounts: { id: string; name: string; color: string }[]): ChatActivityDayReport {
     const conversationsByAccount = new Map<string, Set<string>>();
-    const messagesByAccount = new Map<string, number>();
+    const receivedByAccount = new Map<string, number>();
+    const sentByAccount = new Map<string, number>();
 
     for (const e of this.data.events) {
       if (e.day !== day) continue;
-      messagesByAccount.set(e.a, (messagesByAccount.get(e.a) ?? 0) + e.c);
+      // Fase 40: evento sem direção veio de versão anterior à separação —
+      // conta como recebida, que era a intenção original daquele código.
+      if (e.d === 'out') {
+        sentByAccount.set(e.a, (sentByAccount.get(e.a) ?? 0) + e.c);
+        // Mensagem ENVIADA não cria interação: interação é pessoa que falou
+        // com você. Mandar mensagem para alguém que não respondeu não conta.
+        continue;
+      }
+      receivedByAccount.set(e.a, (receivedByAccount.get(e.a) ?? 0) + e.c);
       if (!conversationsByAccount.has(e.a)) conversationsByAccount.set(e.a, new Set());
       conversationsByAccount.get(e.a)!.add(e.k);
     }
 
     const byAccount = accounts
-      .map((acc) => ({
-        accountId: acc.id,
-        name: acc.name,
-        color: acc.color,
-        newConversations: conversationsByAccount.get(acc.id)?.size ?? 0,
-        messages: messagesByAccount.get(acc.id) ?? 0,
-      }))
+      .map((acc) => {
+        const received = receivedByAccount.get(acc.id) ?? 0;
+        const sent = sentByAccount.get(acc.id) ?? 0;
+        return {
+          accountId: acc.id,
+          name: acc.name,
+          color: acc.color,
+          newConversations: conversationsByAccount.get(acc.id)?.size ?? 0,
+          received,
+          sent,
+          messages: received + sent,
+        };
+      })
       .filter((a) => a.newConversations > 0 || a.messages > 0)
       .sort((a, b) => b.messages - a.messages);
 
     const totalConversations = byAccount.reduce((sum, a) => sum + a.newConversations, 0);
-    const totalMessages = byAccount.reduce((sum, a) => sum + a.messages, 0);
+    const totalReceived = byAccount.reduce((sum, a) => sum + a.received, 0);
+    const totalSent = byAccount.reduce((sum, a) => sum + a.sent, 0);
 
-    return { totalConversations, totalMessages, byAccount };
+    return {
+      totalConversations,
+      totalMessages: totalReceived + totalSent,
+      totalReceived,
+      totalSent,
+      byAccount,
+    };
   }
 
   /** Relatório fixo de Hoje x Ontem (Fase 28) — independente do seletor de período geral do Analytics. */
@@ -531,28 +565,46 @@ export class ChatActivityStore {
   buildAnalyticsSummary(range: AnalyticsRange, accounts: { id: string; name: string; color: string }[]): AnalyticsSummary {
     const startDay = dayKey(new Date(range.startTs));
     const endDay = dayKey(new Date(range.endTs));
-    const totalsByAccount = new Map<string, number>();
+    const receivedByAccount = new Map<string, number>();
+    const sentByAccount = new Map<string, number>();
     const hourly = new Array(24).fill(0) as number[];
 
     for (const e of this.data.events) {
       // Comparação de string funciona porque a chave é AAAA-MM-DD (ordem
       // lexicográfica = ordem cronológica).
       if (e.day < startDay || e.day > endDay) continue;
-      totalsByAccount.set(e.a, (totalsByAccount.get(e.a) ?? 0) + e.c);
+      // Fase 40: evento sem direção (versão anterior à separação) conta como recebida.
+      const target = e.d === 'out' ? sentByAccount : receivedByAccount;
+      target.set(e.a, (target.get(e.a) ?? 0) + e.c);
       hourly[new Date(e.t).getHours()] += e.c;
     }
 
     const byAccount = accounts
-      .map((acc) => ({ accountId: acc.id, name: acc.name, color: acc.color, total: totalsByAccount.get(acc.id) ?? 0 }))
+      .map((acc) => {
+        const received = receivedByAccount.get(acc.id) ?? 0;
+        const sent = sentByAccount.get(acc.id) ?? 0;
+        return { accountId: acc.id, name: acc.name, color: acc.color, received, sent, total: received + sent };
+      })
       .filter((a) => a.total > 0)
       .sort((a, b) => b.total - a.total);
 
     const totalVolume = byAccount.reduce((sum, a) => sum + a.total, 0);
+    const totalReceived = byAccount.reduce((sum, a) => sum + a.received, 0);
+    const totalSent = byAccount.reduce((sum, a) => sum + a.sent, 0);
     const leader = byAccount[0]
       ? { accountId: byAccount[0].accountId, name: byAccount[0].name, total: byAccount[0].total }
       : null;
     const averagePerAccount = byAccount.length > 0 ? totalVolume / byAccount.length : 0;
 
-    return { range, totalVolume, leader, averagePerAccount, byAccount, timeline: hourly.map((count, hour) => ({ hour, count })) };
+    return {
+      range,
+      totalVolume,
+      totalReceived,
+      totalSent,
+      leader,
+      averagePerAccount,
+      byAccount,
+      timeline: hourly.map((count, hour) => ({ hour, count })),
+    };
   }
 }

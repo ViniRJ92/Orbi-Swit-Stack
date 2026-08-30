@@ -187,6 +187,19 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- A caixa do Windows continua aparecendo quando a janela do app esta minimizada ou na bandeja - nessa situacao um aviso dentro da janela nao seria visto.',
     '- Corrigido tambem o espacamento da chave "Comparar com periodo anterior", no Analytics, que encostava na borda dos cards abaixo.',
   ].join('\n'),
+  '0.38.0': [
+    'Recebidas x Enviadas, e atividade do dia em tabela',
+    '',
+    '- "Atividade de hoje" e "Atividade de ontem" viraram tabela: Instancia | Interacoes | Recebidas | Enviadas | Total, com linha de TOTAL no rodape.',
+    '- As mensagens enviadas por voce deixaram de ser descartadas e passaram a ser contadas em coluna separada, sem se misturar com as recebidas.',
+    '- "Interacoes" continua contando so quem falou com voce: mandar mensagem para alguem que nao respondeu nao vira interacao.',
+    '- O grafico "Movimento por instancia" virou barra empilhada, mostrando quanto de cada instancia foi recebido e quanto foi enviado.',
+    '- O card "Volume total" agora mostra a divisao logo abaixo do numero.',
+    '',
+    'Limite importante da coluna "Enviadas": so e possivel ler o que foi enviado numa conversa ABERTA. Em conversa que voce nao abriu, o WhatsApp nao mostra nada sobre envios, entao a coluna fica em 0 - o que significa "nao foi possivel capturar", nao necessariamente "nao houve envio".',
+    '',
+    'Os numeros ja gravados nao tem essa separacao e aparecem todos como recebidos. Para o relatorio ficar coerente, use "Limpar dados do Analytics" em Configuracoes.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
