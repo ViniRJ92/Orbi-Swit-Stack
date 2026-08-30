@@ -285,9 +285,34 @@ export class ChatActivityStore {
 
     if (isGrace) {
       this.syncedSinceLoad.add(compositeK);
+      // Fase 34 — "nunca vi esta conversa antes" é diferente de "só estou
+      // reabrindo o app". `syncedSinceLoad` é só da sessão atual, mas
+      // `lastSeen` é persistido: se já existe baseline gravada, estas não
+      // lidas já foram contabilizadas numa sessão anterior e semear de novo
+      // duplicaria a cada reinício do app.
+      const hadBaseline = accountMap[chatKey] !== undefined;
       if (accountMap[chatKey] !== value) {
         accountMap[chatKey] = value;
         this.data.lastSeen[accountId] = accountMap;
+        changed = true;
+      }
+      // Sem baseline anterior (primeiro uso, conversa nova, ou logo depois de
+      // "Limpar dados do Analytics") + rótulo de dia visível na lista lateral:
+      // estas não lidas SÃO mensagens daquele dia que ninguém contou ainda.
+      // Sem isto, limpar os dados jogava fora a atividade real do dia e só
+      // voltava a contar se o usuário abrisse cada conversa manualmente.
+      // Fica marcado como 'b' (estimativa): abrir a conversa depois descarta
+      // isto e regrava o número exato pelos balões.
+      // Rótulo mais antigo que ontem nunca semeia — seriam mensagens velhas.
+      if (!hadBaseline && value > 0 && (dateTag === 'today' || dateTag === 'yesterday')) {
+        this.data.events.push({
+          t: Date.now(),
+          day: resolveDay(dateTag),
+          a: accountId,
+          k: chatKey,
+          c: value,
+          s: 'b',
+        });
         changed = true;
       }
     } else {

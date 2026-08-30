@@ -144,6 +144,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Antes o botao limpava o historico salvo, mas cada instancia aberta continuava lembrando quais mensagens ja tinha reportado - entao a conversa que estivesse aberta na hora so voltava a ser contada depois de trocar de conversa ou recarregar, comecando o acompanhamento com um buraco.',
     '- Agora limpar zera tambem essa memoria dentro de cada instancia e recomeca a leitura na hora, do zero.',
   ].join('\n'),
+  '0.35.4': [
+    'Contagem passa a ler as notificacoes que ja estao na tela',
+    '',
+    '- Antes, ao limpar os dados (ou na primeira vez que o app rodava), as mensagens nao lidas que ja estavam na lista viravam apenas "ponto de partida" e nunca eram contadas - so voltavam a contar se voce abrisse cada conversa manualmente. Na pratica, limpar os dados jogava fora a atividade do dia.',
+    '- Agora o app le o numero de nao lidas de cada conversa junto com o rotulo de dia que o WhatsApp mostra do lado ("hoje"/"ontem") e ja registra aquilo como mensagens daquele dia. Conversa com rotulo mais antigo que ontem nao entra.',
+    '- Ao abrir a conversa, esse numero estimado e apagado e regravado pelo total real dos baloes, como ja era.',
+    '- Reabrir o app nao conta nada de novo: so semeia conversa que ainda nao tinha registro nenhum.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
