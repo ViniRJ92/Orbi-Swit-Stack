@@ -227,6 +227,16 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Tela "Sobre" com texto mais curto e mais espaço entre as linhas.',
     '• Notas de versão reescritas: frases mais diretas, acentuação corrigida e marcadores padronizados.',
   ].join('\n'),
+  '0.38.2': [
+    'Corrige quem enviou a mensagem e mensagens que sumiam da contagem',
+    '',
+    'Dois defeitos encontrados conferindo os dados gravados no seu computador.',
+    '',
+    '• Suas mensagens continuavam sendo contadas como recebidas. A verificação de quem enviou procurava a marcação de lado nos elementos acima da mensagem, mas o WhatsApp coloca essa marcação abaixo. Nunca encontrava nada. Agora procura nos dois sentidos, e usa o indicador de entrega e o formato do identificador como reforço.',
+    '• Imagens, figurinhas e áudios sumiam da contagem. Só mensagem de texto carrega a data própria; as demais dependiam do divisor "Hoje"/"Ontem" estar carregado na tela, o que quase nunca acontece numa conversa rolada. Agora elas herdam o dia da última mensagem datada antes delas.',
+    '',
+    'Os números gravados antes desta versão estão errados: mensagens suas aparecem como recebidas. Use "Limpar dados do Analytics" em Configurações para recomeçar com a contagem certa.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

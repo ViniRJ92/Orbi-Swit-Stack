@@ -199,29 +199,33 @@ function classifyByOwnDate(node: Element): 'today' | 'yesterday' | 'other' | nul
  * corrigível olhando o relatório; parar de contar passa despercebido.
  */
 function isOutgoing(node: Element, dataId: string): boolean {
-  // Sinal 1 — formato antigo do identificador (`true_...`). Mantido porque não
-  // custa nada, embora não apareça mais nas versões atuais.
+  // Sinal 1 — formato antigo do identificador (`true_...`).
   if (/^true[_-]/i.test(dataId)) return true;
+  if (/^false[_-]/i.test(dataId)) return false;
 
-  // Sinal 2 — a classe de alinhamento da bolha. Mensagem enviada vai para a
-  // direita (`message-out`), recebida para a esquerda (`message-in`).
-  const row = node.closest('.message-out, .message-in, [data-is-outgoing]');
-  if (row) {
-    if (row.classList.contains('message-out')) return true;
-    if (row.classList.contains('message-in')) return false;
-    if (row.getAttribute('data-is-outgoing') === 'true') return true;
-    if (row.getAttribute('data-is-outgoing') === 'false') return false;
-  }
+  // Sinal 2 — classe de alinhamento da bolha (`message-out` à direita,
+  // `message-in` à esquerda).
+  //
+  // CORREÇÃO (verificada nos dados reais do usuário, 2026-08-30): a versão
+  // anterior só usava `closest()`, que procura nos elementos ACIMA na árvore.
+  // No WhatsApp Web essa classe fica num elemento ABAIXO do que carrega o
+  // `data-id`, então `closest()` nunca achava nada e toda mensagem enviada
+  // era contada como recebida. Agora procura nos dois sentidos.
+  const above = node.closest('.message-out, .message-in');
+  if (above) return above.classList.contains('message-out');
+  const below = node.querySelector('.message-out, .message-in');
+  if (below) return below.classList.contains('message-out');
 
-  // Sinal 3 (reserva) — só a SUA mensagem tem indicador de entrega: o
-  // relógio de "enviando", o tique simples de entregue e o tique duplo de
-  // lido. Mensagem recebida nunca mostra nenhum dos três. Serve de rede
-  // caso a classe de alinhamento do sinal 2 mude de nome numa atualização
-  // do WhatsApp Web.
-  const container = node.closest('[data-id]') || node;
-  if (container.querySelector('[data-icon="msg-check"], [data-icon="msg-dblcheck"], [data-icon="msg-time"]')) {
-    return true;
-  }
+  // Sinal 3 — indicador de entrega. Só a SUA mensagem tem relógio de
+  // "enviando", tique simples ou tique duplo. Recebida nunca tem.
+  if (node.querySelector('[data-icon^="msg-"], [data-icon^="status-"]')) return true;
+
+  // Sinal 4 — prefixo do identificador. O WhatsApp Web gera identificador
+  // começando com "3EB0" para as mensagens que ELE mesmo envia. Confirmado
+  // no arquivo real do usuário: todos os `3EB0...` gravados eram mensagens
+  // dele, e os `AC...` eram recebidas. Fica por último por ser um padrão
+  // observado, não documentado.
+  if (/^3EB0/i.test(dataId)) return true;
 
   return false;
 }
@@ -249,7 +253,23 @@ function scanChatMessages(panel: Element): ScannedMessage[] {
       // "Recebidas" de "Enviadas". Continua fora da contagem de interações
       // (interação é pessoa que FALOU com você).
       const direction: 'in' | 'out' = isOutgoing(node, dataId) ? 'out' : 'in';
-      const effectiveBucket = classifyByOwnDate(node) ?? bucket;
+      // Data própria da bolha quando existe. Imagem, figurinha e áudio
+      // normalmente NÃO têm esse dado — só mensagem de texto tem.
+      const ownDate = classifyByOwnDate(node);
+      if (ownDate) {
+        // Mensagem datada: além de classificar a si mesma, ela passa a ser a
+        // referência de dia para as próximas bolhas sem data. É o que faz uma
+        // imagem entre duas mensagens de hoje ser contada como hoje.
+        bucket = ownDate;
+      }
+      // CORREÇÃO (2026-08-30): antes, bolha sem data própria dependia só do
+      // divisor "Hoje"/"Ontem" estar carregado. Numa conversa rolada, esse
+      // divisor costuma estar fora do trecho renderizado, então imagens e
+      // figurinhas viravam "mais antiga que ontem" e sumiam da contagem —
+      // no caso real do usuário, 16 mensagens viraram 7. Agora a referência
+      // também vem da última mensagem datada vista antes dela, na ordem da
+      // tela.
+      const effectiveBucket = ownDate ?? bucket;
       if (effectiveBucket === 'other') continue; // mais antiga que ontem: nunca conta, não marca visto (barato reavaliar)
       seenMessageIds.add(dataId);
       out.push({ dataId, bucket: effectiveBucket, direction });
