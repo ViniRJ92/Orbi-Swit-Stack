@@ -246,6 +246,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Correção: as primeiras imagens e figurinhas logo abaixo do divisor "Hoje" eram contadas como sendo de ontem. A busca pelo divisor de data usava um seletor que não casava com o divisor comum do WhatsApp.',
   ].join('\n'),
+  '0.39.1': [
+    'Corrige a chave "Comparar com período anterior"',
+    '',
+    '• A bolinha da chave escapava para fora da cápsula. As tentativas anteriores mexeram na posição do bloco na linha, não na chave em si, por isso o defeito continuava.',
+    '• A chave foi refeita sem posicionamento absoluto: a bolinha agora anda dentro da área interna e encosta na borda sem ultrapassar.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

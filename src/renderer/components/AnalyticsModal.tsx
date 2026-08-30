@@ -578,18 +578,29 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
 
         <label className="flex shrink-0 items-center gap-2 text-[12px] font-medium text-text-dim">
           Comparar com período anterior
+          {/*
+            Fase 44 — o botão foi refeito. A bolinha era posicionada de forma
+            ABSOLUTA (`absolute top-0.5` + `translate-x-4`) dentro de uma
+            cápsula de 36px. Sem o deslocamento estar preso à área interna, ela
+            escapava pela direita e aparecia meio fora da cápsula.
+            Correção: `inline-flex` + `items-center` + `p-0.5` criam uma área
+            interna de 32px (36 menos 2px de cada lado); a bolinha tem 16px e
+            desloca no máximo 16px, então encosta exatamente na borda interna e
+            nunca ultrapassa. Sem posicionamento absoluto.
+          */}
           <button
             role="switch"
             aria-checked={compare}
             onClick={() => setCompare((v) => !v)}
             className={
-              'relative h-5 w-9 shrink-0 rounded-full transition-colors ' + (compare ? 'accent-gradient' : 'bg-input')
+              'inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ' +
+              (compare ? 'accent-gradient' : 'bg-input')
             }
           >
             <span
               className={
-                'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ' +
-                (compare ? 'translate-x-4' : 'translate-x-0.5')
+                'h-4 w-4 rounded-full bg-white shadow transition-transform ' +
+                (compare ? 'translate-x-4' : 'translate-x-0')
               }
             />
           </button>
