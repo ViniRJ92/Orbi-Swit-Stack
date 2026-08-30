@@ -262,6 +262,17 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Nada foi alterado na contagem nem na soma das mensagens.',
   ].join('\n'),
+  '0.40.0': [
+    'Aviso de mensagem só pelo toast do app',
+    '',
+    '• A caixa preta do Windows saiu de vez. O aviso agora é sempre o do próprio app, no canto inferior direito.',
+    '• Visual flutuante: cantos arredondados, sombra mais funda e fundo que acompanha o tema claro ou escuro.',
+    '• Nome da instância limpo na exibição: traços soltos e trechos repetidos são removidos. O nome cadastrado da conta não muda.',
+    '',
+    'Com a janela minimizada na bandeja não aparece aviso visual, já que o toast vive dentro da janela. O contador de não lidas na barra lateral continua marcando normalmente.',
+    '',
+    'A detecção de mensagem nova não foi alterada. Mudou só por onde o aviso aparece.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

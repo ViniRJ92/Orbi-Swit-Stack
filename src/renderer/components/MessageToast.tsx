@@ -35,6 +35,36 @@ const VISIBLE_MS = 5000;
 /** Teto de avisos empilhados — acima disso os mais antigos saem. */
 const MAX_STACK = 3;
 
+/**
+ * Fase 46 — limpa o nome antes de mostrar.
+ *
+ * Os nomes vêm como o usuário cadastrou e costumam trazer sobras de
+ * formatação: hífens soltos no fim, sequências de "-" seguidas ("- -"), e o
+ * mesmo trecho repetido ("Praça Seca - Praça Seca 1"). Isso é só formatação
+ * de exibição; o nome real da conta não é alterado em lugar nenhum.
+ */
+function cleanName(raw: string): string {
+  let name = (raw || '')
+    // "- -" ou "--" viram um traço só
+    .replace(/\s*[-–—]{1,}\s*(?=[-–—])/g, '')
+    // espaços repetidos
+    .replace(/\s{2,}/g, ' ')
+    // traço solto no começo ou no fim
+    .replace(/^\s*[-–—]+\s*|\s*[-–—]+\s*$/g, '')
+    .trim();
+
+  // Trecho repetido em sequência ("Praça Seca Praça Seca 1" -> "Praça Seca 1")
+  const partes = name.split(' ');
+  const semRepeticao: string[] = [];
+  for (const parte of partes) {
+    if (semRepeticao.length > 0 && semRepeticao[semRepeticao.length - 1].toLowerCase() === parte.toLowerCase()) continue;
+    semRepeticao.push(parte);
+  }
+  name = semRepeticao.join(' ');
+
+  return name || raw;
+}
+
 export function MessageToast() {
   const [items, setItems] = useState<ToastItem[]>([]);
   const switchAccount = useAppStore((s) => s.switchAccount);
@@ -66,13 +96,20 @@ export function MessageToast() {
               switchAccount(item.accountId);
               dismiss(item.id);
             }}
-            className="pointer-events-auto group flex items-center gap-2.5 rounded-2xl border border-border bg-surface py-2.5 pl-2.5 pr-3 text-left shadow-lg transition-colors hover:bg-surface-hover"
+            /*
+              Fase 46 — flutuante e adaptado ao tema: as cores saem das mesmas
+              variáveis do resto da interface (`bg-surface`, `border-border`,
+              `text-text`), então o toast acompanha claro e escuro sozinho.
+              `backdrop-blur` e a sombra mais funda dão o destaque de algo que
+              flutua sobre o conteúdo.
+            */
+            className="pointer-events-auto group flex max-w-[320px] items-center gap-3 rounded-2xl border border-border bg-surface/95 py-3 pl-3 pr-3.5 text-left shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-colors hover:bg-surface-hover"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl accent-gradient text-accent-contrast">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl accent-gradient text-accent-contrast shadow-sm">
               <MessageCircle size={16} />
             </span>
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className="truncate text-[12.5px] font-semibold text-text">{item.accountName}</span>
+            <span className="flex min-w-0 flex-col gap-0.5 leading-tight">
+              <span className="truncate text-[13px] font-semibold text-text">{cleanName(item.accountName)}</span>
               <span className="text-[11.5px] font-light text-text-dim">
                 {item.count === 1 ? 'Nova mensagem' : `${item.count} mensagens novas`}
               </span>

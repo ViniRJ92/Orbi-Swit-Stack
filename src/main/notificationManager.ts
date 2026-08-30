@@ -1,11 +1,15 @@
 /**
- * Notificações nativas de novas mensagens. Só compara o contador de não
- * lidas já calculado por accountManager/viewManager — nenhum conteúdo de
- * mensagem é lido ou armazenado aqui.
+ * Aviso de mensagem nova. Só compara o contador de não lidas já calculado por
+ * accountManager/viewManager. Nenhum conteúdo de mensagem é lido ou
+ * armazenado aqui.
+ *
+ * Fase 46: a caixa nativa do Windows foi substituída pelo toast do próprio
+ * app (ver MessageToast.tsx). A detecção continua exatamente a mesma; mudou
+ * só por onde o aviso aparece.
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { BrowserWindow, Notification, nativeImage } from 'electron';
+import { BrowserWindow } from 'electron';
 import { AccountStatus } from './types';
 import { AccountStore } from './accountStore';
 
@@ -50,31 +54,24 @@ export class NotificationManager {
       const acc = this.accountStore.get(status.id);
       if (!acc) continue;
 
-      // Fase 39 — se a janela do app está visível, quem avisa é o toast
-      // desenhado pelo próprio app (MessageToast.tsx), que segue a identidade
-      // visual da interface. A notificação nativa do Windows fica só para
-      // quando a janela está escondida ou minimizada na bandeja — aí um aviso
-      // dentro da janela não seria visto por ninguém.
-      const windowVisible = !!win && win.isVisible() && !win.isMinimized();
-      if (windowVisible) {
-        win.webContents.send('mw:new-messages', {
-          accountId: status.id,
-          accountName: acc.name,
-          count: status.unreadCount - previous,
-        });
-        continue;
-      }
-
-      if (Notification.isSupported()) {
-        const notification = new Notification({
-          title: `${this.appName} · ${acc.name}`,
-          body: status.unreadCount === 1 ? 'Nova mensagem' : `${status.unreadCount} mensagens não lidas`,
-          icon: nativeImage.createFromPath(this.iconPath),
-          silent: false,
-        });
-        notification.on('click', () => this.onNotificationClicked(status.id));
-        notification.show();
-      }
+      // Fase 46 — o aviso passa a ser SEMPRE o toast desenhado pelo próprio
+      // app (MessageToast.tsx). A caixa nativa do Windows saiu de vez: o
+      // sistema operacional é quem a desenha, então tamanho, cantos, fonte e
+      // espaçamento não eram ajustáveis daqui.
+      //
+      // Nada da detecção mudou: quem decide que existe mensagem nova continua
+      // sendo a comparação de contador logo acima, com as mesmas condições de
+      // sempre. Só o meio de exibir é que é outro.
+      //
+      // Consequência assumida: com a janela minimizada na bandeja não aparece
+      // aviso visual, porque um toast dentro de uma janela escondida não seria
+      // visto. O contador de não lidas na barra lateral continua marcando
+      // normalmente quando a janela volta.
+      win?.webContents.send('mw:new-messages', {
+        accountId: status.id,
+        accountName: acc.name,
+        count: status.unreadCount - previous,
+      });
     }
   }
 }
