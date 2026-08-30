@@ -26,7 +26,7 @@ import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
 import { UpdateManager } from './updateManager';
 import { resolveWhatsNew } from './releaseNotes';
-import { AnalyticsRange, BackupFile } from './types';
+import { AnalyticsRange, AnalyticsSummary, BackupFile } from './types';
 import { logger } from './logger';
 
 const ICON_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
@@ -383,9 +383,22 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
 
   // --- Analytics (Fase 9) ---
 
+  // Fase 32: fonte ÚNICA do painel — a mesma contagem por mensagem que
+  // alimenta "Atividade de hoje/ontem" (ver
+  // chatActivityStore.buildAnalyticsSummary). Antes vinha de
+  // analyticsStore.buildSummary, que conta pelo badge da conta inteira: os
+  // dois blocos da mesma tela nunca fechavam entre si.
   ipcMain.handle('mw:get-analytics-summary', (_evt, range: AnalyticsRange) => {
     const accounts = accountManager.list().map((a) => ({ id: a.id, name: a.name, color: a.color }));
-    return analyticsStore.buildSummary(range, accounts);
+    const empty: AnalyticsSummary = {
+      range,
+      totalVolume: 0,
+      leader: null,
+      averagePerAccount: 0,
+      byAccount: [],
+      timeline: Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 })),
+    };
+    return chatActivityStore?.buildAnalyticsSummary(range, accounts) ?? empty;
   });
 
   // Fase 28: relatório fixo de Hoje x Ontem por instância — não depende do

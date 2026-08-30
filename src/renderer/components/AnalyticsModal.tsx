@@ -48,7 +48,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Modal } from './Modal';
 import { useAppStore } from '../store/useAppStore';
 import {
   AccountStatus,
@@ -360,15 +359,31 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
     dismissAlert(alert.id);
   }
 
+  // Fase 32: deixou de ser janela flutuante (modal) e virou PÁGINA — ocupa
+  // toda a área de conteúdo (largura e altura), no lugar da instância, para
+  // caber o painel inteiro sem aperto. Quem esconde a WebContentsView por
+  // baixo continua sendo o mesmo mecanismo de sempre (setOverlayActive em
+  // App.tsx), então nada muda no processo principal.
+  if (!open) return null;
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Analytics"
-      icon={<BarChart3 size={15} />}
-      size="xl"
-      contentClassName="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-6"
-    >
+    <section className="flex min-h-0 flex-1 flex-col bg-content">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg accent-gradient text-accent-contrast">
+            <BarChart3 size={15} />
+          </span>
+          <h1 className="text-[15px] font-semibold text-text">Analytics</h1>
+        </div>
+        <button
+          className="rounded-lg px-3 py-1.5 text-[12.5px] font-medium text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+          onClick={onClose}
+        >
+          Fechar
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
       {/* Barra superior: atalhos rápidos + intervalo customizado + comparação */}
       <div className="flex shrink-0 flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 rounded-lg bg-input p-1">
@@ -546,6 +561,11 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
                   tick={{ fill: 'var(--color-text-dim)', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
+                  // Fase 32: sem isto o Recharts descarta rótulos quando o
+                  // card fica baixo — aparecia barra sem nome (duas barras,
+                  // um nome só), fazendo parecer que a instância líder do
+                  // card ao lado nem estava no gráfico.
+                  interval={0}
                 />
                 <Tooltip
                   cursor={{ fill: 'var(--color-surface-hover)' }}
@@ -598,7 +618,8 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
           )}
         </ChartCard>
       </div>
-    </Modal>
+      </div>
+    </section>
   );
 }
 

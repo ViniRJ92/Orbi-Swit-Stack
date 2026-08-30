@@ -80,7 +80,7 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ChatActivityDailySummary, ChatActivityDayReport } from './types';
+import { AnalyticsRange, AnalyticsSummary, ChatActivityDailySummary, ChatActivityDayReport } from './types';
 
 const STORE_FILE = 'chatActivity.json';
 const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -415,5 +415,58 @@ export class ChatActivityStore {
       today: this.buildDayReport(todayKey(), accounts),
       yesterday: this.buildDayReport(yesterdayKey(), accounts),
     };
+  }
+
+  /**
+   * Fase 32 (2026-08-30) — FONTE ÚNICA dos números do painel de Analytics.
+   *
+   * Antes, o painel misturava duas contagens independentes na mesma tela:
+   * "Volume total / Instância líder / Média / Movimento por instância /
+   * Horários de pico" vinham de analyticsStore.ts (que conta pelo contador de
+   * não lidas da CONTA inteira), enquanto "Atividade de hoje/ontem" vinha
+   * daqui (que conta mensagem por mensagem, por CONVERSA). Como medem coisas
+   * diferentes, os dois blocos nunca fechavam entre si — foi exatamente a
+   * divergência que o usuário reportou ("Volume total 17" ao lado de
+   * "Atividade de hoje: 8 mensagens", 2026-08-30).
+   *
+   * Agora o painel inteiro deriva DESTES eventos, então "Volume total" é, por
+   * construção, a soma exata do que aparece por instância, e o período "Hoje"
+   * bate com o card "Atividade de hoje" (os dois usam a mesma chave de dia).
+   *
+   * Duas consequências assumidas de propósito:
+   *  - Grupos continuam fora da conta (regra desta métrica desde a Fase 17),
+   *    então o volume passa a refletir só conversas com pessoas.
+   *  - O filtro de período usa a CHAVE DE DIA do evento (`day`, o dia real da
+   *    mensagem segundo o próprio WhatsApp), não o instante em que o app
+   *    percebeu (`t`). É o que faz "Hoje" bater exatamente com o card de
+   *    hoje mesmo para mensagens de ontem detectadas hoje. `t` continua sendo
+   *    usado só para o gráfico de horários de pico, que é por hora do dia.
+   */
+  buildAnalyticsSummary(range: AnalyticsRange, accounts: { id: string; name: string; color: string }[]): AnalyticsSummary {
+    const startDay = dayKey(new Date(range.startTs));
+    const endDay = dayKey(new Date(range.endTs));
+    const totalsByAccount = new Map<string, number>();
+    const hourly = new Array(24).fill(0) as number[];
+
+    for (const e of this.data.events) {
+      // Comparação de string funciona porque a chave é AAAA-MM-DD (ordem
+      // lexicográfica = ordem cronológica).
+      if (e.day < startDay || e.day > endDay) continue;
+      totalsByAccount.set(e.a, (totalsByAccount.get(e.a) ?? 0) + e.c);
+      hourly[new Date(e.t).getHours()] += e.c;
+    }
+
+    const byAccount = accounts
+      .map((acc) => ({ accountId: acc.id, name: acc.name, color: acc.color, total: totalsByAccount.get(acc.id) ?? 0 }))
+      .filter((a) => a.total > 0)
+      .sort((a, b) => b.total - a.total);
+
+    const totalVolume = byAccount.reduce((sum, a) => sum + a.total, 0);
+    const leader = byAccount[0]
+      ? { accountId: byAccount[0].accountId, name: byAccount[0].name, total: byAccount[0].total }
+      : null;
+    const averagePerAccount = byAccount.length > 0 ? totalVolume / byAccount.length : 0;
+
+    return { range, totalVolume, leader, averagePerAccount, byAccount, timeline: hourly.map((count, hour) => ({ hour, count })) };
   }
 }

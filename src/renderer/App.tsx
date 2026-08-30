@@ -123,7 +123,19 @@ export function App() {
   // exatamente sobre esta área (ver windowManager.ts, que calcula os bounds
   // de forma diferente conforme `sidebarPosition` — ver getContentBounds) —
   // este <main> só reserva o espaço e mostra o estado vazio.
-  const main = (
+  // Fase 32: Analytics virou PÁGINA — ocupa a área de conteúdo inteira no
+  // lugar da instância, em vez da antiga janela flutuante. A WebContentsView
+  // por baixo continua sendo escondida pelo mesmo `setOverlayActive`
+  // (analyticsOpen já entra em `anyModalOpen` acima).
+  const analyticsPage = analyticsLoaded ? (
+    <Suspense fallback={null}>
+      <AnalyticsModal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} />
+    </Suspense>
+  ) : null;
+
+  const main = analyticsOpen ? (
+    analyticsPage
+  ) : (
     <main id="content-area" className="relative flex-1 bg-content transition-colors">
       {!hasActive && accounts.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3.5 text-center">
@@ -168,11 +180,6 @@ export function App() {
       <WhatsNewModal />
       <AddAccountWizard open={addAccountOpen} onClose={() => setAddAccountOpen(false)} />
       <AccountsDashboard open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
-      {analyticsLoaded && (
-        <Suspense fallback={null}>
-          <AnalyticsModal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} />
-        </Suspense>
-      )}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
   );

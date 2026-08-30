@@ -113,6 +113,16 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Instancias desses servicos que voce ja tenha criado continuam abrindo como antes; nada foi apagado.',
     '- Nos servicos que nao sao WhatsApp, o status agora diz "Aberto" em vez de "Conectado". Fora do WhatsApp o app so sabe que a pagina carregou, nao se voce esta logado - dizer "Conectado" aparecia ate quando o login tinha falhado.',
   ].join('\n'),
+  '0.35.0': [
+    'Analytics em tela cheia e numeros que fecham entre si',
+    '',
+    '- O Analytics deixou de ser uma janelinha e virou pagina inteira, usando toda a largura e altura.',
+    '- Numeros unificados: "Volume total", "Instancia lider", "Media por conta", "Movimento por instancia" e "Horarios de pico" agora vem da MESMA contagem por mensagem que ja alimentava "Atividade de hoje/ontem". Antes eram dois sistemas diferentes na mesma tela (um contava pelo aviso de nao lidas da conta inteira, outro mensagem por mensagem), e por isso os blocos nunca batiam.',
+    '- Consequencia esperada: o "Volume total" fica menor do que voce via antes. O numero antigo estava inflado; o novo e a soma exata do que aparece por instancia.',
+    '- O periodo "Hoje" agora casa exatamente com o card "Atividade de hoje".',
+    '- Corrigido o grafico "Movimento por instancia", que escondia o nome de algumas instancias (aparecia barra sem nome).',
+    '- Grupos continuam fora da contagem, como ja era na atividade diaria.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
