@@ -29,7 +29,7 @@
 import { BrowserWindow, WebContentsView, ipcMain, session } from 'electron';
 import * as path from 'path';
 import { AccountStore } from './accountStore';
-import { SERVICES, isHostAllowed, resolveAccountUrl } from './services';
+import { SERVICES, isHostAllowed, resolveAccountUrl, allowedHostsFor } from './services';
 import { logger } from './logger';
 
 /**
@@ -129,24 +129,6 @@ export class ViewManager {
         this.onChatMessages?.(accountId, chat?.chatKey ?? null, chat?.isGroup ?? false, payload.items);
       }
     );
-    // Fase 30.9 (2026-08-29, DIAGNÓSTICO TEMPORÁRIO) — só grava no log o
-    // identificador opaco (`data-id`, nunca texto/mídia/remetente) de cada
-    // balão visto e a decisão de classificação tomada, pra confirmar por que
-    // mensagens visivelmente sob o divisor "Hoje" (ex.: imagens encaminhadas)
-    // estavam saindo classificadas como "ontem" — ver comentário de
-    // `classifyByOwnDate` em webviewPreload.ts. Remover depois de confirmado.
-    ipcMain.on(
-      'mw:debug-classify',
-      (
-        event,
-        info: { dataId: string; isSelfSent: boolean; hasOwnDate: boolean; ownDate: string | null; fallbackBucket: string; effectiveBucket: string }
-      ) => {
-        const accountId = this.webContentsIdToAccount.get(event.sender.id);
-        logger.info(
-          `[debug-classify] conta=${accountId} dataId=${info.dataId} selfSent=${info.isSelfSent} temDataPropria=${info.hasOwnDate} dataPropria=${info.ownDate} bucketDivisor=${info.fallbackBucket} bucketFinal=${info.effectiveBucket}`
-        );
-      }
-    );
     // Fase 30 (reescrita) — avisa quando a conversa aberta desta conta
     // aparece/desaparece/troca (usado para ligar/desligar o canal de badge
     // enquanto uma conversa está sendo observada em tempo real, e para saber
@@ -228,6 +210,9 @@ export class ViewManager {
     const account = this.accountStore.get(accountId);
     const service = SERVICES[account?.service ?? 'whatsapp'] ?? SERVICES.whatsapp;
     const startUrl = resolveAccountUrl(service.id, account?.customUrl);
+    // Fase 31: allowlist do serviço + provedores de login social (ver
+    // `allowedHostsFor`). WhatsApp segue restrito só ao próprio domínio.
+    const navHosts = allowedHostsFor(service.id);
 
     const partition = AccountStore.partitionFor(accountId);
     // Sessão isolada e persistente por conta — este é o ponto central do isolamento.
@@ -268,23 +253,48 @@ export class ViewManager {
     // Allowlist de navegação por serviço (ver services.ts) — null = sem
     // restrição, usado por "Navegador livre" e "URL customizada".
     view.webContents.on('will-navigate', (event, targetUrl) => {
-      if (!isNavigationAllowed(service.allowedHosts, targetUrl)) {
+      if (!isNavigationAllowed(navHosts, targetUrl)) {
         logger.warn(`Navegação bloqueada (fora do domínio permitido de "${service.label}") na conta ${accountId}: ${targetUrl}`);
         event.preventDefault();
       }
     });
     view.webContents.setWindowOpenHandler(({ url }) => {
-      // Nada abre em uma janela do sistema operacional separada — isso
-      // escaparia do isolamento por partition. Para o WhatsApp (que nunca
-      // precisa disso para sua função oficial) o link é só recusado; para os
-      // demais serviços, que legitimamente usam links "abrir em nova aba"
-      // (ex.: um resultado de busca), a navegação acontece na própria view.
-      if (service.id !== 'whatsapp' && isNavigationAllowed(service.allowedHosts, url)) {
-        view.webContents.loadURL(url).catch(() => {});
-      } else {
+      // WhatsApp nunca precisa abrir janela nenhuma para sua função oficial —
+      // segue recusando, como sempre.
+      if (service.id === 'whatsapp') {
         logger.warn(`Tentativa de abrir nova janela bloqueada na conta ${accountId}: ${url}`);
+        return { action: 'deny' };
       }
-      return { action: 'deny' };
+
+      // Link "abrir em nova aba" dentro do próprio serviço (ex.: um resultado
+      // de busca): continua navegando na própria view, sem abrir janela.
+      if (isNavigationAllowed(SERVICES[service.id]?.allowedHosts ?? null, url)) {
+        view.webContents.loadURL(url).catch(() => {});
+        return { action: 'deny' };
+      }
+
+      // Fase 31 (2026-08-30): login social ("Continuar com Google/Facebook/
+      // Apple") acontece obrigatoriamente numa janela popup, num domínio de
+      // terceiro que por definição não está na allowlist do serviço. Recusar
+      // essa janela era o motivo do erro "Failed to open popup window" no
+      // TikTok — o fluxo de login simplesmente não tinha como acontecer.
+      // A janela é aberta com a MESMA sessão isolada da conta (`ses`), então
+      // o isolamento por partition continua valendo: o popup enxerga só os
+      // cookies desta instância, e o que ele gravar fica nesta instância.
+      logger.info(`Abrindo janela de login (popup) da conta ${accountId}: ${url}`);
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 620,
+          height: 760,
+          autoHideMenuBar: true,
+          webPreferences: {
+            session: ses,
+            contextIsolation: true,
+            nodeIntegration: false,
+          },
+        },
+      };
     });
 
     view.webContents.on('page-title-updated', () => {

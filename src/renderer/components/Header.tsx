@@ -1,7 +1,7 @@
 /**
  * Cabeçalho superior. Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { Settings, Info, LayoutGrid, Search, BarChart3 } from 'lucide-react';
+import { Settings, Info, LayoutGrid, Search, BarChart3, RotateCw } from 'lucide-react';
 
 export function Header({
   onOpenAbout,
@@ -9,6 +9,8 @@ export function Header({
   onOpenDashboard,
   onOpenPalette,
   onOpenAnalytics,
+  onReloadActive,
+  canReload,
   hasUpdate,
 }: {
   onOpenAbout: () => void;
@@ -16,6 +18,10 @@ export function Header({
   onOpenDashboard: () => void;
   onOpenPalette: () => void;
   onOpenAnalytics: () => void;
+  /** Fase 31: recarrega a instância em exibição (mesmo efeito de F5 / Ctrl+R). */
+  onReloadActive: () => void;
+  /** Fase 31: só há o que recarregar quando alguma instância está aberta. */
+  canReload: boolean;
   /** Fase 27: acende um ponto vermelho sobre "Configurações" quando há uma atualização disponível/baixada. */
   hasUpdate?: boolean;
 }) {
@@ -38,6 +44,14 @@ export function Header({
           title="Analytics"
         >
           <BarChart3 size={14} />
+        </button>
+        <button
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-text-dim transition-colors hover:bg-surface-hover hover:text-text disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-dim"
+          onClick={onReloadActive}
+          disabled={!canReload}
+          title={canReload ? 'Recarregar esta instância (F5)' : 'Nenhuma instância aberta para recarregar'}
+        >
+          <RotateCw size={14} />
         </button>
         <button
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-text-dim transition-colors hover:bg-surface-hover hover:text-text"

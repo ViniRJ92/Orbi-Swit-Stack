@@ -212,3 +212,47 @@ export function isHostAllowed(allowedHosts: string[] | null, hostname: string): 
   if (allowedHosts === null) return true;
   return allowedHosts.some((allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`));
 }
+
+/**
+ * Fase 31 (2026-08-30) — domínios oficiais de login de terceiros ("Continuar
+ * com Google/Facebook/Apple/Microsoft"). Quase todo serviço da lista oferece
+ * pelo menos uma dessas opções, e o login redireciona (ou abre um popup) para
+ * o domínio do provedor — que, por definição, nunca está na allowlist do
+ * serviço em si. Sem isto, a allowlist de navegação bloqueava a própria tela
+ * de login: era por isso que só dava pra entrar em serviços que não dependem
+ * de login social.
+ *
+ * Continua sendo só a interface oficial de login de cada provedor, aberta na
+ * sessão isolada da conta — nenhuma credencial passa pelo app, que só carrega
+ * a página e deixa o usuário digitar direto nela, como em qualquer navegador.
+ *
+ * O WhatsApp NÃO usa isto (ver `allowedHostsFor`): ele não tem login social e
+ * mantém a trava mais estrita de sempre, por exigência do projeto.
+ */
+export const IDENTITY_PROVIDER_HOSTS = [
+  'accounts.google.com',
+  'accounts.youtube.com',
+  'gstatic.com',
+  'googleusercontent.com',
+  'facebook.com',
+  'fbcdn.net',
+  'appleid.apple.com',
+  'apple.com',
+  'login.microsoftonline.com',
+  'login.live.com',
+  'login.microsoft.com',
+  'x.com',
+  'twitter.com',
+];
+
+/**
+ * Allowlist efetiva de um serviço: a dele mesmo + os provedores de login
+ * (exceto WhatsApp, que segue restrito só ao próprio domínio). `null`
+ * continua significando "sem restrição" (Pesquisa Google / Web Explorer).
+ */
+export function allowedHostsFor(service: AccountService): string[] | null {
+  const base = SERVICES[service]?.allowedHosts ?? null;
+  if (base === null) return null;
+  if (service === 'whatsapp') return base;
+  return [...base, ...IDENTITY_PROVIDER_HOSTS];
+}

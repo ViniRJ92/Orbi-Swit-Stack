@@ -96,6 +96,15 @@ export const RELEASE_NOTES: Record<string, string> = {
     '- Agora cada mensagem carrega a propria data (mesmo dado que a funcao "copiar" do WhatsApp ja usa), entao a contagem funciona independente de quanto historico a conversa tem ou de quanto voce rolou a tela.',
     '- Sem leitura de texto, remetente ou midia em nenhum momento.',
   ].join('\n'),
+  '0.34.0': [
+    'Login nos servicos + botao de recarregar (F5)',
+    '',
+    '- Corrigido o erro "Failed to open popup window" (TikTok e outros): o login social ("Continuar com Google/Facebook/Apple") precisa abrir uma janela de login, e o app recusava todas. Agora essa janela abre na MESMA sessao isolada da instancia, sem quebrar o isolamento entre contas.',
+    '- Corrigido tambem o bloqueio da propria tela de login: quando o servico te manda pro site do provedor (Google, Facebook, Apple, Microsoft), a navegacao era barrada pela lista de dominios permitidos. Esses dominios de login agora sao aceitos em todos os servicos, menos WhatsApp (que nao tem login social e segue com a trava mais estrita).',
+    '- Novo botao de recarregar no topo, e atalhos F5 e Ctrl+R, para recarregar a instancia que esta em exibicao.',
+    '',
+    'Limitacao conhecida (nao e falha do app): o Google bloqueia login de conta Google dentro de navegadores embutidos como este - por isso Gmail, Google Calendar, Google Earth e "Continuar com Google" mostram "esse navegador ou app pode nao ser seguro". Nos servicos que oferecem outras formas de entrar (e-mail/telefone, Facebook, Apple), essas funcionam.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

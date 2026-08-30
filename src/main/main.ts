@@ -183,7 +183,8 @@ app.whenReady().then(() => {
     accountStore,
     () => accountManager!.getActiveAccountId(),
     (id) => switchToAccount(id),
-    () => windowManager?.get()?.webContents.send('mw:open-command-palette')
+    () => windowManager?.get()?.webContents.send('mw:open-command-palette'),
+    (id) => accountManager?.reload(id)
   );
   viewManager.setShortcutHandler((input) => shortcutManagerRef.handleNavigationShortcut(input));
 

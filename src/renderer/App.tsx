@@ -31,6 +31,7 @@ export function App() {
   const updateState = useAppStore((s) => s.updateState);
   const hasUpdate = updateState.phase === 'available' || updateState.phase === 'downloading' || updateState.phase === 'downloaded';
   const whatsNew = useAppStore((s) => s.whatsNew);
+  const reloadAccount = useAppStore((s) => s.reloadAccount);
 
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -95,6 +96,8 @@ export function App() {
   }, [anyModalOpen]);
 
   const hasActive = accounts.some((a) => statuses.get(a.id)?.isActive);
+  // Fase 31: instância em exibição — alvo do botão de recarregar e do F5.
+  const activeAccountId = accounts.find((a) => statuses.get(a.id)?.isActive)?.id ?? null;
 
   const header = (
     <Header
@@ -106,6 +109,10 @@ export function App() {
         setAnalyticsLoaded(true);
         setAnalyticsOpen(true);
       }}
+      onReloadActive={() => {
+        if (activeAccountId) reloadAccount(activeAccountId);
+      }}
+      canReload={activeAccountId !== null}
       hasUpdate={hasUpdate}
     />
   );
