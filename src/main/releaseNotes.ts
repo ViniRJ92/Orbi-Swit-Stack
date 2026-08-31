@@ -319,6 +319,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• A decisão de quando esta tela aparece e o registro da versão já vista continuam como estavam.',
     '• O Esc agora fecha só a tela que está na frente. Renomear um agrupamento e apertar Esc cancela apenas a edição do nome, sem fechar as Configurações; e com o Analytics aberto atrás de outra tela, só a de cima fecha.',
   ].join('\n'),
+  '0.42.1': [
+    'Ajuda: contato do suporte e rolagem do índice',
+    '',
+    '• Novo card "Ainda precisa de ajuda?" no fim do manual, com WhatsApp e e-mail do suporte. Os contatos são texto: dá para selecionar e copiar.',
+    '• Clicar num item do índice agora leva o título da seção exatamente para o topo. Antes a rolagem parava abaixo do título, porque a medição partia do elemento errado.',
+    '• O destaque do índice acompanha a rolagem sem piscar entre duas seções.',
+    '• A última seção também consegue subir até o topo ao ser clicada.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

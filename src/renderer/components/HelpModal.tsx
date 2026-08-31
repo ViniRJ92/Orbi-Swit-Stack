@@ -14,7 +14,11 @@
  */
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BarChart3, Bell, HelpCircle, Keyboard, LayoutGrid, Rocket, Settings, X } from 'lucide-react';
+import { BarChart3, Bell, HelpCircle, Keyboard, LayoutGrid, Mail, MessageCircle, Rocket, Settings, X } from 'lucide-react';
+
+/** Fase 51 — contatos do suporte, exibidos como texto no card do rodapé. */
+const SUPORTE_WHATSAPP_EXIBICAO = '(21) 97161-2853';
+const SUPORTE_EMAIL = 'viniciusbraga.rio@gmail.com';
 
 interface HelpSection {
   id: string;
@@ -321,22 +325,52 @@ export function HelpModal({ open, onClose }: { open: boolean; onClose: () => voi
     if (open) setActiveId(SECTIONS[0].id);
   }, [open]);
 
+  /**
+   * Distância real, em pixels, entre o topo de uma seção e o topo do conteúdo
+   * rolável.
+   *
+   * CORREÇÃO: antes isto usava `offsetTop`, que mede a distância até o
+   * ancestral POSICIONADO mais próximo. O painel de rolagem daqui não tem
+   * posicionamento próprio, então esse ancestral acabava sendo outro elemento
+   * mais acima e o número saía errado. Resultado: clicar no índice parava a
+   * rolagem no lugar errado, geralmente abaixo do título da seção.
+   *
+   * Medir pela posição na tela dos dois elementos e somar a rolagem atual dá
+   * o valor certo, sem depender de como o CSS está posicionado.
+   */
+  function distanciaAteOTopo(alvo: HTMLElement, container: HTMLElement): number {
+    return alvo.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+  }
+
   function irPara(id: string) {
     setActiveId(id);
     const alvo = document.getElementById(`ajuda-${id}`);
     const container = contentRef.current;
     if (!alvo || !container) return;
-    container.scrollTo({ top: alvo.offsetTop - 12, behavior: 'smooth' });
+    // O painel tem um espaço interno no topo; descontar isso encosta o título
+    // exatamente na primeira linha visível, sem cortar nada acima.
+    const espacoInterno = parseFloat(getComputedStyle(container).paddingTop) || 0;
+    container.scrollTo({ top: Math.max(0, distanciaAteOTopo(alvo, container) - espacoInterno), behavior: 'smooth' });
   }
 
   /** Destaca no índice a seção que está sendo lida. */
   function onScroll() {
     const container = contentRef.current;
     if (!container) return;
+    // Mesma medição do clique, para o destaque bater com o que está no topo.
+    const espacoInterno = parseFloat(getComputedStyle(container).paddingTop) || 0;
+    // Margem de tolerância: a seção passa a ser "a atual" quando seu título
+    // cruza um pouco abaixo do topo, evitando piscar entre duas na fronteira.
+    const linhaDeCorte = container.scrollTop + espacoInterno + 24;
     let atual = SECTIONS[0].id;
     for (const s of SECTIONS) {
       const el = document.getElementById(`ajuda-${s.id}`);
-      if (el && el.offsetTop - 40 <= container.scrollTop) atual = s.id;
+      if (el && distanciaAteOTopo(el, container) <= linhaDeCorte) atual = s.id;
+    }
+    // Rolou até o fim: destaca a última seção, mesmo que ela seja curta demais
+    // para chegar ao topo.
+    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 4) {
+      atual = SECTIONS[SECTIONS.length - 1].id;
     }
     setActiveId(atual);
   }
@@ -409,6 +443,49 @@ export function HelpModal({ open, onClose }: { open: boolean; onClose: () => voi
                     {s.body}
                   </section>
                 ))}
+
+                {/*
+                  Fase 51 — atendimento, no fim de tudo. Os contatos são TEXTO,
+                  não link: a pessoa seleciona e copia. `select-text` e
+                  `cursor-text` deixam claro que dá para selecionar.
+                */}
+                <div className="mt-2 rounded-2xl border border-border bg-surface-hover/40 px-5 py-5">
+                  <h3 className="text-[14px] font-semibold text-text">Ainda precisa de ajuda?</h3>
+                  <p className="mt-1 text-[13px] leading-6 text-text-dim">
+                    Se algo não funcionou como esperado ou ficou dúvida, fale direto com o suporte.
+                  </p>
+                  <div className="mt-3.5 flex flex-col gap-2">
+                    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-2.5">
+                      <MessageCircle size={15} className="shrink-0 text-accent" />
+                      <span className="text-[13px] text-text-dim">
+                        WhatsApp:{' '}
+                        <span className="select-text cursor-text font-semibold text-text">
+                          {SUPORTE_WHATSAPP_EXIBICAO}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-2.5">
+                      <Mail size={15} className="shrink-0 text-accent" />
+                      <span className="text-[13px] text-text-dim">
+                        E-mail:{' '}
+                        <span className="select-text cursor-text font-semibold text-text">{SUPORTE_EMAIL}</span>
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[12px] leading-5 text-text-faint">
+                    Ao relatar um problema, diga qual instância, o que você fez e o que aconteceu. Isso resolve bem mais
+                    rápido.
+                  </p>
+                </div>
+
+                {/*
+                  Espaço vazio no fim, para que a ÚLTIMA seção também consiga
+                  subir até o topo ao ser clicada no índice. Sem ele a rolagem
+                  chega ao fim antes disso e o título fica no meio da tela.
+                  Não é conteúdo do manual, é só folga de rolagem.
+                */}
+                <div aria-hidden className="h-[45vh]" />
               </div>
             </div>
           </motion.div>
