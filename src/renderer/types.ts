@@ -224,6 +224,53 @@ export interface WhatsNewResult {
   shouldShow: boolean;
 }
 
+/** Fase 54 — Agenda. Espelha src/main/calendarStore.ts e holidays.ts. */
+export const EVENT_CATEGORIES = [
+  { id: 'trabalho', label: 'Trabalho', color: '#3B82F6' },
+  { id: 'reuniao', label: 'Reunião', color: '#8B5CF6' },
+  { id: 'pessoal', label: 'Pessoal', color: '#10B981' },
+  { id: 'atendimento', label: 'Atendimento', color: '#F59E0B' },
+  { id: 'outro', label: 'Outro', color: '#64748B' },
+] as const;
+
+export type EventCategoryId = (typeof EVENT_CATEGORIES)[number]['id'];
+
+export interface EventReminder {
+  id: string;
+  /** Antecedência em minutos. 0 = na hora do evento. */
+  minutesBefore: number;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+  category: EventCategoryId;
+  accountId?: string | null;
+  description?: string;
+  reminders: EventReminder[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type CalendarEventInput = Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface Holiday {
+  date: string;
+  name: string;
+  kind: 'fixed' | 'movable';
+}
+
+export interface ReminderDuePayload {
+  key: string;
+  eventId: string;
+  title: string;
+  start: number;
+  minutesBefore: number;
+}
+
 export interface OrbiSwitStackApi {
   getAppInfo: () => Promise<AppInfo>;
   listAccounts: () => Promise<AccountsChangedPayload>;
@@ -291,6 +338,15 @@ export interface OrbiSwitStackApi {
     groupId?: string | null
   ) => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
   clearAnalytics: () => Promise<boolean>;
+  // --- Agenda (Fase 54) ---
+  listEvents: (range?: { startTs: number; endTs: number }) => Promise<CalendarEvent[]>;
+  createEvent: (input: CalendarEventInput) => Promise<CalendarEvent>;
+  updateEvent: (id: string, patch: Partial<CalendarEventInput>) => Promise<CalendarEvent | null>;
+  removeEvent: (id: string) => Promise<boolean>;
+  listHolidays: (startKey: string, endKey: string) => Promise<Holiday[]>;
+  snoozeReminder: (key: string, minutes: number) => Promise<boolean>;
+  dismissReminder: (key: string) => Promise<boolean>;
+  onReminderDue: (cb: (payload: ReminderDuePayload) => void) => () => void;
   onAccountsChanged: (cb: (payload: AccountsChangedPayload) => void) => () => void;
   onOpenCommandPalette: (cb: () => void) => () => void;
   getUpdateState: () => Promise<UpdateState>;

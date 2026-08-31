@@ -25,6 +25,8 @@ import {
 } from './settingsStore';
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
+import { CalendarStore, CalendarEvent } from './calendarStore';
+import { holidaysBetween } from './holidays';
 import { UpdateManager } from './updateManager';
 import { resolveWhatsNew } from './releaseNotes';
 import { AnalyticsRange, AnalyticsSummary, BackupFile } from './types';
@@ -57,6 +59,7 @@ export interface IpcRouterDeps {
   settingsStore: SettingsStore;
   analyticsStore: AnalyticsStore;
   chatActivityStore: ChatActivityStore | null;
+  calendarStore: CalendarStore;
   updateManager: UpdateManager | null;
   getMainWindow: () => BrowserWindow | null;
   switchToAccount: (accountId: string) => void;
@@ -105,7 +108,7 @@ function dateStampForFile(ts: number): string {
 }
 
 export function registerIpcHandlers(deps: IpcRouterDeps): void {
-  const { accountStore, accountManager, groupStore, settingsStore, analyticsStore, chatActivityStore } = deps;
+  const { accountStore, accountManager, groupStore, settingsStore, analyticsStore, chatActivityStore, calendarStore } = deps;
 
   ipcMain.handle('mw:get-app-info', () => ({
     appName: deps.appName,
@@ -173,6 +176,9 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     deps.forgetNotificationState(id);
     analyticsStore.forget(id);
     chatActivityStore?.forget(id);
+    // Fase 54: compromissos vinculados a esta conta perdem só o vínculo. O
+    // compromisso em si é do usuário e continua na agenda.
+    calendarStore.forgetAccount(id);
     deps.pushAccountsUpdate();
     return true;
   });
@@ -581,6 +587,37 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
       logger.error(`Falha ao exportar Analytics: ${String(err)}`);
       return { canceled: false, error: 'Não foi possível salvar o arquivo.' };
     }
+  });
+
+  // --- Agenda (Fase 54) ---
+
+  ipcMain.handle('mw:list-events', (_evt, range?: { startTs: number; endTs: number }) =>
+    range ? calendarStore.listBetween(range.startTs, range.endTs) : calendarStore.list()
+  );
+
+  ipcMain.handle('mw:create-event', (_evt, input: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) =>
+    calendarStore.create(input)
+  );
+
+  ipcMain.handle('mw:update-event', (_evt, { id, patch }: { id: string; patch: Partial<CalendarEvent> }) =>
+    calendarStore.update(id, patch)
+  );
+
+  ipcMain.handle('mw:remove-event', (_evt, id: string) => calendarStore.remove(id));
+
+  /** Feriados do intervalo pedido — calculados localmente, sem rede (ver holidays.ts). */
+  ipcMain.handle('mw:list-holidays', (_evt, { startKey, endKey }: { startKey: string; endKey: string }) =>
+    holidaysBetween(startKey, endKey)
+  );
+
+  ipcMain.handle('mw:snooze-reminder', (_evt, { key, minutes }: { key: string; minutes: number }) => {
+    calendarStore.snoozeReminder(key, minutes);
+    return true;
+  });
+
+  ipcMain.handle('mw:dismiss-reminder', (_evt, key: string) => {
+    calendarStore.markReminderFired(key);
+    return true;
   });
 
   ipcMain.handle('mw:clear-analytics', () => {

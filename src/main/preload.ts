@@ -70,6 +70,23 @@ const api = {
   exportAnalyticsCsv: (range: AnalyticsRange, groupId?: string | null) =>
     ipcRenderer.invoke('mw:export-analytics-csv', range, groupId ?? null),
   clearAnalytics: () => ipcRenderer.invoke('mw:clear-analytics'),
+  // --- Agenda (Fase 54) ---
+  listEvents: (range?: { startTs: number; endTs: number }) => ipcRenderer.invoke('mw:list-events', range),
+  createEvent: (input: unknown) => ipcRenderer.invoke('mw:create-event', input),
+  updateEvent: (id: string, patch: unknown) => ipcRenderer.invoke('mw:update-event', { id, patch }),
+  removeEvent: (id: string) => ipcRenderer.invoke('mw:remove-event', id),
+  listHolidays: (startKey: string, endKey: string) => ipcRenderer.invoke('mw:list-holidays', { startKey, endKey }),
+  snoozeReminder: (key: string, minutes: number) => ipcRenderer.invoke('mw:snooze-reminder', { key, minutes }),
+  dismissReminder: (key: string) => ipcRenderer.invoke('mw:dismiss-reminder', key),
+  /** Fase 54 — o processo principal avisa que chegou a hora de um lembrete. */
+  onReminderDue: (cb: (payload: { key: string; eventId: string; title: string; start: number; minutesBefore: number }) => void) => {
+    const listener = (
+      _evt: unknown,
+      payload: { key: string; eventId: string; title: string; start: number; minutesBefore: number }
+    ) => cb(payload);
+    ipcRenderer.on('mw:reminder-due', listener);
+    return () => ipcRenderer.removeListener('mw:reminder-due', listener);
+  },
   onAccountsChanged: (cb: (payload: AccountsChangedPayload) => void) => {
     const listener = (_evt: unknown, payload: AccountsChangedPayload) => cb(payload);
     ipcRenderer.on('mw:accounts-changed', listener);

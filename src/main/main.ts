@@ -22,6 +22,7 @@ import { AccountStore } from './accountStore';
 import { GroupStore } from './groupStore';
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
+import { CalendarStore } from './calendarStore';
 import { ViewManager } from './viewManager';
 import { AccountManager } from './accountManager';
 import { NotificationManager } from './notificationManager';
@@ -65,6 +66,8 @@ const CHAT_ACTIVITY_POLL_MS = 4000;
 // app rodando na bandeja por dias sem reabrir, sem gerar tráfego de rede
 // desnecessário nem incomodar com verificações constantes.
 const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+// Fase 54: de quanto em quanto tempo os lembretes da Agenda são conferidos.
+const REMINDER_CHECK_INTERVAL_MS = 30 * 1000;
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.png');
 
 let windowManager: WindowManager | null = null;
@@ -74,6 +77,7 @@ let trayManager: TrayManager | null = null;
 let notificationManager: NotificationManager | null = null;
 let analyticsStore: AnalyticsStore | null = null;
 let chatActivityStore: ChatActivityStore | null = null;
+let calendarStore: CalendarStore | null = null;
 let updateManager: UpdateManager | null = null;
 
 function pushAccountsUpdate(): void {
@@ -125,6 +129,7 @@ app.whenReady().then(() => {
   const groupStore = new GroupStore();
   analyticsStore = new AnalyticsStore();
   chatActivityStore = new ChatActivityStore();
+  calendarStore = new CalendarStore();
 
   windowManager = new WindowManager(
     APP_NAME,
@@ -272,6 +277,7 @@ app.whenReady().then(() => {
     settingsStore,
     analyticsStore,
     chatActivityStore,
+    calendarStore: calendarStore!,
     updateManager,
     getMainWindow: () => windowManager?.get() ?? null,
     switchToAccount,
@@ -336,6 +342,33 @@ app.whenReady().then(() => {
         .catch(() => {});
     }
   }, CHAT_ACTIVITY_POLL_MS);
+
+  /**
+   * Fase 54 — verificação dos lembretes da Agenda.
+   *
+   * Roda a cada 30 segundos, que é preciso o bastante para um alerta de
+   * compromisso e leve o bastante para não pesar (a checagem é uma passada
+   * por uma lista pequena em memória, sem tocar em disco quando não há nada
+   * a disparar).
+   *
+   * O processo principal só AVISA; quem mostra o alerta é o renderer
+   * (ReminderAlert.tsx). Marcar como mostrado acontece lá também, quando o
+   * usuário dispensa ou adia, para um alerta que ninguém viu não sumir por
+   * ter sido "entregue" enquanto a janela estava escondida.
+   */
+  setInterval(() => {
+    const win = windowManager?.get();
+    if (!win || !calendarStore) return;
+    for (const { event, reminder, key } of calendarStore.dueReminders(Date.now())) {
+      win.webContents.send('mw:reminder-due', {
+        key,
+        eventId: event.id,
+        title: event.title,
+        start: event.start,
+        minutesBefore: reminder.minutesBefore,
+      });
+    }
+  }, REMINDER_CHECK_INTERVAL_MS);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

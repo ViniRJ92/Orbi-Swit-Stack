@@ -5,10 +5,11 @@
  * uma aba dentro de Configurações, e o lugar dele no topo passou a ser do
  * botão "Ajuda", que abre o manual de uso.
  */
-import { Settings, HelpCircle, LayoutGrid, Search, BarChart3, RotateCw } from 'lucide-react';
+import { Settings, HelpCircle, LayoutGrid, Search, BarChart3, RotateCw, CalendarDays } from 'lucide-react';
 
 export function Header({
   onOpenHelp,
+  onOpenCalendar,
   onOpenSettings,
   onOpenDashboard,
   onOpenPalette,
@@ -19,6 +20,8 @@ export function Header({
 }: {
   /** Fase 50: abre o manual de uso (HelpModal). */
   onOpenHelp: () => void;
+  /** Fase 54: abre a Agenda. */
+  onOpenCalendar: () => void;
   onOpenSettings: () => void;
   onOpenDashboard: () => void;
   onOpenPalette: () => void;
@@ -49,6 +52,15 @@ export function Header({
           title="Analytics"
         >
           <BarChart3 size={14} />
+        </button>
+        {/* Fase 54: Agenda fica logo depois do Analytics, como pedido. */}
+        <button
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+          onClick={onOpenCalendar}
+          title="Agenda"
+        >
+          <CalendarDays size={14} />
+          Agenda
         </button>
         <button
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-text-dim transition-colors hover:bg-surface-hover hover:text-text disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-dim"

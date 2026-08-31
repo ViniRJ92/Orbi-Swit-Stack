@@ -9,6 +9,8 @@ import { Header } from './components/Header';
 import { MessageToast } from './components/MessageToast';
 import { Sidebar } from './components/Sidebar';
 import { HelpModal } from './components/HelpModal';
+import { CalendarPage } from './components/CalendarPage';
+import { ReminderAlert } from './components/ReminderAlert';
 import { SettingsModal } from './components/SettingsModal';
 import { AddAccountWizard } from './components/AddAccountWizard';
 import { AccountsDashboard } from './components/AccountsDashboard';
@@ -35,6 +37,7 @@ export function App() {
   const reloadAccount = useAppStore((s) => s.reloadAccount);
 
   const [helpOpen, setHelpOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Fase 29: quando a notificação nativa de atualização é clicada,
   // Configurações abre já na aba certa em vez da aba "Geral" padrão.
@@ -85,6 +88,7 @@ export function App() {
   // ativa durante o redimensionamento também.
   const anyModalOpen =
     helpOpen ||
+    calendarOpen ||
     settingsOpen ||
     addAccountOpen ||
     dashboardOpen ||
@@ -103,6 +107,7 @@ export function App() {
   const header = (
     <Header
       onOpenHelp={() => setHelpOpen(true)}
+      onOpenCalendar={() => setCalendarOpen(true)}
       onOpenSettings={() => setSettingsOpen(true)}
       onOpenDashboard={() => setDashboardOpen(true)}
       onOpenPalette={() => setPaletteOpen(true)}
@@ -140,7 +145,12 @@ export function App() {
     </Suspense>
   ) : null;
 
-  const main = analyticsOpen ? (
+  // Fase 54: a Agenda é PÁGINA, igual ao Analytics — ocupa a área de
+  // conteúdo no lugar da instância. Se as duas estiverem abertas, o Analytics
+  // tem precedência só porque foi aberto por último na ordem de checagem.
+  const main = calendarOpen ? (
+    <CalendarPage open={calendarOpen} onClose={() => setCalendarOpen(false)} />
+  ) : analyticsOpen ? (
     analyticsPage
   ) : (
     <main id="content-area" className="relative flex-1 bg-content transition-colors">
@@ -190,6 +200,9 @@ export function App() {
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {/* Fase 39: aviso de mensagem nova desenhado pelo app (janela visível). */}
       <MessageToast />
+      {/* Fase 54: alerta de lembrete da Agenda — fica sempre montado para
+          poder aparecer com qualquer tela em uso. */}
+      <ReminderAlert />
     </>
   );
 
