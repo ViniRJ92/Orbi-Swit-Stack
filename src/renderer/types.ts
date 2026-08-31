@@ -279,7 +279,7 @@ export interface OrbiSwitStackApi {
   exportBackup: () => Promise<BackupResult>;
   importBackup: () => Promise<BackupResult>;
   openLogsFolder: () => Promise<boolean>;
-  /** Fase 43: `groupId` opcional restringe o relatório a um agrupamento (Praça Seca, Taquara). */
+  /** Fase 43: `groupId` opcional restringe o relatório a um agrupamento (Vendas, Suporte). */
   getAnalyticsSummary: (range: AnalyticsRange, groupId?: string | null) => Promise<AnalyticsSummary>;
   /** Fase 28: relatório fixo de Hoje x Ontem por instância — independente do período geral do Analytics. */
   getChatActivityDaily: (groupId?: string | null) => Promise<ChatActivityDailySummary>;

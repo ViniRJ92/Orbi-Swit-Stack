@@ -436,7 +436,7 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   // dois blocos da mesma tela nunca fechavam entre si.
   /**
    * Fase 43 — `groupId` opcional restringe o relatório a um agrupamento
-   * (Praça Seca, Taquara). Filtrar a LISTA DE CONTAS aqui é suficiente: as
+   * (Vendas, Suporte). Filtrar a LISTA DE CONTAS aqui é suficiente: as
    * duas agregações só consideram contas que recebem nesta lista.
    * `null`/ausente = todas as contas.
    */

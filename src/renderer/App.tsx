@@ -8,7 +8,7 @@ import { useTheme } from './useTheme';
 import { Header } from './components/Header';
 import { MessageToast } from './components/MessageToast';
 import { Sidebar } from './components/Sidebar';
-import { AboutModal } from './components/AboutModal';
+import { HelpModal } from './components/HelpModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AddAccountWizard } from './components/AddAccountWizard';
 import { AccountsDashboard } from './components/AccountsDashboard';
@@ -34,7 +34,7 @@ export function App() {
   const whatsNew = useAppStore((s) => s.whatsNew);
   const reloadAccount = useAppStore((s) => s.reloadAccount);
 
-  const [aboutOpen, setAboutOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Fase 29: quando a notificação nativa de atualização é clicada,
   // Configurações abre já na aba certa em vez da aba "Geral" padrão.
@@ -84,7 +84,7 @@ export function App() {
   // que recebe os eventos de mousemove/mouseup, então escondemos a view
   // ativa durante o redimensionamento também.
   const anyModalOpen =
-    aboutOpen ||
+    helpOpen ||
     settingsOpen ||
     addAccountOpen ||
     dashboardOpen ||
@@ -102,7 +102,7 @@ export function App() {
 
   const header = (
     <Header
-      onOpenAbout={() => setAboutOpen(true)}
+      onOpenHelp={() => setHelpOpen(true)}
       onOpenSettings={() => setSettingsOpen(true)}
       onOpenDashboard={() => setDashboardOpen(true)}
       onOpenPalette={() => setPaletteOpen(true)}
@@ -130,7 +130,13 @@ export function App() {
   // (analyticsOpen já entra em `anyModalOpen` acima).
   const analyticsPage = analyticsLoaded ? (
     <Suspense fallback={null}>
-      <AnalyticsModal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)} />
+      {/* Fase 50: com algo aberto por cima (Ajuda, Configurações, contas...),
+          o Esc deve fechar só o que está na frente, não a página junto. */}
+      <AnalyticsModal
+        open={analyticsOpen}
+        onClose={() => setAnalyticsOpen(false)}
+        escEnabled={!helpOpen && !settingsOpen && !dashboardOpen && !addAccountOpen && !paletteOpen && whatsNew === null}
+      />
     </Suspense>
   ) : null;
 
@@ -169,7 +175,7 @@ export function App() {
 
   const modals = (
     <>
-      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} appInfo={appInfo} />
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
       <SettingsModal
         open={settingsOpen}
         onClose={() => {

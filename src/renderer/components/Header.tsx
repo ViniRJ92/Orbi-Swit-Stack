@@ -1,10 +1,14 @@
 /**
- * Cabeçalho superior. Orbi Swit Stack — Criado por Vinicius Braga
+ * Cabeçalho superior. Orbi — Criado por Vinicius Braga
+ *
+ * Fase 50: o botão "Sobre" saiu daqui. As informações institucionais viraram
+ * uma aba dentro de Configurações, e o lugar dele no topo passou a ser do
+ * botão "Ajuda", que abre o manual de uso.
  */
-import { Settings, Info, LayoutGrid, Search, BarChart3, RotateCw } from 'lucide-react';
+import { Settings, HelpCircle, LayoutGrid, Search, BarChart3, RotateCw } from 'lucide-react';
 
 export function Header({
-  onOpenAbout,
+  onOpenHelp,
   onOpenSettings,
   onOpenDashboard,
   onOpenPalette,
@@ -13,7 +17,8 @@ export function Header({
   canReload,
   hasUpdate,
 }: {
-  onOpenAbout: () => void;
+  /** Fase 50: abre o manual de uso (HelpModal). */
+  onOpenHelp: () => void;
   onOpenSettings: () => void;
   onOpenDashboard: () => void;
   onOpenPalette: () => void;
@@ -73,10 +78,11 @@ export function Header({
         </button>
         <button
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
-          onClick={onOpenAbout}
+          onClick={onOpenHelp}
+          title="Manual de uso do aplicativo"
         >
-          <Info size={14} />
-          Sobre
+          <HelpCircle size={14} />
+          Ajuda
         </button>
       </div>
     </header>

@@ -309,7 +309,7 @@ function reportChatMessages(items: ScannedMessage[]): void {
  * desenha as mensagens mais recentes (lista virtualizada). Numa conversa com
  * bastante movimento, boa parte das mensagens DE HOJE simplesmente não está
  * na página — não tem identificador, não tem nada — e por isso nunca era
- * contada. Era o caso do Jorge Pereira: mensagens de hoje visíveis na
+ * contada. Caso real relatado em uso: mensagens de hoje visíveis na
  * conversa, e o relatório sem elas.
  *
  * Como resolve: rola o painel para cima em passos, o que faz o WhatsApp

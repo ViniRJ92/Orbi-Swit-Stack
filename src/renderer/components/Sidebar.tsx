@@ -526,8 +526,8 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             sozinha). Fase 26: o botão extenso "+ Adicionar conta" e o texto
             da versão viraram só um botão compacto com o ícone "+" — pedido
             explícito do usuário para otimizar o espaço útil da barra para a
-            lista de contas. A versão do app continua visível na tela
-            "Sobre" (ver AboutModal.tsx), não precisa duplicar aqui. */}
+            lista de contas. A versão do app continua visível em Configurações,
+            na aba "Sobre o Sistema" (Fase 50), não precisa duplicar aqui. */}
         <button
           className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dashed border-border-strong text-text-dim transition-colors hover:border-accent hover:text-accent"
           onClick={onAdd}

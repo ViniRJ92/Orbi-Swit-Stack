@@ -49,6 +49,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   DownloadCloud as DownloadCloudIcon,
+  Info,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   AccountRecord,
@@ -64,6 +66,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { Modal } from './Modal';
 import { ServiceGlyph } from './ServiceIcon';
+import { OrbiLogo } from './OrbiLogo';
 import { accountStatusLabel } from '../accountStatusLabel';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: ReactNode }[] = [
@@ -100,7 +103,9 @@ const CLOSE_OPTIONS: { value: CloseBehavior; label: string; description: string;
   { value: 'quit', label: 'Sair', description: 'Encerra o programa por completo.', icon: <LogOut size={15} /> },
 ];
 
-type TabKey = 'general' | 'instances' | 'performance' | 'backup' | 'updates';
+// Fase 50: "about" é nova — as informações institucionais saíram do botão
+// "Sobre" do topo (que deu lugar a "Ajuda") e viraram uma aba aqui.
+type TabKey = 'general' | 'instances' | 'performance' | 'backup' | 'updates' | 'about';
 
 const TABS: { key: TabKey; label: string; icon: ReactNode }[] = [
   { key: 'general', label: 'Geral & Aparência', icon: <SlidersHorizontal size={14} /> },
@@ -108,6 +113,7 @@ const TABS: { key: TabKey; label: string; icon: ReactNode }[] = [
   { key: 'performance', label: 'Desempenho & Notificações', icon: <GaugeIcon size={14} /> },
   { key: 'backup', label: 'Backup & Diagnóstico', icon: <DatabaseBackup size={14} /> },
   { key: 'updates', label: 'Atualizações', icon: <RefreshCw size={14} /> },
+  { key: 'about', label: 'Sobre o Sistema', icon: <Info size={14} /> },
 ];
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -525,7 +531,7 @@ function InstancesTab() {
     <div className="flex flex-col gap-4">
       <Section title="Agrupamentos">
         <p className="mb-2.5 text-xs leading-relaxed text-text-dim">
-          Crie agrupamentos (ex.: "Praça Seca", "Taquara") para organizar suas instâncias na barra lateral.
+          Crie agrupamentos (ex.: "Vendas", "Suporte") para organizar suas instâncias na barra lateral.
         </p>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -539,7 +545,14 @@ function InstancesTab() {
                   onChange={(e) => setEditingGroupName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') commitRenameGroup();
-                    if (e.key === 'Escape') setEditingGroupId(null);
+                    if (e.key === 'Escape') {
+                      // Fase 50: sem parar a propagação, este Esc chegaria
+                      // também ao ouvinte do modal e fecharia as Configurações
+                      // inteiras junto com o cancelamento da renomeação. Aqui
+                      // ele só cancela a edição do nome.
+                      e.stopPropagation();
+                      setEditingGroupId(null);
+                    }
                   }}
                   onBlur={commitRenameGroup}
                   className="w-28 rounded-lg border border-accent bg-input px-2 py-1 text-[11px] text-text"
@@ -808,6 +821,60 @@ function PerformanceNotificationsTab({
               className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
             />
           </label>
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+/**
+ * Fase 50 — informações institucionais, vindas do antigo botão "Sobre" do
+ * topo. O lugar dele passou a ser do botão "Ajuda".
+ */
+function AboutSystemTab({ appInfo }: { appInfo: { appName: string; creator: string; version: string } | null }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <Section title="Aplicativo">
+        <div className="flex flex-col items-center rounded-xl border border-border px-5 py-6 text-center">
+          <div className="mb-3 h-14 w-14 overflow-hidden rounded-2xl shadow-lg">
+            <OrbiLogo size={56} />
+          </div>
+          <h3 className="text-lg font-semibold text-text">{appInfo?.appName ?? 'Orbi'}</h3>
+          <p className="mt-0.5 text-xs text-text-faint">Versão {appInfo?.version ?? ''}</p>
+          <p className="mt-3.5 max-w-md text-sm leading-7 text-text-dim">
+            O <strong className="font-semibold text-text">Orbi</strong> foi criado para centralizar e acelerar a gestão
+            das suas instâncias em um só lugar, oferecendo controle total e produtividade para o seu fluxo de trabalho.
+          </p>
+          <div className="mt-4 rounded-full border border-border px-4 py-1.5 text-sm text-text">
+            Criado por <strong className="font-semibold text-accent">{appInfo?.creator ?? 'Vinicius Braga'}</strong>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Licença e uso">
+        <div className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3.5 text-[13px] leading-6 text-text-dim">
+          <p>
+            Software proprietário, de uso restrito. Todos os direitos reservados ao autor. A redistribuição, a revenda e
+            a modificação não são autorizadas.
+          </p>
+          <p>Copyright © 2026 Vinicius Braga.</p>
+        </div>
+      </Section>
+
+      <Section title="Privacidade">
+        <div className="flex gap-2.5 rounded-xl border border-border px-4 py-3.5">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-accent" />
+          <div className="flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
+            <p>
+              Cada conta roda em uma sessão isolada, guardada apenas neste computador. Uma conta nunca enxerga os dados
+              da outra.
+            </p>
+            <p>
+              O Orbi não lê, guarda nem envia o conteúdo das suas conversas. Os números do Analytics são apenas
+              quantidades, calculadas e mantidas localmente.
+            </p>
+            <p>Nenhum dado de conversa sai da sua máquina.</p>
+          </div>
         </div>
       </Section>
     </div>
@@ -1262,6 +1329,7 @@ export function SettingsModal({
             onInstall={installUpdate}
           />
         )}
+        {activeTab === 'about' && <AboutSystemTab appInfo={appInfo} />}
       </div>
     </Modal>
   );

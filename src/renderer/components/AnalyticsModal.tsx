@@ -263,7 +263,22 @@ function connectionCategory(status: AccountStatus | undefined): 'online' | 'offl
   return status.isOnline ? 'online' : 'reconnecting';
 }
 
-export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AnalyticsModal({
+  open,
+  onClose,
+  escEnabled = true,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /**
+   * Fase 50 — o Analytics é uma PÁGINA, e modais como Ajuda e Configurações
+   * abrem por cima dela. Como os dois ouvem Esc na janela, um único toque
+   * fecharia o modal e a página junto. Quem monta a tela (App.tsx) desliga
+   * este ouvinte enquanto houver algo aberto na frente, então Esc fecha só o
+   * que está por cima. O fechamento do Analytics em si não mudou.
+   */
+  escEnabled?: boolean;
+}) {
   const accounts = useAppStore((s) => s.accounts);
   const statuses = useAppStore((s) => s.statuses);
   const reloadAccount = useAppStore((s) => s.reloadAccount);
@@ -365,13 +380,13 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
   // aqui. A WebContentsView da instância fica escondida enquanto esta página
   // está aberta, então o foco de teclado é desta janela e o listener pega.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !escEnabled) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  }, [open, escEnabled, onClose]);
 
   // Alertas em tempo real: detecta transições de status (não faz nenhuma
   // leitura nova — usa exatamente os mesmos campos de AccountStatus que já
@@ -554,7 +569,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
           por espaço sobrando de flex, que era o que fazia o switch escapar.
         */}
         <div className="flex shrink-0 items-center justify-self-end gap-3">
-          {/* Fase 43 — filtro por agrupamento (Praça Seca, Taquara). */}
+          {/* Fase 43 — filtro por agrupamento (Vendas, Suporte). */}
           {groups.length > 0 && (
             <select
               value={groupFilter ?? ''}
@@ -703,7 +718,7 @@ export function AnalyticsModal({ open, onClose }: { open: boolean; onClose: () =
       {/*
         Fase 28: relatório fixo de Hoje x Ontem por instância, separado do
         seletor de período acima de propósito (ver chatActivityStore.ts) —
-        "Praça Seca 1 teve 4 novas interações — 13 mensagens", nunca
+        "Atendimento 1 teve 4 novas interações — 13 mensagens", nunca
         misturando os dois dias e nunca contando de novo o que já foi visto.
       */}
       <div className="flex min-h-[190px] shrink-0 gap-4">

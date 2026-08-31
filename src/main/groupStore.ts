@@ -1,6 +1,6 @@
 /**
- * Persistência simples em JSON dos grupos/pastas de instâncias (ex.: "Praça
- * Seca", "Taquara"). Um grupo é só um rótulo com ordem de exibição — a
+ * Persistência simples em JSON dos grupos/pastas de instâncias (ex.:
+ * "Vendas", "Suporte"). Um grupo é só um rótulo com ordem de exibição — a
  * associação de cada conta a um grupo mora no próprio AccountRecord
  * (`groupId`), gerenciado por AccountStore.
  *

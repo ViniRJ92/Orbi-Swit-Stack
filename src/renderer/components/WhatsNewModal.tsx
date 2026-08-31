@@ -15,7 +15,16 @@ export function WhatsNewModal() {
   const dismissWhatsNew = useAppStore((s) => s.dismissWhatsNew);
 
   return (
-    <Modal open={whatsNew !== null} onClose={dismissWhatsNew} title="O que há de novo" icon={<Sparkles size={15} />}>
+    // Fase 50: `closeOnEscape` faz o Esc chamar o mesmo `dismissWhatsNew` do
+    // botão de fechar. A decisão de quando o modal aparece e o registro da
+    // versão já vista continuam exatamente como estavam.
+    <Modal
+      open={whatsNew !== null}
+      onClose={dismissWhatsNew}
+      title="O que há de novo"
+      icon={<Sparkles size={15} />}
+      closeOnEscape
+    >
       <div className="flex flex-col gap-4">
         <p className="text-xs text-text-faint">Versão {whatsNew?.version}</p>
         {/* Texto simples, sem markdown — cada linha em branco vira um parágrafo, o resto quebra normalmente. */}

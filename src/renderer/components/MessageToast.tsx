@@ -40,7 +40,7 @@ const MAX_STACK = 3;
  *
  * Os nomes vêm como o usuário cadastrou e costumam trazer sobras de
  * formatação: hífens soltos no fim, sequências de "-" seguidas ("- -"), e o
- * mesmo trecho repetido ("Praça Seca - Praça Seca 1"). Isso é só formatação
+ * mesmo trecho repetido ("Vendas - Vendas 1"). Isso é só formatação
  * de exibição; o nome real da conta não é alterado em lugar nenhum.
  */
 function cleanName(raw: string): string {
@@ -53,7 +53,7 @@ function cleanName(raw: string): string {
     .replace(/^\s*[-–—]+\s*|\s*[-–—]+\s*$/g, '')
     .trim();
 
-  // Trecho repetido em sequência ("Praça Seca Praça Seca 1" -> "Praça Seca 1")
+  // Trecho repetido em sequência ("Vendas Vendas 1" -> "Vendas 1")
   const partes = name.split(' ');
   const semRepeticao: string[] = [];
   for (const parte of partes) {

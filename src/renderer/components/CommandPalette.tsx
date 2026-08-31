@@ -43,6 +43,9 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
+      // Fase 50: outras telas passaram a ouvir Esc na janela. Sem parar aqui,
+      // fechar a busca com Esc fecharia junto a tela que estiver por baixo.
+      e.stopPropagation();
       onClose();
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
