@@ -327,6 +327,21 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• O destaque do índice acompanha a rolagem sem piscar entre duas seções.',
     '• A última seção também consegue subir até o topo ao ser clicada.',
   ].join('\n'),
+  '0.43.0': [
+    'Botão para limpar cache e liberar espaço',
+    '',
+    '• Novo botão em Configurações, na aba Backup e Diagnóstico. Ele mostra quanto foi liberado, medido no disco antes e depois.',
+    '• O cache de cada instância cresce sozinho com o uso, guardando imagens, fotos de perfil e mídia já baixadas. Em uso intenso ele passa de 500 MB por instância.',
+    '',
+    'O que a limpeza faz e o que não faz',
+    '',
+    '• Apaga: cache de rede e arquivos temporários de cada instância.',
+    '• Não apaga: conversas, login, configurações, agrupamentos nem o histórico do Analytics.',
+    '• Nenhuma conta é desconectada e nenhuma pede QR Code de novo.',
+    '• Depois de limpar, cada instância demora um pouco mais para abrir na primeira vez, enquanto baixa de novo o que precisa.',
+    '',
+    'Aviso: apagar manualmente a pasta "Partitions" na pasta de dados do aplicativo desconecta todas as contas. O botão apaga só as partes seguras, sem esse risco.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

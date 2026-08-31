@@ -5,8 +5,9 @@
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import * as fs from 'fs';
+import * as path from 'path';
 import { AccountStore } from './accountStore';
 import { AccountManager, MAX_ACCOUNTS } from './accountManager';
 import { GroupStore } from './groupStore';
@@ -69,6 +70,30 @@ export interface IpcRouterDeps {
   setIconSize: (size: IconSize) => void;
   /** Fase 33.2 — faz cada instância esquecer quais balões já reportou (usado ao limpar o Analytics). */
   resetMessageTracking: () => void;
+}
+
+/**
+ * Fase 52 — soma o tamanho de uma pasta, recursivamente. Usado para medir o
+ * cache antes e depois da limpeza. Erros de leitura (arquivo em uso, pasta
+ * removida no meio do caminho) são ignorados de propósito: é uma medição
+ * informativa, e falhar nela nunca deve impedir a limpeza de acontecer.
+ */
+function dirSizeBytes(dir: string): number {
+  let total = 0;
+  try {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      try {
+        if (entry.isDirectory()) total += dirSizeBytes(full);
+        else if (entry.isFile()) total += fs.statSync(full).size;
+      } catch {
+        // arquivo sumiu ou está bloqueado — ignora e segue somando
+      }
+    }
+  } catch {
+    // pasta não existe (ex.: nenhuma conta criada ainda)
+  }
+  return total;
 }
 
 /** Fase 43 — "2026-08-30" para compor o nome do arquivo exportado. */
@@ -226,6 +251,51 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   ipcMain.handle('mw:open-logs-folder', () => {
     shell.openPath(logger.getLogDir());
     return true;
+  });
+
+  /**
+   * Fase 52 — limpa o cache de disco de todas as instâncias.
+   *
+   * O que É apagado, por conta:
+   *  • `Cache`      — cache de rede: imagens, fotos de perfil, mídia baixada.
+   *  • `Code Cache` — JavaScript já compilado, guardado só para abrir rápido.
+   *
+   * O que NUNCA é tocado:
+   *  • `IndexedDB` e `Local Storage` — onde o WhatsApp guarda as conversas e
+   *    as chaves da sessão. Apagar isso desconectaria a conta.
+   *  • Cookies (pasta `Network`) — idem.
+   *  • `Service Worker` — limpar obrigaria o WhatsApp a se registrar de novo,
+   *    e recarregamento forçado de sessão já causou instabilidade neste
+   *    projeto antes. Fica de fora de propósito.
+   *
+   * `clearCache` e `clearCodeCaches` do Electron mexem só nessas duas áreas,
+   * então a sessão continua intacta e nenhuma conta pede QR Code.
+   *
+   * A medição é feita NO DISCO, antes e depois, em vez de estimada: o número
+   * mostrado ao usuário é o espaço realmente liberado.
+   */
+  ipcMain.handle('mw:clear-cache', async () => {
+    const partitionsDir = path.join(app.getPath('userData'), 'Partitions');
+    const antes = dirSizeBytes(partitionsDir);
+
+    let contasLimpas = 0;
+    for (const acc of accountManager.list()) {
+      try {
+        const ses = session.fromPartition(AccountStore.partitionFor(acc.id));
+        await ses.clearCache();
+        await ses.clearCodeCaches({});
+        contasLimpas++;
+      } catch (err) {
+        logger.warn(`Não foi possível limpar o cache da conta ${acc.id}: ${String(err)}`);
+      }
+    }
+
+    const depois = dirSizeBytes(partitionsDir);
+    const liberado = Math.max(0, antes - depois);
+    logger.info(
+      `Cache limpo em ${contasLimpas} instância(s): ${(liberado / (1024 * 1024)).toFixed(1)} MB liberados.`
+    );
+    return { freedBytes: liberado, accounts: contasLimpas };
   });
 
   ipcMain.handle('mw:get-performance-mode', () => ({

@@ -896,6 +896,27 @@ function BackupDiagnosticsTab({
   toggleLogViewer: () => void;
   clearAnalytics: () => void;
 }) {
+  // Fase 52 — estado local: só esta aba precisa saber o resultado da limpeza.
+  const [clearingCache, setClearingCache] = useState(false);
+  const [cacheResult, setCacheResult] = useState<string | null>(null);
+
+  async function clearCache() {
+    setClearingCache(true);
+    setCacheResult(null);
+    try {
+      const { freedBytes, accounts } = await window.multiwhats.clearCache();
+      setCacheResult(
+        freedBytes > 0
+          ? `${formatBytes(freedBytes)} liberados em ${accounts} ${accounts === 1 ? 'instância' : 'instâncias'}.`
+          : 'Nada para limpar: o cache já estava vazio.'
+      );
+    } catch {
+      setCacheResult('Não foi possível limpar o cache.');
+    } finally {
+      setClearingCache(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <Section title="Backup das instâncias">
@@ -970,6 +991,26 @@ function BackupDiagnosticsTab({
             {logLines.length > 0 ? logLines.join('\n') : 'Sem entradas no log ainda.'}
           </pre>
         )}
+      </Section>
+
+      {/*
+        Fase 52 — o cache de rede de cada instância cresce sozinho com o uso
+        (imagens, fotos de perfil, mídia) e ocupa a maior parte do espaço em
+        disco do app. Limpar não mexe na sessão: ver o comentário do handler
+        mw:clear-cache para o que é e o que não é apagado.
+      */}
+      <Section title="Espaço em disco">
+        <p className="mb-2.5 text-xs leading-relaxed text-text-dim">
+          Apaga o cache de imagens e arquivos temporários de todas as instâncias. Não desconecta nenhuma conta, não pede
+          QR Code e não apaga conversas, configurações ou o histórico do Analytics. Depois de limpar, cada instância
+          demora um pouco mais para abrir na primeira vez.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <SecondaryButton onClick={clearCache} icon={<Trash2 size={14} />}>
+            {clearingCache ? 'Limpando…' : 'Limpar cache'}
+          </SecondaryButton>
+          {cacheResult && <span className="text-[12.5px] text-text-dim">{cacheResult}</span>}
+        </div>
       </Section>
 
       <Section title="Analytics">

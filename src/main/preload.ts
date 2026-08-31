@@ -61,6 +61,8 @@ const api = {
   exportBackup: () => ipcRenderer.invoke('mw:export-backup'),
   importBackup: () => ipcRenderer.invoke('mw:import-backup'),
   openLogsFolder: () => ipcRenderer.invoke('mw:open-logs-folder'),
+  /** Fase 52 — limpa o cache de disco das instâncias, sem desconectar nenhuma. */
+  clearCache: () => ipcRenderer.invoke('mw:clear-cache'),
   // Fase 43: `groupId` opcional restringe o relatório a um agrupamento.
   getAnalyticsSummary: (range: AnalyticsRange, groupId?: string | null) =>
     ipcRenderer.invoke('mw:get-analytics-summary', range, groupId ?? null),
