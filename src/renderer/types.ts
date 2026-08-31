@@ -249,6 +249,12 @@ export interface OrbiSwitStackApi {
   setCustomMaxLoadedAccounts: (value: number) => Promise<number>;
   getNotificationsEnabled: () => Promise<boolean>;
   setNotificationsEnabled: (enabled: boolean) => Promise<boolean>;
+  /** Fase 48 — caixa nativa do Windows (janela minimizada ou em segundo plano). */
+  getWindowsNotificationsEnabled: () => Promise<boolean>;
+  setWindowsNotificationsEnabled: (enabled: boolean) => Promise<boolean>;
+  /** Fase 48 — aviso interno flutuante (janela em primeiro plano). */
+  getToastNotificationsEnabled: () => Promise<boolean>;
+  setToastNotificationsEnabled: (enabled: boolean) => Promise<boolean>;
   getDiagnostics: () => Promise<DiagnosticsInfo>;
   readRecentLogs: (maxLines: number) => Promise<string[]>;
   getCloseBehavior: () => Promise<CloseBehavior>;

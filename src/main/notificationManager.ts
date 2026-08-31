@@ -9,7 +9,7 @@
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, Notification, nativeImage } from 'electron';
 import { AccountStatus } from './types';
 import { AccountStore } from './accountStore';
 
@@ -25,7 +25,11 @@ export class NotificationManager {
     private readonly accountStore: AccountStore,
     private readonly getMainWindow: () => BrowserWindow | null,
     private readonly onNotificationClicked: (accountId: string) => void,
-    private readonly isEnabled: () => boolean
+    private readonly isEnabled: () => boolean,
+    /** Fase 48 — chave da caixa nativa do Windows (janela minimizada/segundo plano). */
+    private readonly isWindowsNotificationEnabled: () => boolean,
+    /** Fase 48 — chave do aviso interno flutuante (janela em primeiro plano). */
+    private readonly isToastEnabled: () => boolean
   ) {}
 
   forget(accountId: string): void {
@@ -54,24 +58,36 @@ export class NotificationManager {
       const acc = this.accountStore.get(status.id);
       if (!acc) continue;
 
-      // Fase 46 — o aviso passa a ser SEMPRE o toast desenhado pelo próprio
-      // app (MessageToast.tsx). A caixa nativa do Windows saiu de vez: o
-      // sistema operacional é quem a desenha, então tamanho, cantos, fonte e
-      // espaçamento não eram ajustáveis daqui.
+      // Fase 48 — a partir daqui é só ESCOLHA DE ONDE MOSTRAR. Toda a
+      // detecção (comparação de contador, primeira observação, chave geral de
+      // notificações, conta ativa em foco) já aconteceu acima e não mudou.
       //
-      // Nada da detecção mudou: quem decide que existe mensagem nova continua
-      // sendo a comparação de contador logo acima, com as mesmas condições de
-      // sempre. Só o meio de exibir é que é outro.
-      //
-      // Consequência assumida: com a janela minimizada na bandeja não aparece
-      // aviso visual, porque um toast dentro de uma janela escondida não seria
-      // visto. O contador de não lidas na barra lateral continua marcando
-      // normalmente quando a janela volta.
-      win?.webContents.send('mw:new-messages', {
-        accountId: status.id,
-        accountName: acc.name,
-        count: status.unreadCount - previous,
+      // A janela em primeiro plano recebe o aviso interno; minimizada ou em
+      // segundo plano recebe a caixa do Windows, que é a única visível nessa
+      // situação. Cada uma respeita sua própria chave em Configurações.
+      const janelaEmPrimeiroPlano = !!win && win.isVisible() && !win.isMinimized();
+      const contagem = status.unreadCount - previous;
+
+      if (janelaEmPrimeiroPlano) {
+        if (!this.isToastEnabled()) continue;
+        win.webContents.send('mw:new-messages', {
+          accountId: status.id,
+          accountName: acc.name,
+          count: contagem,
+        });
+        continue;
+      }
+
+      if (!this.isWindowsNotificationEnabled()) continue;
+      if (!Notification.isSupported()) continue;
+      const notification = new Notification({
+        title: `${this.appName} · ${acc.name}`,
+        body: contagem === 1 ? 'Nova mensagem' : `${contagem} mensagens novas`,
+        icon: nativeImage.createFromPath(this.iconPath),
+        silent: false,
       });
+      notification.on('click', () => this.onNotificationClicked(status.id));
+      notification.show();
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "orbi-swit-stack",
-  "version": "0.40.0",
-  "description": "Orbi Swit Stack: hub para centralizar múltiplas contas e serviços web (WhatsApp, Gmail, navegador e mais) em sessões isoladas. Criado por Vinicius Braga.",
+  "version": "0.41.0",
+  "description": "Orbi: hub para centralizar múltiplas contas e serviços web (WhatsApp, Gmail, navegador e mais) em sessões isoladas. Criado por Vinicius Braga.",
   "author": "Vinicius Braga",
   "creator": "Vinicius Braga",
   "license": "UNLICENSED",
@@ -39,7 +39,7 @@
   },
   "build": {
     "appId": "com.viniciusbraga.orbiswitstack",
-    "productName": "Orbi Swit Stack",
+    "productName": "Orbi",
     "copyright": "Copyright © 2026 Vinicius Braga",
     "publish": {
       "provider": "github",
@@ -61,9 +61,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Orbi Swit Stack",
-      "artifactName": "OrbiSwitStack-Setup-${version}.exe",
-      "uninstallDisplayName": "Orbi Swit Stack"
+      "shortcutName": "Orbi",
+      "artifactName": "Orbi-Setup-${version}.exe",
+      "uninstallDisplayName": "Orbi",
+      "include": "build/installer.nsh"
     },
     "files": [
       "dist/**/*",

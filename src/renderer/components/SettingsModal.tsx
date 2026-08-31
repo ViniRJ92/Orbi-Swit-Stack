@@ -686,6 +686,10 @@ function PerformanceNotificationsTab({
   applyCustomMaxLoaded,
   notificationsEnabled,
   toggleNotifications,
+  windowsNotificationsEnabled,
+  toggleWindowsNotifications,
+  toastNotificationsEnabled,
+  toggleToastNotifications,
 }: {
   performanceMode: PerformanceMode;
   applyPerformanceMode: (m: PerformanceMode) => void;
@@ -694,6 +698,10 @@ function PerformanceNotificationsTab({
   applyCustomMaxLoaded: (value: number) => void;
   notificationsEnabled: boolean;
   toggleNotifications: () => void;
+  windowsNotificationsEnabled: boolean;
+  toggleWindowsNotifications: () => void;
+  toastNotificationsEnabled: boolean;
+  toggleToastNotifications: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -754,6 +762,53 @@ function PerformanceNotificationsTab({
             className="h-4 w-4 accent-[var(--color-accent)]"
           />
         </label>
+
+        {/*
+          Fase 48 — por onde o aviso aparece. As duas cobrem situações
+          diferentes e não se sobrepõem: a caixa do Windows é a única visível
+          com o app minimizado; o aviso interno só existe com a janela aberta.
+          Ficam desabilitadas quando a chave geral acima está desligada, para
+          deixar claro que ela manda nas duas.
+        */}
+        <div className={'mt-2 flex flex-col gap-2 ' + (notificationsEnabled ? '' : 'pointer-events-none opacity-50')}>
+          <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-border px-3.5 py-2.5">
+            <span className="flex flex-col gap-0.5">
+              <span className="flex items-center gap-2 text-sm text-text">
+                <Monitor size={15} className="text-text-dim" />
+                Notificações do Windows
+              </span>
+              <span className="text-[12px] text-text-dim">
+                Caixa do sistema, aparece com o app minimizado ou em segundo plano.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={windowsNotificationsEnabled}
+              onChange={toggleWindowsNotifications}
+              disabled={!notificationsEnabled}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+            />
+          </label>
+
+          <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-border px-3.5 py-2.5">
+            <span className="flex flex-col gap-0.5">
+              <span className="flex items-center gap-2 text-sm text-text">
+                <Bell size={15} className="text-text-dim" />
+                Notificações internas
+              </span>
+              <span className="text-[12px] text-text-dim">
+                Aviso flutuante no canto do app, aparece com a janela aberta.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={toastNotificationsEnabled}
+              onChange={toggleToastNotifications}
+              disabled={!notificationsEnabled}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+            />
+          </label>
+        </div>
       </Section>
     </div>
   );
@@ -889,7 +944,7 @@ function UpdatesTab({
     <div className="flex flex-col gap-4">
       <Section title="Versão instalada">
         <div className="flex items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-          <span className="text-sm text-text">Orbi Swit Stack</span>
+          <span className="text-sm text-text">Orbi</span>
           <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12px] font-medium text-text-dim">v{version}</span>
         </div>
       </Section>
@@ -1015,6 +1070,9 @@ export function SettingsModal({
   const [customMaxLoaded, setCustomMaxLoadedState] = useState(6);
   const [customMaxLoadedRange, setCustomMaxLoadedRange] = useState({ min: 1, max: 30 });
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  // Fase 48 — preferências de por onde o aviso aparece.
+  const [windowsNotificationsEnabled, setWindowsNotificationsEnabled] = useState(true);
+  const [toastNotificationsEnabled, setToastNotificationsEnabled] = useState(true);
   const [closeBehavior, setCloseBehaviorState] = useState<CloseBehavior>('tray');
   const [diagnostics, setDiagnostics] = useState<DiagnosticsInfo | null>(null);
   const [logLines, setLogLines] = useState<string[] | null>(null);
@@ -1029,6 +1087,8 @@ export function SettingsModal({
       setCustomMaxLoadedRange(info.customMaxLoadedRange);
     });
     window.multiwhats.getNotificationsEnabled().then(setNotificationsEnabled);
+    window.multiwhats.getWindowsNotificationsEnabled().then(setWindowsNotificationsEnabled);
+    window.multiwhats.getToastNotificationsEnabled().then(setToastNotificationsEnabled);
     window.multiwhats.getCloseBehavior().then(setCloseBehaviorState);
     window.multiwhats.getDiagnostics().then(setDiagnostics);
     loadGroups();
@@ -1052,6 +1112,18 @@ export function SettingsModal({
   const toggleNotifications = async () => {
     const applied = await window.multiwhats.setNotificationsEnabled(!notificationsEnabled);
     setNotificationsEnabled(applied);
+  };
+
+  // Fase 48 — cada chave é gravada no settings.json na hora do clique, então
+  // a escolha sobrevive a fechar o app.
+  const toggleWindowsNotifications = async () => {
+    const applied = await window.multiwhats.setWindowsNotificationsEnabled(!windowsNotificationsEnabled);
+    setWindowsNotificationsEnabled(applied);
+  };
+
+  const toggleToastNotifications = async () => {
+    const applied = await window.multiwhats.setToastNotificationsEnabled(!toastNotificationsEnabled);
+    setToastNotificationsEnabled(applied);
   };
 
   const applyCloseBehavior = async (behavior: CloseBehavior) => {
@@ -1107,6 +1179,7 @@ export function SettingsModal({
       title="Configurações"
       icon={<Settings size={15} />}
       size="lg"
+      closeOnEscape
       contentClassName="flex min-h-0 flex-1"
     >
       <nav className="flex w-52 shrink-0 flex-col gap-0.5 border-r border-border p-2.5">
@@ -1164,6 +1237,10 @@ export function SettingsModal({
             applyCustomMaxLoaded={applyCustomMaxLoaded}
             notificationsEnabled={notificationsEnabled}
             toggleNotifications={toggleNotifications}
+            windowsNotificationsEnabled={windowsNotificationsEnabled}
+            toggleWindowsNotifications={toggleWindowsNotifications}
+            toastNotificationsEnabled={toastNotificationsEnabled}
+            toggleToastNotifications={toggleToastNotifications}
           />
         )}
         {activeTab === 'backup' && (

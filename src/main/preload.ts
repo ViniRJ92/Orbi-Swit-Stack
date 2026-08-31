@@ -31,6 +31,12 @@ const api = {
   setCustomMaxLoadedAccounts: (value: number) => ipcRenderer.invoke('mw:set-custom-max-loaded-accounts', value),
   getNotificationsEnabled: () => ipcRenderer.invoke('mw:get-notifications-enabled'),
   setNotificationsEnabled: (enabled: boolean) => ipcRenderer.invoke('mw:set-notifications-enabled', enabled),
+  // Fase 48 — preferências de por onde o aviso aparece.
+  getWindowsNotificationsEnabled: () => ipcRenderer.invoke('mw:get-windows-notifications-enabled'),
+  setWindowsNotificationsEnabled: (enabled: boolean) =>
+    ipcRenderer.invoke('mw:set-windows-notifications-enabled', enabled),
+  getToastNotificationsEnabled: () => ipcRenderer.invoke('mw:get-toast-notifications-enabled'),
+  setToastNotificationsEnabled: (enabled: boolean) => ipcRenderer.invoke('mw:set-toast-notifications-enabled', enabled),
   getDiagnostics: () => ipcRenderer.invoke('mw:get-diagnostics'),
   readRecentLogs: (maxLines: number) => ipcRenderer.invoke('mw:read-recent-logs', maxLines),
   getCloseBehavior: () => ipcRenderer.invoke('mw:get-close-behavior'),

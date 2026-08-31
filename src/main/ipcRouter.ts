@@ -257,6 +257,22 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     return enabled;
   });
 
+  // Fase 48 — por onde o aviso aparece. Ver settingsStore para a explicação
+  // de cada uma; a detecção de mensagem nova não passa por aqui.
+  ipcMain.handle('mw:get-windows-notifications-enabled', () => settingsStore.getWindowsNotificationsEnabled());
+
+  ipcMain.handle('mw:set-windows-notifications-enabled', (_evt, enabled: boolean) => {
+    settingsStore.setWindowsNotificationsEnabled(enabled);
+    return enabled;
+  });
+
+  ipcMain.handle('mw:get-toast-notifications-enabled', () => settingsStore.getToastNotificationsEnabled());
+
+  ipcMain.handle('mw:set-toast-notifications-enabled', (_evt, enabled: boolean) => {
+    settingsStore.setToastNotificationsEnabled(enabled);
+    return enabled;
+  });
+
   ipcMain.handle('mw:get-diagnostics', () => {
     const list = accountManager.list();
     const statuses = accountManager.buildStatuses();

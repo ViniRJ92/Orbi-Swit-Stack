@@ -80,6 +80,24 @@ interface SettingsShape {
   /** Quantidade de instâncias simultâneas do perfil "Personalizado" (1-30). Só usado quando performanceMode === 'custom'. */
   customMaxLoadedAccounts: number;
   notificationsEnabled: boolean;
+  /**
+   * Fase 48 — por onde o aviso de mensagem nova aparece. As duas chaves são
+   * independentes e cada uma cobre uma situação diferente:
+   *
+   *  - `windowsNotificationsEnabled`: caixa nativa do Windows, usada quando a
+   *    janela está minimizada ou em segundo plano. É o único aviso que o
+   *    usuário enxerga com o app na bandeja.
+   *  - `toastNotificationsEnabled`: aviso flutuante desenhado pelo próprio
+   *    app (MessageToast.tsx), usado com a janela em primeiro plano.
+   *
+   * Desligar as duas silencia os avisos por completo, sem afetar em nada a
+   * detecção de mensagem nova nem o contador de não lidas.
+   *
+   * `notificationsEnabled` acima continua sendo a chave geral: com ela
+   * desligada, nenhuma das duas dispara.
+   */
+  windowsNotificationsEnabled: boolean;
+  toastNotificationsEnabled: boolean;
   closeBehavior: CloseBehavior;
   confirmBeforeRemove: boolean;
   sidebarWidth: number;
@@ -100,6 +118,10 @@ const DEFAULTS: SettingsShape = {
   performanceMode: 'balanced',
   customMaxLoadedAccounts: CUSTOM_MAX_LOADED_DEFAULT,
   notificationsEnabled: true,
+  // Fase 48: as duas ligadas por padrão — o comportamento que o usuário já
+  // esperava (aviso na janela quando está usando, caixa do Windows quando não).
+  windowsNotificationsEnabled: true,
+  toastNotificationsEnabled: true,
   closeBehavior: 'tray',
   confirmBeforeRemove: true,
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
@@ -177,6 +199,29 @@ export class SettingsStore {
 
   setNotificationsEnabled(enabled: boolean): void {
     this.data.notificationsEnabled = enabled;
+    this.persist();
+  }
+
+  /**
+   * Fase 48 — `?? true` porque quem já tinha o app instalado não tem estes
+   * campos no settings.json salvo. Sem isso, uma configuração antiga leria
+   * `undefined` e os avisos apareceriam desligados sem o usuário ter pedido.
+   */
+  getWindowsNotificationsEnabled(): boolean {
+    return this.data.windowsNotificationsEnabled ?? true;
+  }
+
+  setWindowsNotificationsEnabled(enabled: boolean): void {
+    this.data.windowsNotificationsEnabled = enabled;
+    this.persist();
+  }
+
+  getToastNotificationsEnabled(): boolean {
+    return this.data.toastNotificationsEnabled ?? true;
+  }
+
+  setToastNotificationsEnabled(enabled: boolean): void {
+    this.data.toastNotificationsEnabled = enabled;
     this.persist();
   }
 

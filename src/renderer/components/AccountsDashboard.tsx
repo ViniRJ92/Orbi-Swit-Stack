@@ -6,7 +6,7 @@
  * cabe na barra lateral.
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   X,
@@ -58,6 +58,19 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+
+  // Fase 49 — Esc fecha o gerenciador, chamando exatamente o mesmo `onClose`
+  // do X no canto superior direito. Esta tela não usa o componente Modal, que
+  // é onde as outras herdam esse comportamento, por isso o ouvinte fica aqui.
+  // Nada da navegação do app é alterado.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
 
   const filteredByQuery = useFilteredAccounts(accounts, statuses, query, filter);
   const knownGroupIds = new Set(groups.map((g) => g.id));

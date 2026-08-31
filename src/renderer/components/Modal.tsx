@@ -7,7 +7,7 @@
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -37,6 +37,7 @@ export function Modal({
    * rolagem interna (ex.: abas com rail fixo + painel que rola sozinho),
    * para nunca ter dois scrolls (o do modal E o do conteúdo) ao mesmo tempo. */
   contentClassName,
+  closeOnEscape,
   children,
 }: {
   open: boolean;
@@ -47,9 +48,31 @@ export function Modal({
   wide?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   contentClassName?: string;
+  /**
+   * Fase 49 — Esc dispara o mesmo `onClose` do X no canto superior direito.
+   *
+   * Opcional de propósito, em vez de ligado para todos os modais: num
+   * formulário com campos preenchidos (o assistente de adicionar conta), Esc
+   * descartaria o que já foi digitado sem aviso. Fica ligado só onde fechar
+   * não custa nada ao usuário.
+   */
+  closeOnEscape?: boolean;
   children: ReactNode;
 }) {
   const resolvedSize = size ?? (wide ? 'md' : 'sm');
+
+  // Fase 49 — Esc chama exatamente o mesmo `onClose` do botão X. Só enquanto
+  // o modal está aberto e só quando quem o abriu pediu esse comportamento;
+  // nada da navegação do app é tocado.
+  useEffect(() => {
+    if (!open || !closeOnEscape) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, closeOnEscape, onClose]);
+
   return (
     <AnimatePresence>
       {open && (

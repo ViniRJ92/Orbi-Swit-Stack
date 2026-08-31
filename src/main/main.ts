@@ -33,7 +33,25 @@ import { SettingsStore, resolvePerformancePreset } from './settingsStore';
 import { UpdateManager } from './updateManager';
 import { logger } from './logger';
 
-const APP_NAME = 'Orbi Swit Stack';
+/**
+ * Fase 47 — TRAVA DE SEGURANÇA DOS DADOS, obrigatória por causa da mudança de
+ * nome do app.
+ *
+ * Tudo que importa vive em `%APPDATA%\orbi-swit-stack`: as sessões do
+ * WhatsApp de cada conta (partitions), accounts.json, analytics.json,
+ * chatActivity.json, settings.json e os logs. O nome dessa pasta é derivado
+ * do nome da aplicação — então renomear o app faria o Electron apontar para
+ * uma pasta NOVA e vazia, e todas as contas apareceriam desconectadas,
+ * pedindo QR Code de novo.
+ *
+ * Fixando o caminho aqui, o nome exibido pode mudar à vontade sem nunca
+ * mexer em onde os dados moram. Precisa rodar antes de qualquer coisa que
+ * leia disco, por isso está no topo do módulo.
+ */
+const USER_DATA_DIR_NAME = 'orbi-swit-stack';
+app.setPath('userData', path.join(app.getPath('appData'), USER_DATA_DIR_NAME));
+
+const APP_NAME = 'Orbi';
 const CREATOR_NAME = 'Vinicius Braga';
 const IDLE_SWEEP_INTERVAL_MS = 60 * 1000;
 // Fase 17: intervalo de leitura passiva da lista de conversas (ver
@@ -240,7 +258,9 @@ app.whenReady().then(() => {
       windowManager?.show();
       switchToAccount(accountId);
     },
-    () => settingsStore.getNotificationsEnabled()
+    () => settingsStore.getNotificationsEnabled(),
+    () => settingsStore.getWindowsNotificationsEnabled(),
+    () => settingsStore.getToastNotificationsEnabled()
   );
 
   registerIpcHandlers({
