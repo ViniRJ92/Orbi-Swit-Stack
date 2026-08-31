@@ -203,7 +203,7 @@ export function AccountItem({
           }}
           className={
             'group relative flex shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl transition-colors ' +
-            (isActive ? 'bg-surface shadow-sm' : status?.loadError ? 'bg-danger/5' : 'hover:bg-surface-hover') +
+            (isActive ? 'bg-surface mw-selected' : status?.loadError ? 'bg-danger/5' : 'hover:bg-surface-hover') +
             (drag?.isOver ? ' ring-1 ring-accent' : '')
           }
           onClick={() => switchAccount(account.id)}
@@ -278,7 +278,7 @@ export function AccountItem({
         transition={{ duration: 0.18 }}
         className={
           `group relative flex cursor-pointer items-center rounded-xl transition-colors ${spec.rowGap} ${spec.rowPadX} ${spec.rowPadY} ` +
-          (isActive ? 'bg-surface shadow-sm' : status?.loadError ? 'bg-danger/5' : 'hover:bg-surface-hover') +
+          (isActive ? 'bg-surface mw-selected' : status?.loadError ? 'bg-danger/5' : 'hover:bg-surface-hover') +
           (drag?.isOver ? ' ring-1 ring-accent' : '')
         }
         onClick={() => switchAccount(account.id)}

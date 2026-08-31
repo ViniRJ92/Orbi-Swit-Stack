@@ -136,6 +136,34 @@ body,
   height: 0;
 }
 
+/* Fase 53 — realce da conta selecionada na barra lateral.
+   Substitui o `shadow-sm` genérico do Tailwind, que quase não aparecia sobre
+   o fundo da barra e deixava difícil saber de relance qual conta está aberta.
+
+   São três camadas de sombra, todas de baixa intensidade:
+     1. um fio de contorno, que separa o item do fundo sem virar borda forte;
+     2. uma sombra curta logo abaixo, que dá o assentamento;
+     3. uma sombra larga e difusa, que cria a profundidade.
+
+   Nenhuma cor de fundo, tamanho, espaçamento ou tipografia muda: o ganho de
+   contraste vem só do contorno e da profundidade. O indicador verde continua
+   sendo desenhado à parte, no próprio componente. */
+.mw-selected {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-border-strong) 45%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.16),
+    0 6px 16px -6px rgba(0, 0, 0, 0.28);
+}
+
+/* No tema claro a sombra preta pesa demais e some o efeito de "elegante";
+   aqui ela fica mais fraca e o fio de contorno assume o contraste. */
+:root[data-theme='light'] .mw-selected {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-border-strong) 70%, transparent),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 6px 14px -6px rgba(15, 23, 42, 0.12);
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-accent) 35%, transparent);
 }

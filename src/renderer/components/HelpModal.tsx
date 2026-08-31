@@ -12,7 +12,7 @@
  *
  * Orbi — Criado por Vinicius Braga
  */
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart3, Bell, HelpCircle, Keyboard, LayoutGrid, Mail, MessageCircle, Rocket, Settings, X } from 'lucide-react';
 
@@ -326,6 +326,37 @@ export function HelpModal({ open, onClose }: { open: boolean; onClose: () => voi
   }, [open]);
 
   /**
+   * Folga no fim do conteúdo, calculada em vez de fixa.
+   *
+   * Ela existe por um motivo só: sem nada depois da última seção, a rolagem
+   * termina antes de o título dela chegar ao topo, e clicar no índice deixa a
+   * seção parada no meio da tela.
+   *
+   * A versão anterior usava um valor fixo (45vh), o que sobrava e deixava uma
+   * área vazia grande, dando a impressão de que a página tinha continuação.
+   * Aqui é medido o mínimo necessário: a rolagem passa a terminar exatamente
+   * onde a última seção encosta no topo, sem vazio de sobra.
+   */
+  const [espacoFinal, setEspacoFinal] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const container = contentRef.current;
+    const ultima = document.getElementById(`ajuda-${SECTIONS[SECTIONS.length - 1].id}`);
+    if (!container || !ultima) return;
+
+    const espacoInterno = parseFloat(getComputedStyle(container).paddingTop) || 0;
+    // Altura do conteúdo desconsiderando a folga já aplicada, para o cálculo
+    // não depender de si mesmo.
+    const alturaSemFolga = container.scrollHeight - espacoFinal;
+    const rolagemAlvo = distanciaAteOTopo(ultima, container) - espacoInterno;
+    const necessario = Math.max(0, rolagemAlvo - (alturaSemFolga - container.clientHeight));
+
+    // Tolerância de 1px evita ficar recalculando por arredondamento.
+    if (Math.abs(necessario - espacoFinal) > 1) setEspacoFinal(necessario);
+  }, [open, espacoFinal]);
+
+  /**
    * Distância real, em pixels, entre o topo de uma seção e o topo do conteúdo
    * rolável.
    *
@@ -479,13 +510,8 @@ export function HelpModal({ open, onClose }: { open: boolean; onClose: () => voi
                   </p>
                 </div>
 
-                {/*
-                  Espaço vazio no fim, para que a ÚLTIMA seção também consiga
-                  subir até o topo ao ser clicada no índice. Sem ele a rolagem
-                  chega ao fim antes disso e o título fica no meio da tela.
-                  Não é conteúdo do manual, é só folga de rolagem.
-                */}
-                <div aria-hidden className="h-[45vh]" />
+                {/* Folga mínima calculada — ver `espacoFinal` acima. */}
+                <div aria-hidden style={{ height: espacoFinal }} />
               </div>
             </div>
           </motion.div>

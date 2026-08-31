@@ -342,6 +342,15 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Aviso: apagar manualmente a pasta "Partitions" na pasta de dados do aplicativo desconecta todas as contas. O botão apaga só as partes seguras, sem esse risco.',
   ].join('\n'),
+  '0.43.1': [
+    'Destaque da conta aberta e fim da rolagem na Ajuda',
+    '',
+    '• A conta selecionada na barra lateral ficou mais fácil de identificar de relance. Ganhou um contorno fino e uma sombra suave, que dão profundidade sem virar bloco de cor. O indicador verde continua igual.',
+    '• Vale para os dois formatos da barra lateral, em tema claro e escuro.',
+    '• Nenhum tamanho, espaçamento, fonte, ícone ou cor foi alterado.',
+    '',
+    '• Corrigido: na Ajuda dava para rolar além do último bloco e cair numa área vazia, como se a página continuasse. A folga que existe para o índice funcionar passou a ser calculada, em vez de fixa, e agora a rolagem termina no card de contato.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
