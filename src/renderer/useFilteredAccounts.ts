@@ -8,14 +8,19 @@ import { AccountRecord, AccountStatus } from './types';
 
 export type FilterKey = 'all' | 'online' | 'suspended' | 'error';
 
-export const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'Todas' },
-  { key: 'online', label: 'Conectadas' },
-  { key: 'suspended', label: 'Suspensas' },
+/**
+ * `label` é o texto curto das abas (ainda usadas na tela de gerenciamento
+ * de contas). `selectedLabel` é o texto do menu suspenso da barra lateral
+ * (Fase 56), onde há largura para uma frase mais clara.
+ */
+export const FILTERS: { key: FilterKey; label: string; selectedLabel: string }[] = [
+  { key: 'all', label: 'Todas', selectedLabel: 'Todas as contas' },
+  { key: 'online', label: 'Conectadas', selectedLabel: 'Conectadas' },
+  { key: 'suspended', label: 'Suspensas', selectedLabel: 'Suspensas' },
   // Fase 41: era "Com erro". Encurtado para caber na barra lateral estreita —
   // com o texto longo os filtros quebravam para uma segunda linha, e a linha
   // de cima ("Todas") aparecia cortada.
-  { key: 'error', label: 'Erro' },
+  { key: 'error', label: 'Erro', selectedLabel: 'Com erro' },
 ];
 
 export function matchesFilter(filter: FilterKey, status: AccountStatus | undefined): boolean {
@@ -24,6 +29,28 @@ export function matchesFilter(filter: FilterKey, status: AccountStatus | undefin
   if (filter === 'suspended') return !!status?.suspended;
   if (filter === 'error') return !!status?.loadError;
   return true;
+}
+
+/**
+ * Quantas instâncias existem em cada estado, ignorando a busca por texto:
+ * o menu suspenso mostra o tamanho de cada estado, não quantas sobram da
+ * busca atual. Usa exatamente o mesmo `matchesFilter` da listagem, então os
+ * números nunca divergem do que o filtro correspondente exibe.
+ */
+export function useFilterCounts(
+  accounts: AccountRecord[],
+  statuses: Map<string, AccountStatus>
+): Record<FilterKey, number> {
+  return useMemo(() => {
+    const counts = { all: 0, online: 0, suspended: 0, error: 0 } as Record<FilterKey, number>;
+    for (const acc of accounts) {
+      const status = statuses.get(acc.id);
+      for (const f of FILTERS) {
+        if (matchesFilter(f.key, status)) counts[f.key] += 1;
+      }
+    }
+    return counts;
+  }, [accounts, statuses]);
 }
 
 /**

@@ -31,7 +31,8 @@ import { AnimatePresence } from 'framer-motion';
 import { AccountRecord, IconSize, SidebarPosition } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { AccountItem } from './AccountItem';
-import { FILTERS, FilterKey, useFilteredAccounts } from '../useFilteredAccounts';
+import { AccountFilterSelect } from './AccountFilterSelect';
+import { FILTERS, FilterKey, useFilterCounts, useFilteredAccounts } from '../useFilteredAccounts';
 import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, clampSidebarWidth } from '../constants';
 
 // Fase 22: altura da barra no modo "Topo", PARAMETRIZADA por `iconSize` —
@@ -147,6 +148,8 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
     topScrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' });
   };
 
+  // Fase 56: quantidade por estado, exibida dentro do menu suspenso de filtro.
+  const filterCounts = useFilterCounts(accounts, statuses);
   const visibleAccounts = useFilteredAccounts(accounts, statuses, searchQuery, filter);
 
   const handleResizeStart = useCallback(
@@ -456,6 +459,15 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
                 />
               </div>
 
+              {/* Fase 56: aqui as abas CONTINUAM como estavam, de propósito.
+                  A barra no modo "Topo" tem altura fixa (60 a 88px, ver
+                  TOP_BAR_HEIGHT_BY_ICON_SIZE) e logo abaixo dela começa a
+                  WebContentsView da instância, que é uma camada NATIVA
+                  desenhada na frente desta página. Um menu suspenso aberto
+                  aqui cairia justamente nessa faixa e ficaria invisível e
+                  sem receber cliques. Na barra lateral esquerda, que ocupa
+                  a altura toda, o menu tem para onde abrir — por isso lá a
+                  troca foi feita (ver AccountFilterSelect.tsx). */}
               <div className="flex shrink-0 items-center gap-0.5">
                 {FILTERS.map((f) => (
                   <button
@@ -571,28 +583,18 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
           />
         </div>
         {/*
-          Fase 41: os filtros ficavam em `flex-wrap` e, ao estreitar a barra
-          lateral, quebravam para uma segunda linha — a de cima aparecia
-          cortada. Agora ficam sempre numa única linha (`flex-nowrap`) e, se
-          não couberem, a faixa desliza na horizontal. A barra de rolagem fica
-          escondida (`mw-scroll-hidden`) para não roubar altura nem poluir uma
-          faixa tão fina. `shrink-0` em cada botão faz a faixa deslizar em vez
-          de espremer o texto.
+          Fase 56: as quatro abas horizontais viraram um menu suspenso. Elas
+          não cabiam numa barra lateral estreita: na Fase 41 já tinham
+          deixado de quebrar linha para deslizar na horizontal, mas os
+          rótulos continuavam cortados. O seletor ocupa a largura inteira em
+          qualquer largura de sidebar e encurta o texto com reticências.
         */}
-        <div className="mw-scroll-hidden mt-2 flex flex-nowrap gap-1 overflow-x-auto">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={
-                'shrink-0 rounded-full px-2 py-1 text-[11px] transition-colors ' +
-                (filter === f.key ? 'bg-accent/15 text-accent' : 'text-text-dim hover:bg-surface-hover')
-              }
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <AccountFilterSelect
+          value={filter}
+          onChange={setFilter}
+          counts={filterCounts}
+          className="mt-2 w-full"
+        />
       </div>
 
       {accountsArea}
