@@ -112,7 +112,37 @@ export class WindowManager {
 
     win.webContents.on('before-input-event', (_event, input) => this.onInputEvent(input));
 
-    win.on('resize', () => this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize)));
+    const recalcularArea = () =>
+      this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize));
+
+    /**
+     * Fase 55 — a área onde a instância é desenhada precisa ser remedida em
+     * TODA situação que muda o tamanho útil da janela, não só no arrasto de
+     * redimensionar.
+     *
+     * Bug real relatado: ao iniciar junto com o Windows, a instância aparecia
+     * numa faixa estreita, com o resto da área em branco. Motivo: a medida
+     * era tirada em `did-finish-load`, quando a janela ainda não tinha
+     * assumido o tamanho final do boot, e nada depois disso refazia a conta.
+     * `maximize`, `restore` e `show` não emitem `resize`, então a medida
+     * errada ficava valendo até o usuário arrastar a borda da janela.
+     *
+     * Recalcular é barato (só aritmética sobre o tamanho atual), então ouvir
+     * todos esses eventos não tem custo perceptível.
+     */
+    win.on('resize', recalcularArea);
+    win.on('maximize', recalcularArea);
+    win.on('unmaximize', recalcularArea);
+    win.on('restore', recalcularArea);
+    win.on('enter-full-screen', recalcularArea);
+    win.on('leave-full-screen', recalcularArea);
+    // `show` cobre voltar da bandeja e a janela aparecer depois de criada.
+    // O recálculo atrasado cobre o caso de o Windows ainda estar animando a
+    // transição no instante do evento, quando o tamanho lido ainda é o antigo.
+    win.on('show', () => {
+      recalcularArea();
+      setTimeout(recalcularArea, 250);
+    });
 
     win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 

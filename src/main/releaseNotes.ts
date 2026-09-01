@@ -382,6 +382,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     'Tudo fica salvo apenas neste computador.',
   ].join('\n'),
+  '0.44.1': [
+    'Correção do layout ao iniciar junto com o Windows',
+    '',
+    '• Corrigido um caso em que, ao abrir o aplicativo automaticamente com o Windows, a instância aparecia espremida numa faixa estreita, com o resto da área em branco.',
+    '• Causa: o espaço reservado para a instância era medido enquanto a janela ainda estava assumindo o tamanho final, e nada depois disso refazia a conta.',
+    '• Agora esse espaço é remedido também ao maximizar, restaurar, entrar e sair de tela cheia e ao voltar da bandeja.',
+    '• Nenhuma mudança na contagem de mensagens, na Agenda ou no comportamento das telas.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
