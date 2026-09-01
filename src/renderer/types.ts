@@ -102,8 +102,12 @@ export type ThemePreference = 'dark' | 'light' | 'system';
 
 export type CloseBehavior = 'tray' | 'ask' | 'quit';
 
-/** Fase 21: posição da sidebar de contas — "left" (padrão) ou "top" (barra horizontal). */
-export type SidebarPosition = 'left' | 'top';
+/**
+ * Posição da barra de contas. Fase 21: "left" (padrão) e "top". Fase 58:
+ * "right" e "bottom". "left"/"right" são painéis verticais redimensionáveis;
+ * "top"/"bottom" são barras horizontais de altura fixa por tamanho de ícone.
+ */
+export type SidebarPosition = 'left' | 'top' | 'right' | 'bottom';
 
 /** Fase 22: tamanho dos ícones/cards de conta na sidebar — afeta ambos os modos (Esquerda/Topo). */
 export type IconSize = 'small' | 'medium' | 'large';

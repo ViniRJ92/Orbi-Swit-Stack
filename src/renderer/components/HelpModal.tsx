@@ -73,7 +73,7 @@ const SECTIONS: HelpSection[] = [
 
         <Bloco title="Adicionar sua primeira conta">
           <ol className="flex flex-col gap-2">
-            <Passo n={1}>Clique em "Adicionar conta", no fim da barra lateral esquerda.</Passo>
+            <Passo n={1}>Clique em "Adicionar conta", no fim da barra de contas.</Passo>
             <Passo n={2}>Escolha o serviço, por exemplo WhatsApp.</Passo>
             <Passo n={3}>Dê um nome que faça sentido para você, como "Atendimento 1", e escolha uma cor.</Passo>
             <Passo n={4}>A instância abre com o QR Code. Leia pelo celular, igual ao WhatsApp Web normal.</Passo>
@@ -240,7 +240,8 @@ const SECTIONS: HelpSection[] = [
       <>
         <Bloco title="Geral e Aparência">
           <p className="text-[13px] leading-6 text-text-dim">
-            Tema claro ou escuro, posição da barra lateral, tamanho dos ícones, se o aplicativo abre junto com o
+            Tema claro ou escuro, posição da barra de contas (esquerda, direita, topo ou inferior), tamanho dos
+            ícones, se o aplicativo abre junto com o
             Windows e o que acontece ao clicar no X da janela.
           </p>
         </Bloco>

@@ -28,6 +28,8 @@ const HEADER_HEIGHT = 32;
 // Fase 25: +6px em cada tamanho — folga extra (`TILE_BADGE_HEADROOM` em
 // AccountItem.tsx) para o selo de não lidas nunca ser cortado pela borda
 // superior da barra (bug relatado pelo usuário).
+// Fase 58: vale para 'top' E para 'bottom' — a barra horizontal é a mesma,
+// só muda de ponta.
 const SIDEBAR_TOP_HEIGHT_BY_ICON_SIZE: Record<IconSize, number> = {
   small: 60,
   medium: 72,
@@ -41,11 +43,29 @@ function getContentBounds(
   iconSize: IconSize
 ): Electron.Rectangle {
   const [width, height] = win.getContentSize();
+  // Fase 58: as quatro posições. O header sempre tem 32px, mas ONDE ele fica
+  // muda: nas posições horizontais (Topo/Inferior) atravessa a janela
+  // inteira; nas verticais (Esquerda/Direita) ocupa só a coluna ao lado da
+  // barra — ver App.tsx, que monta o layout exatamente assim.
   if (sidebarPosition === 'top') {
-    // Header (topo, largura total) → sidebar horizontal (largura total,
-    // logo abaixo) → conteúdo ocupando o resto — ver App.tsx/Sidebar.tsx.
     const y = HEADER_HEIGHT + SIDEBAR_TOP_HEIGHT_BY_ICON_SIZE[iconSize];
     return { x: 0, y, width, height: Math.max(0, height - y) };
+  }
+  if (sidebarPosition === 'bottom') {
+    // Header no topo, conteúdo no meio, barra de contas colada na base: a
+    // área da instância perde a altura do header E a da barra.
+    const barra = SIDEBAR_TOP_HEIGHT_BY_ICON_SIZE[iconSize];
+    return { x: 0, y: HEADER_HEIGHT, width, height: Math.max(0, height - HEADER_HEIGHT - barra) };
+  }
+  if (sidebarPosition === 'right') {
+    // Espelho de "left": a barra fica na borda direita, então a instância
+    // começa em x = 0 e termina onde a barra começa.
+    return {
+      x: 0,
+      y: HEADER_HEIGHT,
+      width: Math.max(0, width - sidebarWidth),
+      height: Math.max(0, height - HEADER_HEIGHT),
+    };
   }
   // "left" (padrão): sidebar com altura total ao lado do header — o header,
   // nesse modo, só ocupa a coluna à direita da sidebar (ver App.tsx), então
@@ -236,8 +256,9 @@ export class WindowManager {
   /**
    * Aplica um novo tamanho de ícone/card (Fase 22) e recalcula os bounds
    * imediatamente — só afeta a altura reservada quando `sidebarPosition ===
-   * 'top'` (no modo "left" a largura da sidebar continua sendo a mesma,
-   * independente do tamanho do ícone), mas recalculamos sempre por
+   * 'top'` ou `'bottom'` (nos modos "left"/"right" a largura da barra
+   * continua sendo a mesma, independente do tamanho do ícone), mas
+   * recalculamos sempre por
    * simplicidade/consistência.
    */
   setIconSize(size: IconSize): void {

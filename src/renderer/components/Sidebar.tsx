@@ -55,7 +55,15 @@ const TOP_BAR_HEIGHT_BY_ICON_SIZE: Record<IconSize, number> = {
 const ARROW_SCROLL_AMOUNT = 220;
 
 export function Sidebar({ onAdd, position }: { onAdd: () => void; position: SidebarPosition }) {
+  // Fase 58: quatro posições. O que muda o LAYOUT INTERNO é o eixo:
+  // Topo e Inferior são a mesma barra horizontal, Esquerda e Direita são o
+  // mesmo painel vertical. Só as bordas, o lado da alça de redimensionar e
+  // a ordem no layout raiz (App.tsx) diferem entre as duas pontas de cada
+  // eixo, então `isHorizontal` é o que decide a montagem e `isTop`/`isRight`
+  // só ajustam esses detalhes.
+  const isHorizontal = position === 'top' || position === 'bottom';
   const isTop = position === 'top';
+  const isRight = position === 'right';
   const appInfo = useAppStore((s) => s.appInfo);
   const accounts = useAppStore((s) => s.accounts);
   const statuses = useAppStore((s) => s.statuses);
@@ -110,7 +118,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
   }, []);
 
   useEffect(() => {
-    if (!isTop) return;
+    if (!isHorizontal) return;
     updateScrollButtons();
     const el = topScrollRef.current;
     if (!el) return;
@@ -142,7 +150,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
       el.removeEventListener('wheel', onWheel);
       observer.disconnect();
     };
-  }, [isTop, updateScrollButtons, accounts.length, iconSize]);
+  }, [isHorizontal, updateScrollButtons, accounts.length, iconSize]);
 
   const scrollTopBarBy = (delta: number) => {
     topScrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' });
@@ -163,7 +171,10 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
   useEffect(() => {
     if (!isResizingSidebar) return;
     const onMove = (e: MouseEvent) => {
-      setSidebarWidth(clampSidebarWidth(e.clientX));
+      // Fase 58: na Direita a alça fica na borda ESQUERDA do painel, então a
+      // largura cresce quando o mouse vai para a esquerda — é a distância
+      // do cursor até a borda direita da janela, não até a esquerda.
+      setSidebarWidth(clampSidebarWidth(isRight ? window.innerWidth - e.clientX : e.clientX));
     };
     const onUp = () => {
       setIsResizingSidebar(false);
@@ -175,7 +186,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [isResizingSidebar, setSidebarWidth, setIsResizingSidebar, commitSidebarWidth]);
+  }, [isResizingSidebar, isRight, setSidebarWidth, setIsResizingSidebar, commitSidebarWidth]);
 
   /**
    * Solta uma instância sobre outra: reordena usando a lista GLOBAL de contas
@@ -264,7 +275,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
           account={acc}
           status={statuses.get(acc.id)}
           index={accounts.findIndex((a) => a.id === acc.id)}
-          horizontal={isTop}
+          horizontal={isHorizontal}
           iconSize={iconSize}
           drag={{
             onDragStart: () => setDraggedId(acc.id),
@@ -287,13 +298,13 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
   // Fase 21: listas de conta em coluna (padrão) ou em linha (modo "Topo") — só
   // muda a direção do flex/espaçamento, a lógica de drag-and-drop e os dados
   // renderizados (renderAccountList acima) são exatamente os mesmos.
-  const listClassName = isTop ? 'flex shrink-0 items-center gap-1' : 'space-y-0.5';
+  const listClassName = isHorizontal ? 'flex shrink-0 items-center gap-1' : 'space-y-0.5';
 
   const ungrouped = visibleAccounts.filter((a) => !a.groupId || !knownGroupIds.has(a.groupId));
 
   // Fase 21: divisória entre a área avulsa e os agrupamentos — linha
   // horizontal na coluna (padrão), linha vertical na barra (modo "Topo").
-  const groupDivider = isTop ? (
+  const groupDivider = isHorizontal ? (
     <div className="mx-1 h-6 w-px shrink-0 self-center bg-border/60" aria-hidden />
   ) : (
     <div className="my-1.5 border-t border-border/60" aria-hidden />
@@ -301,9 +312,9 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
 
   const accountsArea = (
     <div
-      ref={isTop ? topScrollRef : undefined}
+      ref={isHorizontal ? topScrollRef : undefined}
       className={
-        isTop
+        isHorizontal
           ? 'flex h-full min-w-0 flex-1 items-center gap-3 overflow-x-auto px-1 py-1'
           : 'flex-1 space-y-2 overflow-y-auto px-2'
       }
@@ -311,7 +322,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
       {accounts.length === 0 ? (
         <div
           className={
-            isTop
+            isHorizontal
               ? 'flex shrink-0 items-center gap-3 px-2 text-left'
               : 'flex h-full flex-col items-center justify-center gap-3 px-4 text-center'
           }
@@ -327,7 +338,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             Adicionar primeira conta
           </button>
         </div>
-      ) : isTop || groups.length === 0 ? (
+      ) : isHorizontal || groups.length === 0 ? (
         // Fase 25: no modo "Topo", TODAS as instâncias aparecem numa única
         // sequência contínua lado a lado, sem cabeçalho de pasta e sem
         // depender de o usuário clicar para expandir um grupo (pedido
@@ -367,14 +378,14 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             if (list.length === 0 && !accounts.some((a) => a.groupId === g.id)) return null;
             const collapsed = collapsedGroups.has(g.id);
             return (
-              <div key={g.id} className={isTop ? 'flex shrink-0 items-center gap-1' : undefined}>
-                {isTop && i > 0 && groupDivider}
+              <div key={g.id} className={isHorizontal ? 'flex shrink-0 items-center gap-1' : undefined}>
+                {isHorizontal && i > 0 && groupDivider}
                 {/* Fase 24: correção do bug de agrupamentos no modo "Topo" —
                     este wrapper precisa ser um flex HORIZONTAL aqui (cabeçalho
                     da pasta ao lado das contas, não empilhado em cima), senão
                     o cabeçalho + a lista de contas ficam um embaixo do outro
                     dentro de uma barra baixa demais para isso, cortando tudo. */}
-                <div className={isTop ? 'flex shrink-0 items-center gap-1.5' : undefined}>
+                <div className={isHorizontal ? 'flex shrink-0 items-center gap-1.5' : undefined}>
                   <button
                     draggable
                     onDragStart={() => setDraggedGroupId(g.id)}
@@ -392,17 +403,17 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
                     onClick={() => toggleGroup(g.id)}
                     className={
                       'flex cursor-grab items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-[11px] font-semibold text-text-dim transition-colors active:cursor-grabbing hover:bg-surface-hover ' +
-                      (isTop ? 'shrink-0 ' : 'w-full ') +
+                      (isHorizontal ? 'shrink-0 ' : 'w-full ') +
                       (overGroupId === g.id ? 'ring-1 ring-accent' : '')
                     }
                   >
                     {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                     <Folder size={12} />
-                    <span className={isTop ? 'shrink-0' : 'flex-1 truncate'}>{g.name}</span>
+                    <span className={isHorizontal ? 'shrink-0' : 'flex-1 truncate'}>{g.name}</span>
                     <span className="text-text-faint">{list.length}</span>
                   </button>
                   {!collapsed && (
-                    <ul className={isTop ? 'flex shrink-0 items-center gap-1' : 'mt-0.5 space-y-0.5'}>
+                    <ul className={isHorizontal ? 'flex shrink-0 items-center gap-1' : 'mt-0.5 space-y-0.5'}>
                       {renderAccountList(list)}
                     </ul>
                   )}
@@ -418,7 +429,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
     </div>
   );
 
-  if (isTop) {
+  if (isHorizontal) {
     // Fase 22: altura dinâmica por `iconSize` (ver o mapa no topo do
     // arquivo) — sempre a mesma fonte de verdade usada no processo
     // principal, então a WebContentsView nunca fica curta nem sobra vão.
@@ -426,7 +437,12 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
     return (
       <aside
         style={{ height: topBarHeight, minHeight: topBarHeight }}
-        className="flex flex-none items-center gap-3 border-b border-border bg-sidebar pl-2.5 pr-4"
+        className={
+          // Fase 58: no Topo a linha divisória fica embaixo (separando da
+          // instância); no Inferior fica em cima, pelo mesmo motivo.
+          'flex flex-none items-center gap-3 border-border bg-sidebar pl-2.5 pr-4 ' +
+          (isTop ? 'border-b' : 'border-t')
+        }
       >
         {/* Fase 24/26: bloco "CONTAS" + busca + filtros espremido ao máximo à
             esquerda — gap e paddings internos reduzidos ao mínimo (pedido
@@ -555,14 +571,20 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
     <aside
       style={{ width: sidebarWidth, minWidth: SIDEBAR_WIDTH_MIN, maxWidth: SIDEBAR_WIDTH_MAX }}
       className={
-        'relative flex flex-none flex-col border-r border-border bg-sidebar py-3 ' +
+        // Fase 58: na Direita a divisória vai para a borda esquerda do
+        // painel, que é o lado voltado para a instância.
+        'relative flex flex-none flex-col border-border bg-sidebar py-3 ' +
+        (isRight ? 'border-l ' : 'border-r ') +
         (isResizingSidebar ? '' : 'transition-[width]')
       }
     >
       <div
         onMouseDown={handleResizeStart}
         className={
-          'absolute right-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-col-resize select-none hover:bg-accent/40 ' +
+          // Fase 58: a alça fica sempre na borda voltada para a instância —
+          // direita do painel na Esquerda, esquerda do painel na Direita.
+          'absolute top-0 z-10 h-full w-1.5 cursor-col-resize select-none hover:bg-accent/40 ' +
+          (isRight ? 'left-0 translate-x-1/2 ' : 'right-0 -translate-x-1/2 ') +
           (isResizingSidebar ? 'bg-accent/60' : 'active:bg-accent/60')
         }
         title="Redimensionar barra lateral"

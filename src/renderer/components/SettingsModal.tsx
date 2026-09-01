@@ -42,7 +42,9 @@ import {
   Keyboard,
   Play,
   Pause,
+  PanelBottom,
   PanelLeft,
+  PanelRight,
   PanelTop,
   Square,
   RefreshCw,
@@ -76,9 +78,14 @@ const THEME_OPTIONS: { value: ThemePreference; label: string; icon: ReactNode }[
 ];
 
 // Fase 21: posição da sidebar de contas — pedido explícito do usuário.
+// Fase 58: Direita e Inferior. A ordem segue os pares de cada eixo
+// (Esquerda/Direita são o painel vertical, Topo/Inferior a barra
+// horizontal), então a grade de 2 colunas deixa cada par lado a lado.
 const SIDEBAR_POSITION_OPTIONS: { value: SidebarPosition; label: string; icon: ReactNode }[] = [
   { value: 'left', label: 'Esquerda', icon: <PanelLeft size={15} /> },
+  { value: 'right', label: 'Direita', icon: <PanelRight size={15} /> },
   { value: 'top', label: 'Topo', icon: <PanelTop size={15} /> },
+  { value: 'bottom', label: 'Inferior', icon: <PanelBottom size={15} /> },
 ];
 
 // Fase 22: tamanho dos ícones/cards de conta — pedido explícito do usuário
@@ -349,7 +356,7 @@ function GeneralAppearanceTab({
         </div>
       </Section>
 
-      <Section title="Posição da barra lateral">
+      <Section title="Posição da barra de contas">
         <div className="grid grid-cols-2 gap-2">
           {SIDEBAR_POSITION_OPTIONS.map((opt) => (
             <button

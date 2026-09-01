@@ -206,17 +206,26 @@ export function App() {
     </>
   );
 
-  // Fase 21: a posição da sidebar muda qual eixo organiza o layout raiz.
-  // "left" (padrão): sidebar com ALTURA TOTAL, ao lado do header (que passa
-  // a ocupar só a coluna à direita dela, não a largura inteira do app).
-  // "top": sidebar vira uma barra horizontal, largura total, entre o header
-  // (que continua no topo, largura total) e o conteúdo principal.
-  if (sidebarPosition === 'top') {
+  // Fase 21/58: a posição da barra de contas muda qual eixo organiza o
+  // layout raiz. São dois formatos, cada um com duas pontas:
+  //
+  // Horizontais ("top"/"bottom"): o header fica no topo ocupando a largura
+  // inteira, e a barra de contas vira uma faixa de altura fixa acima ou
+  // abaixo do conteúdo.
+  //
+  // Verticais ("left"/"right"): a barra ocupa a ALTURA TOTAL numa das
+  // laterais, e o header passa a ocupar só a coluna ao lado dela, não a
+  // largura inteira do app.
+  //
+  // getContentBounds (windowManager.ts) calcula a área da instância com
+  // exatamente esta mesma leitura — os dois precisam continuar casados.
+  if (sidebarPosition === 'top' || sidebarPosition === 'bottom') {
     return (
       <div className="flex h-screen flex-col bg-app text-text">
         {header}
-        {sidebar}
+        {sidebarPosition === 'top' && sidebar}
         <div className="flex min-h-0 flex-1">{main}</div>
+        {sidebarPosition === 'bottom' && sidebar}
         {modals}
       </div>
     );
@@ -224,11 +233,12 @@ export function App() {
 
   return (
     <div className="flex h-screen bg-app text-text">
-      {sidebar}
+      {sidebarPosition === 'left' && sidebar}
       <div className="flex min-h-0 flex-1 flex-col">
         {header}
         <div className="flex min-h-0 flex-1">{main}</div>
       </div>
+      {sidebarPosition === 'right' && sidebar}
       {modals}
     </div>
   );

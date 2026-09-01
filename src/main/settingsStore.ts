@@ -12,7 +12,10 @@ import * as path from 'path';
 export type ThemePreference = 'dark' | 'light' | 'system';
 
 /** Fase 21: posição da sidebar de contas — "left" (padrão, altura total, ao lado do header) ou "top" (barra horizontal). */
-export type SidebarPosition = 'left' | 'top';
+// Fase 58: além de Esquerda e Topo, agora Direita e Inferior.
+export type SidebarPosition = 'left' | 'top' | 'right' | 'bottom';
+
+const SIDEBAR_POSITIONS: SidebarPosition[] = ['left', 'top', 'right', 'bottom'];
 
 /** Fase 22: tamanho dos ícones/cards de conta na sidebar — afeta ambos os modos (Esquerda/Topo). */
 export type IconSize = 'small' | 'medium' | 'large';
@@ -254,7 +257,12 @@ export class SettingsStore {
   }
 
   getSidebarPosition(): SidebarPosition {
-    return this.data.sidebarPosition ?? 'left';
+    // Fase 58: valida contra a lista conhecida em vez de confiar no arquivo.
+    // Um valor gravado por uma versão futura (ou um settings.json editado à
+    // mão) chegaria ao layout como posição desconhecida e deixaria a tela
+    // sem barra nenhuma; aqui ele só volta para o padrão.
+    const gravada = this.data.sidebarPosition;
+    return gravada && SIDEBAR_POSITIONS.includes(gravada) ? gravada : 'left';
   }
 
   setSidebarPosition(position: SidebarPosition): void {
