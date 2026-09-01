@@ -11,7 +11,7 @@
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   Settings,
   Sun,
@@ -31,6 +31,7 @@ import {
   LogOut,
   ShieldAlert,
   ImagePlus,
+  Search,
   RotateCcw,
   FolderPlus,
   Pencil,
@@ -224,7 +225,7 @@ function InstanceRow({
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
             }}
-            className="min-w-[100px] flex-1 rounded-lg border border-border bg-input px-2 py-1 text-[13px] text-text transition-colors focus:border-accent"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-input px-2 py-1 text-[13px] text-text transition-colors focus:border-accent"
             aria-label="Nome da instância"
           />
         </div>
@@ -244,11 +245,15 @@ function InstanceRow({
           ))}
         </select>
       </td>
-      <td className="px-2 py-2 text-[12px] text-text-dim">{SERVICES[account.service]?.label ?? account.service}</td>
+      <td className="px-2 py-2 text-[12px] text-text-dim">
+        <span className="block truncate" title={SERVICES[account.service]?.label ?? account.service}>
+          {SERVICES[account.service]?.label ?? account.service}
+        </span>
+      </td>
       <td className="px-2 py-2">
         <span
           className={
-            'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ' +
+            'inline-flex max-w-full items-center truncate rounded-full px-2 py-0.5 text-[11px] font-medium ' +
             (status?.loadError
               ? 'bg-danger/10 text-danger'
               : isSuspended
@@ -257,6 +262,7 @@ function InstanceRow({
                   ? 'bg-accent/10 text-accent'
                   : 'bg-surface text-text-dim')
           }
+          title={accountStatusLabel(account, status)}
         >
           {accountStatusLabel(account, status)}
         </span>
@@ -264,14 +270,14 @@ function InstanceRow({
       <td className="px-2 py-2">
         <div className="flex items-center gap-0.5">
           <button
-            className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="rounded-lg p-1 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
             title={isSuspended ? 'Ativar instância' : 'Suspender instância'}
             onClick={() => (isSuspended ? switchAccount(account.id) : suspendAccount(account.id))}
           >
             {isSuspended ? <Play size={14} /> : <Pause size={14} />}
           </button>
           <button
-            className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="rounded-lg p-1 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
             title="Escolher imagem"
             onClick={handlePickIcon}
           >
@@ -290,7 +296,7 @@ function InstanceRow({
           </div>
           {account.iconDataUrl && (
             <button
-              className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+              className="rounded-lg p-1 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
               title="Usar ícone padrão do serviço"
               onClick={() => resetAccountIcon(account.id)}
             >
@@ -298,7 +304,7 @@ function InstanceRow({
             </button>
           )}
           <button
-            className="rounded-lg p-1.5 text-text-faint transition-colors hover:bg-danger/10 hover:text-danger"
+            className="rounded-lg p-1 text-text-faint transition-colors hover:bg-danger/10 hover:text-danger"
             title="Excluir instância"
             onClick={() => removeAccountWithConfirm(account.id, account.name)}
           >
@@ -483,6 +489,17 @@ function InstancesTab() {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupName, setEditingGroupName] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Fase 60: busca dentro da própria tabela. Com muitas instâncias, achar
+  // uma conta exigia rolar a lista inteira.
+  const [query, setQuery] = useState('');
+
+  const visiveis = useMemo(() => {
+    const termo = query.trim().toLowerCase();
+    if (!termo) return accounts;
+    return accounts.filter(
+      (a) => a.name.toLowerCase().includes(termo) || a.phone?.toLowerCase().includes(termo)
+    );
+  }, [accounts, query]);
 
   const toggleSelected = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -493,9 +510,19 @@ function InstancesTab() {
     });
   };
 
-  const allSelected = accounts.length > 0 && selectedIds.size === accounts.length;
+  // Fase 60: "selecionar todas" passa a valer para o que está VISÍVEL. Com
+  // a busca ativa, marcar a caixa do cabeçalho e apagar levaria junto
+  // instâncias que nem estavam na tela.
+  const allSelected = visiveis.length > 0 && visiveis.every((a) => selectedIds.has(a.id));
   const toggleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? new Set(accounts.map((a) => a.id)) : new Set());
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const a of visiveis) {
+        if (checked) next.add(a.id);
+        else next.delete(a.id);
+      }
+      return next;
+    });
   };
 
   const bulkSetGroup = (groupId: string | null) => {
@@ -551,8 +578,10 @@ function InstancesTab() {
   return (
     <div className="flex flex-col gap-4">
       <Section title="Agrupamentos">
-        <p className="mb-2.5 text-xs leading-relaxed text-text-dim">
-          Crie agrupamentos (ex.: "Vendas", "Suporte") para organizar suas instâncias na barra lateral.
+        {/* Fase 60: texto encurtado e margem reduzida — a seção ocupava
+            altura demais no topo, empurrando a tabela para baixo. */}
+        <p className="mb-2 text-[11px] leading-snug text-text-dim">
+          Pastas para organizar as instâncias na barra de contas. A bolinha define a cor de cada uma.
         </p>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -640,10 +669,26 @@ function InstancesTab() {
       </Section>
 
       <Section title="Instâncias">
-        <p className="mb-2.5 text-xs leading-relaxed text-text-dim">
-          Renomeie, troque o ícone, mude o agrupamento ou exclua qualquer instância diretamente aqui. Marque as caixas de
-          seleção para aplicar uma ação a várias instâncias de uma vez.
+        <p className="mb-2 text-[11px] leading-snug text-text-dim">
+          Renomeie, troque o ícone e a cor, mude o agrupamento ou exclua. Marque as caixas para agir sobre várias de uma vez.
         </p>
+
+        {/* Fase 60: busca dentro da tabela. */}
+        <div className="mb-2 flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar instância por nome..."
+              className="w-full rounded-lg border border-border bg-input py-1.5 pl-7 pr-2 text-[12px] text-text placeholder:text-text-faint focus:border-accent"
+            />
+          </div>
+          <span className="shrink-0 text-[11px] tabular-nums text-text-faint">
+            {query.trim() ? `${visiveis.length} de ${accounts.length}` : `${accounts.length} instância(s)`}
+          </span>
+        </div>
 
         {selectedIds.size > 0 && (
           <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
@@ -658,7 +703,7 @@ function InstancesTab() {
               className="rounded-lg border border-border bg-input px-2 py-1 text-[11px] text-text focus:border-accent"
             >
               <option value="" disabled>
-                Mover para agrupamento...
+                Alterar agrupamento...
               </option>
               <option value="__none__">Sem agrupamento</option>
               {groups.map((g) => (
@@ -671,7 +716,7 @@ function InstancesTab() {
               Suspender
             </SecondaryButton>
             <SecondaryButton onClick={bulkDelete} icon={<Trash2 size={13} />}>
-              Excluir
+              {`Excluir selecionadas (${selectedIds.size})`}
             </SecondaryButton>
           </div>
         )}
@@ -681,11 +726,28 @@ function InstancesTab() {
             Nenhuma instância ainda. Adicione uma pelo botão "+ Adicionar conta" na barra lateral.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-border bg-surface text-[11px] uppercase tracking-wider text-text-faint">
-                  <th className="w-8 px-2 py-2">
+          // Fase 60: o `overflow-x-auto` daqui gerava a barra de rolagem
+          // lateral E, por ser um contêiner de rolagem, impedia o cabeçalho de
+          // grudar no topo do painel (um `sticky` resolve contra o contêiner
+          // rolável mais próximo, que era esta caixa, e ela nunca rola na
+          // vertical). Com larguras fixas por coluna a tabela cabe na largura
+          // do modal e a caixa não precisa mais rolar.
+          <div className="rounded-lg border border-border">
+            <table className="w-full table-fixed border-collapse text-left">
+              <colgroup>
+                <col style={{ width: 34 }} />
+                <col />
+                <col style={{ width: 118 }} />
+                <col style={{ width: 84 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 128 }} />
+              </colgroup>
+              {/* O fio de baixo vem de `box-shadow`, não de `border-bottom`:
+                  com `border-collapse` a borda de um cabeçalho fixo não
+                  acompanha a rolagem e some. */}
+              <thead className="sticky top-0 z-20 bg-surface">
+                <tr className="text-[11px] uppercase tracking-wider text-text-faint [&>th]:shadow-[inset_0_-1px_0_var(--color-border)]">
+                  <th className="px-2 py-2">
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -702,7 +764,7 @@ function InstancesTab() {
                 </tr>
               </thead>
               <tbody>
-                {accounts.map((acc) => (
+                {visiveis.map((acc) => (
                   <InstanceRow
                     key={acc.id}
                     account={acc}
@@ -711,6 +773,13 @@ function InstancesTab() {
                     onToggleSelected={(checked) => toggleSelected(acc.id, checked)}
                   />
                 ))}
+                {visiveis.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-6 text-center text-xs text-text-faint">
+                      Nenhuma instância com esse nome.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
