@@ -416,6 +416,25 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     '• Ao iniciar junto com o Windows, a instância podia aparecer espremida numa faixa estreita. A área agora é remedida também ao maximizar, restaurar, entrar e sair de tela cheia e ao voltar da bandeja.',
   ].join('\n'),
+  '0.46.0': [
+    'Cores editáveis e tela de instâncias mais fácil de usar',
+    '',
+    'Cor de identificação',
+    '',
+    '• Agora dá para trocar a cor de uma instância já criada. A bolinha fica entre "escolher imagem" e "excluir", em Configurações na aba Instâncias, e também nos cartões de Gerenciar contas.',
+    '• Um clique na bolinha abre o seletor de cores completo, com espectro, valores RGB e conta-gotas para capturar cor de qualquer ponto da tela.',
+    '• Agrupamentos passaram a ter cor própria, escolhida da mesma forma. A cor tinge o ícone de pasta na barra de contas.',
+    '• Agrupamento sem cor definida continua no cinza de antes.',
+    '',
+    'Tela de Instâncias e Agrupamentos',
+    '',
+    '• Os títulos das colunas ficam fixos no topo enquanto a lista rola.',
+    '• Acabou a barra de rolagem lateral: a tabela cabe inteira na largura da janela.',
+    '• Campo de busca por nome ou telefone, com contador de quantas aparecem.',
+    '• Marcar a caixa do cabeçalho agora seleciona só o que está visível na busca, não a lista inteira.',
+    '• As ações em lote ganharam rótulos claros, com o número de instâncias selecionadas.',
+    '• A seção de agrupamentos ficou mais baixa, sobrando espaço para a lista.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
