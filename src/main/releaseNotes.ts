@@ -445,6 +445,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     '• Também corrigida a linha de títulos da tabela de instâncias, que voltou a rolar junto com a lista. Agora fica fixa no topo de novo.',
   ].join('\n'),
+  '0.46.2': [
+    'Correção: linha de títulos da tabela de instâncias',
+    '',
+    '• A linha NOME / AGRUPAMENTO / SERVIÇO / STATUS / AÇÕES voltou a ficar fixa no topo ao rolar a lista.',
+    '• Antes ela parava um pouco abaixo do topo do painel, e as linhas da tabela apareciam passando nessa faixa acima dela.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
