@@ -7,13 +7,13 @@
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
 import { useState } from 'react';
-import { UserPlus, ArrowLeft, Check } from 'lucide-react';
+import { UserPlus, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { Modal } from './Modal';
 import { AccountService, SERVICES } from '../types';
 import { ServiceIcon } from './ServiceIcon';
+import { AccountColorPicker, COLOR_CHOICES } from './AccountColorPicker';
 
-const COLOR_CHOICES = ['#25D366', '#128C7E', '#34B7F1', '#F1A208', '#9B59B6', '#F15C6D', '#00A884', '#5865F2'];
 
 // Fase 19: Threads e X (antigo Twitter) adicionados a pedido do usuário,
 // mesmo padrão visual "ícone de app" dos demais (ver ServiceIcon.tsx).
@@ -184,22 +184,10 @@ export function AddAccountWizard({ open, onClose }: { open: boolean; onClose: ()
       {step === 2 && (
         <>
           <label className="mb-2 block text-xs font-medium text-text-dim">Cor de identificação</label>
-          <div className="grid grid-cols-8 gap-2">
-            {COLOR_CHOICES.map((c) => (
-              <button
-                key={c}
-                className={
-                  'flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-110 ' +
-                  (color === c ? 'ring-2 ring-offset-2 ring-offset-surface ring-text' : '')
-                }
-                style={{ background: c }}
-                onClick={() => setColor(c)}
-                aria-label={`Cor ${c}`}
-              >
-                {color === c && <Check size={14} className="text-white drop-shadow" />}
-              </button>
-            ))}
-          </div>
+          {/* Fase 57: 16 cores prontas + seletor do sistema + campo HEX,
+              tudo em AccountColorPicker.tsx. O valor continua sendo a
+              mesma string HEX que `addAccount` sempre recebeu. */}
+          <AccountColorPicker value={color} onChange={setColor} />
           <div className="mt-5 flex justify-between gap-2">
             <button
               className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm text-text transition-colors hover:border-border-strong hover:bg-surface-hover"
