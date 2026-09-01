@@ -68,6 +68,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { Modal } from './Modal';
 import { ServiceGlyph } from './ServiceIcon';
+import { ColorSwatchButton } from './ColorSwatchButton';
 import { OrbiLogo } from './OrbiLogo';
 import { accountStatusLabel } from '../accountStatusLabel';
 
@@ -163,6 +164,7 @@ function InstanceRow({
   onToggleSelected: (checked: boolean) => void;
 }) {
   const renameAccount = useAppStore((s) => s.renameAccount);
+  const setAccountColor = useAppStore((s) => s.setAccountColor);
   const setAccountGroup = useAppStore((s) => s.setAccountGroup);
   const pickAccountIcon = useAppStore((s) => s.pickAccountIcon);
   const resetAccountIcon = useAppStore((s) => s.resetAccountIcon);
@@ -275,6 +277,17 @@ function InstanceRow({
           >
             <ImagePlus size={14} />
           </button>
+          {/* Fase 59: troca a cor de identificação da instância. Fica junto
+              da escolha de imagem porque as duas definem a mesma coisa: como
+              a instância é reconhecida de relance na barra de contas. */}
+          <div className="px-1">
+            <ColorSwatchButton
+              value={account.color}
+              onChange={(hex) => setAccountColor(account.id, hex)}
+              title={`Cor de ${account.name}`}
+              size={16}
+            />
+          </div>
           {account.iconDataUrl && (
             <button
               className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
@@ -460,6 +473,7 @@ function InstancesTab() {
   const groups = useAppStore((s) => s.groups);
   const createGroup = useAppStore((s) => s.createGroup);
   const renameGroup = useAppStore((s) => s.renameGroup);
+  const setGroupColor = useAppStore((s) => s.setGroupColor);
   const removeGroup = useAppStore((s) => s.removeGroup);
   const setAccountGroup = useAppStore((s) => s.setAccountGroup);
   const suspendAccount = useAppStore((s) => s.suspendAccount);
@@ -568,8 +582,16 @@ function InstancesTab() {
             ) : (
               <span
                 key={g.id}
-                className="flex items-center gap-1 rounded-full border border-border bg-input py-1 pl-2.5 pr-1 text-[11px] text-text-dim"
+                className="flex items-center gap-1 rounded-full border border-border bg-input py-1 pl-2 pr-1 text-[11px] text-text-dim"
               >
+                {/* Fase 59: agrupamento passou a ter cor própria, que tinge o
+                    ícone de pasta na barra de contas. */}
+                <ColorSwatchButton
+                  value={g.color}
+                  onChange={(hex) => setGroupColor(g.id, hex)}
+                  title={`Cor do agrupamento ${g.name}`}
+                  size={12}
+                />
                 {g.name}
                 <button
                   className="rounded-full p-0.5 hover:bg-surface-hover hover:text-text"

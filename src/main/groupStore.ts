@@ -17,6 +17,13 @@ export interface GroupRecord {
   id: string;
   name: string;
   order: number;
+  /**
+   * Fase 59: cor de identificação do agrupamento, em HEX (#RRGGBB).
+   * Opcional de propósito: agrupamento sem cor definida continua sendo
+   * desenhado no cinza padrão, como sempre foi, então nada muda para quem
+   * já tinha pastas criadas.
+   */
+  color?: string;
 }
 
 interface StoreShape {
@@ -95,6 +102,14 @@ export class GroupStore {
     group.name = name.trim();
     this.persist();
     return { ok: true };
+  }
+
+  /** Fase 59: cor de identificação do agrupamento (HEX). */
+  setColor(id: string, color: string): void {
+    const group = this.get(id);
+    if (!group) return;
+    group.color = color;
+    this.persist();
   }
 
   remove(id: string): void {

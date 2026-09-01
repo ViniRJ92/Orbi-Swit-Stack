@@ -139,6 +139,11 @@ export class AccountManager {
     this.accountStore.rename(id, name);
   }
 
+  /** Fase 59: cor de identificação de uma instância já criada. */
+  setColor(id: string, color: string): void {
+    this.accountStore.setColor(id, color);
+  }
+
   toggleFavorite(id: string): void {
     const acc = this.accountStore.get(id);
     if (!acc) return;

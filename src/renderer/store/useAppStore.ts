@@ -50,6 +50,10 @@ interface AppState {
     customUrl?: string
   ) => Promise<{ error: string } | AccountRecord>;
   renameAccount: (id: string, name: string) => Promise<void>;
+  /** Fase 59: cor de identificação de uma instância já criada. */
+  setAccountColor: (id: string, color: string) => Promise<void>;
+  /** Fase 59: cor de identificação de um agrupamento. */
+  setGroupColor: (id: string, color: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
   reorderAccounts: (orderedIds: string[]) => Promise<void>;
   removeAccount: (id: string) => Promise<void>;
@@ -155,6 +159,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     window.multiwhats.addAccount(name, color, service, customUrl),
   renameAccount: async (id, name) => {
     await window.multiwhats.renameAccount(id, name);
+  },
+  setAccountColor: async (id, color) => {
+    await window.multiwhats.setAccountColor(id, color);
+  },
+  setGroupColor: async (id, color) => {
+    await window.multiwhats.setGroupColor(id, color);
+    await get().loadGroups();
   },
   toggleFavorite: async (id) => {
     await window.multiwhats.toggleFavorite(id);

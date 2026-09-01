@@ -26,6 +26,7 @@ import {
 import { AccountRecord } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { FILTERS, FilterKey, useFilteredAccounts } from '../useFilteredAccounts';
+import { ColorSwatchButton } from './ColorSwatchButton';
 import { ServiceGlyph } from './ServiceIcon';
 import { accountStatusLabel } from '../accountStatusLabel';
 
@@ -47,6 +48,7 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
   const reloadAccount = useAppStore((s) => s.reloadAccount);
   const removeAccountWithConfirm = useAppStore((s) => s.removeAccountWithConfirm);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
+  const setAccountColor = useAppStore((s) => s.setAccountColor);
 
   const reorderAccounts = useAppStore((s) => s.reorderAccounts);
   const groups = useAppStore((s) => s.groups);
@@ -232,6 +234,15 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
                         (groupFilter === g.id ? 'bg-accent/15 text-accent' : 'text-text-dim hover:bg-surface-hover')
                       }
                     >
+                      {/* Fase 59: mostra a cor do agrupamento aqui também —
+                          é definida em Configurações, na aba Instâncias. */}
+                      {g.color && (
+                        <span
+                          className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+                          style={{ background: g.color }}
+                          aria-hidden
+                        />
+                      )}
                       {g.name}
                     </button>
                   ))}
@@ -404,6 +415,16 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
                           >
                             <Star size={11} fill={acc.favorite ? 'currentColor' : 'none'} />
                           </button>
+                          {/* Fase 59: troca a cor de identificação sem sair desta tela,
+                              que é onde o círculo colorido da instância aparece maior. */}
+                          <div className="flex items-center rounded-lg border border-border px-2 py-1">
+                            <ColorSwatchButton
+                              value={acc.color}
+                              onChange={(hex) => setAccountColor(acc.id, hex)}
+                              title={`Cor de ${acc.name}`}
+                              size={12}
+                            />
+                          </div>
                           {status?.loaded && (
                             <button
                               className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[10px] text-text-dim transition-colors hover:border-border-strong hover:text-text"

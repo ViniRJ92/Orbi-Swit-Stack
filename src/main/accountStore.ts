@@ -116,6 +116,18 @@ export class AccountStore {
     this.persist();
   }
 
+  /**
+   * Fase 59: troca a cor de identificação de uma instância já criada. Até
+   * aqui a cor só era definida no assistente de adicionar conta e nunca
+   * mais podia ser mudada.
+   */
+  setColor(id: string, color: string): void {
+    const acc = this.get(id);
+    if (!acc) return;
+    acc.color = color;
+    this.persist();
+  }
+
   rename(id: string, newName: string): void {
     const acc = this.get(id);
     if (!acc) return;

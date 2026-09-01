@@ -154,6 +154,13 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     return true;
   });
 
+  // Fase 59: cor de identificação de uma instância já existente.
+  ipcMain.handle('mw:set-account-color', (_evt, { id, color }: { id: string; color: string }) => {
+    accountManager.setColor(id, color);
+    deps.pushAccountsUpdate();
+    return true;
+  });
+
   ipcMain.handle('mw:toggle-favorite', (_evt, id: string) => {
     accountManager.toggleFavorite(id);
     deps.pushAccountsUpdate();
@@ -447,6 +454,13 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     const result = groupStore.rename(id, name);
     if (!('error' in result)) deps.pushAccountsUpdate();
     return result;
+  });
+
+  // Fase 59: cor de identificação de um agrupamento.
+  ipcMain.handle('mw:set-group-color', (_evt, { id, color }: { id: string; color: string }) => {
+    groupStore.setColor(id, color);
+    deps.pushAccountsUpdate();
+    return true;
   });
 
   ipcMain.handle('mw:reorder-groups', (_evt, orderedIds: string[]) => {

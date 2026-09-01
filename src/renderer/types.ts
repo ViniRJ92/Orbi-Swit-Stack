@@ -66,6 +66,8 @@ export interface GroupRecord {
   id: string;
   name: string;
   order: number;
+  /** Fase 59: cor de identificação (HEX). Ausente = cinza padrão de antes. */
+  color?: string;
 }
 
 export interface AccountRecord {
@@ -322,6 +324,8 @@ export interface OrbiSwitStackApi {
   listGroups: () => Promise<GroupRecord[]>;
   createGroup: (name: string) => Promise<GroupRecord | { error: string }>;
   renameGroup: (id: string, name: string) => Promise<{ error: string } | { ok: true }>;
+  setAccountColor: (id: string, color: string) => Promise<boolean>;
+  setGroupColor: (id: string, color: string) => Promise<boolean>;
   reorderGroups: (orderedIds: string[]) => Promise<boolean>;
   removeGroup: (id: string) => Promise<boolean>;
   setAccountGroup: (id: string, groupId: string | null) => Promise<boolean>;

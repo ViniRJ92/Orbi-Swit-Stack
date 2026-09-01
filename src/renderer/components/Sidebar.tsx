@@ -408,7 +408,10 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
                     }
                   >
                     {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                    <Folder size={12} />
+                    {/* Fase 59: quando o agrupamento tem cor definida, ela
+                        tinge a pasta. Sem cor, segue herdando o cinza do
+                        botão, exatamente como antes. */}
+                    <Folder size={12} style={g.color ? { color: g.color } : undefined} />
                     <span className={isHorizontal ? 'shrink-0' : 'flex-1 truncate'}>{g.name}</span>
                     <span className="text-text-faint">{list.length}</span>
                   </button>
