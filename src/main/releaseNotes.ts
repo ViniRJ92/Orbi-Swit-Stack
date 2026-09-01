@@ -435,6 +435,16 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• As ações em lote ganharam rótulos claros, com o número de instâncias selecionadas.',
     '• A seção de agrupamentos ficou mais baixa, sobrando espaço para a lista.',
   ].join('\n'),
+  '0.46.1': [
+    'Correção: instâncias caindo ao minimizar',
+    '',
+    '• Ao minimizar a janela, as instâncias em segundo plano podiam perder a conexão e voltar para "Aguardando QR Code".',
+    '• Causa: ao minimizar, o Windows informa tamanho zero para a janela, e a área da instância era reajustada para zero. O Chromium trata uma página de tamanho zero como oculta e corta a rede dela.',
+    '• Agora a área não é mais recalculada com a janela minimizada. A medida anterior continua valendo e volta a ser refeita ao restaurar.',
+    '• Nenhuma mudança na suspensão por ociosidade nem no limite de instâncias simultâneas.',
+    '',
+    '• Também corrigida a linha de títulos da tabela de instâncias, que voltou a rolar junto com a lista. Agora fica fixa no topo de novo.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

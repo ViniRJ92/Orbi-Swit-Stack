@@ -132,8 +132,25 @@ export class WindowManager {
 
     win.webContents.on('before-input-event', (_event, input) => this.onInputEvent(input));
 
-    const recalcularArea = () =>
+    /**
+     * Fase 61 — NUNCA reposicionar a instância enquanto a janela está
+     * minimizada ou escondida na bandeja.
+     *
+     * Bug real: ao minimizar, o Windows dispara `resize` e a janela pode
+     * reportar tamanho zero. A conta era então redimensionada para 0x0, e o
+     * Chromium trata uma view de tamanho zero como oculta: estrangula os
+     * temporizadores e a rede da página, derrubando a conexão do WhatsApp
+     * Web sem que nada tenha sido suspenso pelo app.
+     *
+     * Enquanto minimizada a área continua valendo a última medida boa, e o
+     * recálculo volta no `restore`/`show`, que já são ouvidos abaixo.
+     */
+    const recalcularArea = () => {
+      if (win.isDestroyed() || win.isMinimized()) return;
+      const [largura, altura] = win.getContentSize();
+      if (largura <= 0 || altura <= 0) return;
       this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize));
+    };
 
     /**
      * Fase 55 — a área onde a instância é desenhada precisa ser remedida em

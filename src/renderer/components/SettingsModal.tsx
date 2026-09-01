@@ -745,8 +745,11 @@ function InstancesTab() {
               {/* O fio de baixo vem de `box-shadow`, não de `border-bottom`:
                   com `border-collapse` a borda de um cabeçalho fixo não
                   acompanha a rolagem e some. */}
-              <thead className="sticky top-0 z-20 bg-surface">
-                <tr className="text-[11px] uppercase tracking-wider text-text-faint [&>th]:shadow-[inset_0_-1px_0_var(--color-border)]">
+              {/* Fase 61: o `sticky` vai nas CÉLULAS do cabeçalho, não no
+                  <thead>. Sticky em <thead>/<tr> não é confiável em tabela
+                  com `border-collapse`; nas células funciona sempre. */}
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wider text-text-faint [&>th]:sticky [&>th]:top-0 [&>th]:z-20 [&>th]:bg-surface [&>th]:shadow-[inset_0_-1px_0_var(--color-border)]">
                   <th className="px-2 py-2">
                     <input
                       type="checkbox"
