@@ -51,6 +51,9 @@ export function App() {
   // vez montado, mantemos montado para não perder a animação de fechamento
   // do Modal (que depende de AnimatePresence reagindo à mudança de `open`).
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
+  // Fase 62: o alerta de lembrete da Agenda também escurece a tela inteira
+  // e por isso precisa esconder a instância, como qualquer outra tela.
+  const [reminderOpen, setReminderOpen] = useState(false);
 
   useTheme(theme);
 
@@ -95,6 +98,7 @@ export function App() {
     paletteOpen ||
     analyticsOpen ||
     isResizingSidebar ||
+    reminderOpen ||
     whatsNew !== null;
   useEffect(() => {
     window.multiwhats.setOverlayActive(anyModalOpen);
@@ -202,7 +206,7 @@ export function App() {
       <MessageToast />
       {/* Fase 54: alerta de lembrete da Agenda — fica sempre montado para
           poder aparecer com qualquer tela em uso. */}
-      <ReminderAlert />
+      <ReminderAlert onOpenChange={setReminderOpen} />
     </>
   );
 

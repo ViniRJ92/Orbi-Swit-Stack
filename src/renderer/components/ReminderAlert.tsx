@@ -45,7 +45,7 @@ function quandoTexto(start: number): string {
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)} às ${hora}`;
 }
 
-export function ReminderAlert() {
+export function ReminderAlert({ onOpenChange }: { onOpenChange?: (aberto: boolean) => void }) {
   const [fila, setFila] = useState<ReminderDuePayload[]>([]);
 
   useEffect(() => {
@@ -57,6 +57,17 @@ export function ReminderAlert() {
   }, []);
 
   const atual = fila[0];
+
+  // Fase 62: avisa quem está por cima (App.tsx) que este alerta está na
+  // tela. Sem isso a instância não era escondida e ficava desenhada por
+  // cima do alerta: sobrava só o escurecimento do fundo, o cartão ficava
+  // invisível atrás da camada nativa e os cliques iam todos para ela, então
+  // não havia como dispensar o lembrete. Como o lembrete só é marcado como
+  // tratado quando o usuário age, ele voltava a cada abertura do app.
+  const chaveAtual = atual?.key ?? null;
+  useEffect(() => {
+    onOpenChange?.(chaveAtual !== null);
+  }, [chaveAtual, onOpenChange]);
 
   function removerAtual() {
     setFila((prev) => prev.slice(1));

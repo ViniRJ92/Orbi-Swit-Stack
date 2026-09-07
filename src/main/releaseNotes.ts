@@ -451,6 +451,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• A linha NOME / AGRUPAMENTO / SERVIÇO / STATUS / AÇÕES voltou a ficar fixa no topo ao rolar a lista.',
     '• Antes ela parava um pouco abaixo do topo do painel, e as linhas da tabela apareciam passando nessa faixa acima dela.',
   ].join('\n'),
+  '0.46.3': [
+    'Correção: tela escurecida por um lembrete invisível',
+    '',
+    '• Quando um lembrete da Agenda vencia, a tela ficava escurecida como se houvesse uma janela aberta, mas nada aparecia e não dava para fechar.',
+    '• Causa: o alerta de lembrete não mandava esconder a instância, então o WhatsApp era desenhado por cima dele. O cartão do alerta ficava atrás e os cliques iam todos para a camada de cima.',
+    '• Como o lembrete só é marcado como tratado depois que você age nele, ele voltava a cada abertura do aplicativo, inclusive ao iniciar junto com o Windows.',
+    '• Agora o alerta esconde a instância enquanto está na tela, como qualquer outra janela do aplicativo.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
