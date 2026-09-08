@@ -154,6 +154,19 @@ app.whenReady().then(() => {
   const win = windowManager.create();
 
   viewManager = new ViewManager(win, accountStore);
+
+  // Fase 63: ao voltar para o Orbi (Alt+Tab, barra de tarefas), o foco do
+  // teclado volta para dentro da instância, e não para a página do app. O
+  // segundo disparo, logo depois, existe porque o Chromium ainda está
+  // distribuindo o foco no instante do evento e sobrescreveria a primeira
+  // chamada. `focusActive` se protege sozinho quando há modal aberto.
+  win.on('blur', () => viewManager?.rememberFocus());
+  win.on('focus', () => {
+    viewManager?.focusActive();
+    setTimeout(() => {
+      if (win.isFocused()) viewManager?.focusActive();
+    }, 60);
+  });
   viewManager.setStatusChangeListener(() => pushAccountsUpdate());
   // Fase 30.6 (versão definitiva): mensagens chegam por EVENTO (MutationObserver
   // dentro da própria página, ver webviewPreload.ts), nunca por polling — o

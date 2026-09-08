@@ -85,6 +85,12 @@ export class ViewManager {
    * WhatsApp Web cobriria e roubaria os cliques destinados ao modal.
    */
   private overlayActive = false;
+
+  // Fase 63: qual camada tinha o teclado quando a janela perdeu o foco —
+  // a instância ou a página do próprio Orbi. Só devolvemos o foco para a
+  // instância se era ela que estava em uso; caso contrário, quem estivesse
+  // digitando na busca de contas perderia o cursor ao voltar do Alt+Tab.
+  private hadViewFocus = false;
   private onStatusChange?: (accountId: string) => void;
   private webContentsIdToAccount: Map<number, string> = new Map();
   private loggedInState: Map<string, boolean> = new Map();
@@ -209,6 +215,32 @@ export class ViewManager {
     const managed = this.activeAccountId ? this.views.get(this.activeAccountId) : undefined;
     if (!managed) return;
     managed.view.setBounds(active ? { x: 0, y: 0, width: 0, height: 0 } : this.contentBounds);
+  }
+
+  /**
+   * Fase 63 — devolve o foco do teclado para a instância visível.
+   *
+   * A instância é uma camada separada da página do app. Quando a janela
+   * recupera o foco (voltar pelo Alt+Tab, clicar na barra de tarefas), o
+   * Chromium entrega o foco para a PÁGINA do Orbi, não para a instância —
+   * então o cursor sai de onde estava dentro do WhatsApp e era preciso
+   * clicar no campo de novo antes de colar ou digitar.
+   *
+   * Não faz nada com um modal aberto: ali o foco tem que ficar na página
+   * do app, senão os campos do modal parariam de receber digitação.
+   */
+  /** Anota, ao perder o foco da janela, se era a instância que estava em uso. */
+  rememberFocus(): void {
+    const managed = this.activeAccountId ? this.views.get(this.activeAccountId) : undefined;
+    this.hadViewFocus =
+      !!managed && !managed.view.webContents.isDestroyed() && managed.view.webContents.isFocused();
+  }
+
+  focusActive(): void {
+    if (this.overlayActive || !this.hadViewFocus) return;
+    const managed = this.activeAccountId ? this.views.get(this.activeAccountId) : undefined;
+    if (!managed || managed.view.webContents.isDestroyed()) return;
+    managed.view.webContents.focus();
   }
 
   hasView(accountId: string): boolean {

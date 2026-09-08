@@ -459,6 +459,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Como o lembrete só é marcado como tratado depois que você age nele, ele voltava a cada abertura do aplicativo, inclusive ao iniciar junto com o Windows.',
     '• Agora o alerta esconde a instância enquanto está na tela, como qualquer outra janela do aplicativo.',
   ].join('\n'),
+  '0.47.0': [
+    'O cursor volta para onde estava ao retornar pelo Alt+Tab',
+    '',
+    '• Ao sair do Orbi e voltar, o teclado volta direto para dentro da instância. Dá para copiar um número em outro programa e colar no campo do WhatsApp sem precisar clicar nele de novo.',
+    '• Antes o foco voltava para a página do aplicativo, e não para a instância, então a digitação não ia para lugar nenhum.',
+    '• Se você estava digitando na busca de contas do próprio Orbi, o cursor continua lá: só volta para a instância se era ela que estava em uso.',
+    '• Com uma janela do aplicativo aberta, o foco continua nela, como antes.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
