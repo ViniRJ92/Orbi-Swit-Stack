@@ -520,6 +520,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• O encaixe vale para os tamanhos de ícone pequeno, médio e grande.',
     '• Instâncias aguardando QR Code aparecem com a bolinha azul.',
   ].join('\n'),
+  '0.48.7': [
+    'Barra de contas: bolinha de status no canto do ícone',
+    '',
+    '• A bolinha de status voltou para o canto inferior direito do ícone de cada instância.',
+    '• O status embaixo do nome agora começa alinhado com o ícone.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

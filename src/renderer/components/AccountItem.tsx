@@ -55,7 +55,7 @@ export const ICON_SIZE_SPECS: Record<
   small: {
     rowAvatar: 20,
     rowGlyph: 13,
-    rowStatusDot: 8,
+    rowStatusDot: 9,
     rowNameText: 'text-[14px]',
     rowStatusText: 'text-[12px]',
     rowPadX: 'px-1.5',
@@ -72,7 +72,7 @@ export const ICON_SIZE_SPECS: Record<
   medium: {
     rowAvatar: 22,
     rowGlyph: 14,
-    rowStatusDot: 8,
+    rowStatusDot: 9,
     rowNameText: 'text-[15px]',
     rowStatusText: 'text-[12px]',
     rowPadX: 'px-1.5',
@@ -89,7 +89,7 @@ export const ICON_SIZE_SPECS: Record<
   large: {
     rowAvatar: 24,
     rowGlyph: 15,
-    rowStatusDot: 8,
+    rowStatusDot: 10,
     rowNameText: 'text-[15.5px]',
     rowStatusText: 'text-[12.5px]',
     rowPadX: 'px-1.5',
@@ -295,19 +295,22 @@ export function AccountItem({
             baixo começando embaixo do ícone, com a largura quase toda da
             linha. Instância conectada fica só com a linha de cima. */}
         <div className={'flex min-w-0 items-center ' + spec.rowGap}>
-          <span
-            className={'shrink-0 rounded-full ' + statusDotClass(account, status)}
-            style={{ width: spec.rowStatusDot, height: spec.rowStatusDot }}
-          />
-          <div
-            className="flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-hover"
-            style={{ width: spec.rowAvatar, height: spec.rowAvatar }}
-          >
-            {account.iconDataUrl ? (
-              <img src={account.iconDataUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <ServiceGlyph service={account.service} size={spec.rowGlyph} color={account.color} />
-            )}
+          <div className="relative shrink-0">
+            <div
+              className="flex items-center justify-center overflow-hidden rounded-md bg-surface-hover"
+              style={{ width: spec.rowAvatar, height: spec.rowAvatar }}
+            >
+              {account.iconDataUrl ? (
+                <img src={account.iconDataUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <ServiceGlyph service={account.service} size={spec.rowGlyph} color={account.color} />
+              )}
+            </div>
+            {/* Bolinha de status no canto inferior direito do ícone. */}
+            <span
+              className={'absolute -bottom-1 -right-1 rounded-full border-[1.5px] border-sidebar ' + statusDotClass(account, status)}
+              style={{ width: spec.rowStatusDot, height: spec.rowStatusDot, boxShadow: 'none' }}
+            />
           </div>
           <div className={'flex min-w-0 flex-1 items-center gap-1 font-semibold leading-tight text-text ' + spec.rowNameText}>
             {account.favorite && <Star size={11} className="shrink-0 text-accent" fill="currentColor" />}
@@ -327,7 +330,6 @@ export function AccountItem({
         {mostrarSegundaLinha && (
           <div
             className={'mt-0.5 flex min-w-0 items-center gap-1.5 leading-tight ' + spec.rowStatusText + ' ' + (status?.loadError ? 'text-danger' : 'text-text-dim')}
-            style={{ paddingLeft: spec.rowStatusDot + 6 }}
           >
             <span className="truncate">{statusLabel}</span>
             {status?.loadError && (
