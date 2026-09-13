@@ -408,6 +408,34 @@ function ThemePreview({ kind }: { kind: ThemePreference }) {
   );
 }
 
+/**
+ * Fase 69 — uma linha do log no formato "[data ISO] [NÍVEL] mensagem" (ver
+ * main/logger.ts). Mostra a data local curta, o nível em etiqueta colorida e
+ * a mensagem. Linhas que não seguem o formato (continuação de um erro com
+ * várias linhas) aparecem só como texto.
+ */
+function LogLine({ linha }: { linha: string }) {
+  const m = /^\[([^\]]+)\]\s+\[(\w+)\]\s+(.*)$/.exec(linha);
+  if (!m) return <div className="truncate pl-[118px] text-text-faint">{linha}</div>;
+  const d = new Date(m[1]);
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const quando = Number.isNaN(d.getTime())
+    ? m[1]
+    : `${p2(d.getDate())}/${p2(d.getMonth() + 1)} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  const nivel = m[2].toUpperCase();
+  const cor =
+    nivel === 'ERROR' ? 'bg-red-500/15 text-red-400' : nivel === 'WARN' ? 'bg-amber-500/15 text-amber-400' : 'bg-accent/15 text-accent';
+  return (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="w-[72px] shrink-0 tabular-nums text-text-faint">{quando}</span>
+      <span className={'w-[46px] shrink-0 rounded px-1 text-center text-[10px] font-bold ' + cor}>{nivel}</span>
+      <span className="min-w-0 truncate text-text" title={m[3]}>
+        {m[3]}
+      </span>
+    </div>
+  );
+}
+
 function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[11px]">{children}</kbd>;
 }
@@ -1560,15 +1588,23 @@ function BackupDiagnosticsTab({
             />
           </div>
         )}
+        {/* Fase 69 — log de diagnóstico visível na própria aba, carregado ao
+            abrir as Configurações. O botão "Ocultar log" / "Ver últimas
+            linhas" continua escondendo e mostrando, como antes. */}
         {logLines && (
-          <pre
-            className={
-              'mw-scroll max-h-40 overflow-y-auto rounded-xl border border-border bg-input p-2.5 pr-3 text-[10px] leading-relaxed text-text-dim ' +
-              (diagnostics ? 'mt-2.5' : '')
-            }
-          >
-            {logLines.length > 0 ? logLines.join('\n') : 'Sem entradas no log ainda.'}
-          </pre>
+          <div className={'rounded-xl border border-border bg-input ' + (diagnostics ? 'mt-3' : '')}>
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+              <span className="text-[12.5px] font-semibold text-text">Log de diagnóstico</span>
+              <span className="text-[11px] text-text-faint">últimas {logLines.length} linhas</span>
+            </div>
+            <div className="mw-scroll flex max-h-56 flex-col gap-0.5 overflow-y-auto px-3 py-2 font-mono text-[11px] leading-6">
+              {logLines.length > 0 ? (
+                logLines.map((linha, i) => <LogLine key={i} linha={linha} />)
+              ) : (
+                <p className="text-text-faint">Sem entradas no log ainda.</p>
+              )}
+            </div>
+          </div>
         )}
       </Card>
 
@@ -1793,6 +1829,8 @@ export function SettingsModal({
     window.multiwhats.getToastNotificationsEnabled().then(setToastNotificationsEnabled);
     window.multiwhats.getCloseBehavior().then(setCloseBehaviorState);
     window.multiwhats.getDiagnostics().then(setDiagnostics);
+    // Fase 69 — o log já aparece carregado na aba Backup & Diagnóstico.
+    window.multiwhats.readRecentLogs(80).then(setLogLines);
     loadGroups();
   }, [open, loadGroups]);
 

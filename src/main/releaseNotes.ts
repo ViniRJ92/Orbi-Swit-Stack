@@ -477,6 +477,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Agenda: barra única no topo, coluna lateral com calendário, próximos compromissos e contagem por categoria, e marcação de hoje e feriados no mês.',
     '• Nenhuma função foi removida. Contagem de mensagens e navegação não foram alteradas.',
   ].join('\n'),
+  '0.48.1': [
+    'Log de diagnóstico visível',
+    '',
+    '• Na aba Backup & Diagnóstico, as últimas linhas do log já aparecem ao abrir, com data, nível e mensagem.',
+    '• O botão de ocultar e mostrar o log continua funcionando.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
