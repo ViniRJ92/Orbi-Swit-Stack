@@ -531,6 +531,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     '• A bolinha no canto do ícone ficou menor e acompanha o tamanho escolhido: pequeno, médio ou grande.',
   ].join('\n'),
+  '0.48.9': [
+    'Barra de contas: estado indicado pela bolinha',
+    '',
+    '• Aguardando QR Code não aparece mais embaixo do nome. A bolinha no canto do ícone já indica o estado.',
+    '• Instâncias não conectadas voltaram a usar a bolinha escura.',
+    '• A bolinha ficou sem o brilho em volta.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

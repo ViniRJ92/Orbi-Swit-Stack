@@ -116,8 +116,6 @@ function statusDotClass(account: AccountRecord, status: AccountStatus | undefine
   if (status?.loadError) return 'bg-danger';
   if (status?.suspended) return 'bg-text-faint';
   if (status?.isOnline) return 'bg-accent accent-glow';
-  // Fase 74: mesmo caso em que o texto mostra "Aguardando QR Code" (ver accountStatusLabel.ts).
-  if (account.service === 'whatsapp' && !account.phone) return 'bg-cyan-400 shadow-[0_0_0_3px_rgb(34_211_238/0.18)]';
   return 'bg-text-faint';
 }
 
@@ -152,7 +150,9 @@ export function AccountItem({
   const isActive = !!status?.isActive;
   const spec = ICON_SIZE_SPECS[iconSize];
   const statusLabel = accountStatusLabel(account, status);
-  const mostrarSegundaLinha = statusLabel !== 'Conectado' && statusLabel !== 'Aberto';
+  // Fase 75: "Aguardando QR Code" também saiu da segunda linha; a bolinha já indica o estado.
+  const mostrarSegundaLinha =
+    statusLabel !== 'Conectado' && statusLabel !== 'Aberto' && statusLabel !== 'Aguardando QR Code';
 
   const dragProps = {
     draggable: !!drag,
