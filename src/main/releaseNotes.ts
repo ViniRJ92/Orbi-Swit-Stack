@@ -490,6 +490,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Novo botão Limpar log, com confirmação. Não afeta instâncias, conversas nem configurações.',
     '• A data e a hora de cada linha não quebram mais em duas linhas.',
   ].join('\n'),
+  '0.48.3': [
+    'Analytics: nova disposição dos cards',
+    '',
+    '• Mensagens por instância: lista com barra dividida entre enviadas e recebidas. Mostra as 6 mais ativas e Ver todas abre a lista inteira.',
+    '• Fluxo de mensagens: gráfico em área por hora, com o horário de pico no rodapé e seletor de período no próprio card.',
+    '• Atividade das instâncias: um card só, com os botões Hoje e Ontem, duas colunas e a linha de total embaixo.',
+    '• Os números e a forma de contar não mudaram.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

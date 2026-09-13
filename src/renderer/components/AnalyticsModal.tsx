@@ -38,17 +38,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAppStore } from '../store/useAppStore';
 import {
   AccountStatus,
@@ -216,109 +206,341 @@ function ChartCard({
 }
 
 /**
- * Fase 28: um card de relatório diário (Hoje ou Ontem) — uma linha por
- * instância com atividade, no formato "Nome teve N novas interações — M
- * mensagens", mais os totais do dia inteiro. Nunca mostra nome/telefone de
- * pessoa nenhuma, só o nome da própria instância (conta) e números
- * agregados — ver chatActivityStore.ts para a fonte do dado.
+ * Fase 71 — "Mensagens por instância": lista com uma barra dividida entre
+ * enviadas e recebidas, no lugar do gráfico de barras. Mesmos dados de antes
+ * (summary.byAccount), ordenados por volume. Mostra as 6 mais ativas e o
+ * "Ver todas" expande para a lista inteira, então nenhuma instância some.
  */
-function DailyActivityCard({
-  title,
-  tone,
-  report,
+function MensagensPorInstanciaCard({
+  dados,
+  loading,
+  updatedAt,
+  totalVolume,
 }: {
-  title: string;
-  /** Fase 64 — cor da bolinha ao lado do título: destaque para hoje, neutra para ontem. */
-  tone: 'today' | 'yesterday';
-  report: ChatActivityDayReport | undefined;
+  dados: { name: string; total: number; received: number; sent: number; color: string }[];
+  loading: boolean;
+  updatedAt: number | null;
+  totalVolume: number;
 }) {
-  const rows = report?.byAccount ?? [];
+  const [verTodas, setVerTodas] = useState(false);
+  const LIMITE = 6;
+  const ordenados = [...dados].sort((a, b) => b.total - a.total);
+  const visiveis = verTodas ? ordenados : ordenados.slice(0, LIMITE);
+  const pct = (v: number, t: number) => (t > 0 ? Math.round((v / t) * 100) : 0);
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 rounded-xl border border-border bg-surface p-5">
-      <div className="flex shrink-0 items-center justify-between">
+    <div className="flex min-h-[350px] min-w-0 flex-1 flex-col rounded-xl border border-border bg-surface p-5">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
         <p className="flex items-center gap-2 text-[13.5px] font-semibold text-text">
-          <Dot className={tone === 'today' ? 'bg-accent' : 'bg-text-faint'} />
-          {title}
+          <Dot color="var(--color-accent)" />
+          Mensagens por instância
         </p>
-        <span className="text-[11.5px] text-text-dim">
-          {report?.totalConversations ?? 0} interações · {report?.totalMessages ?? 0} mensagens
-        </span>
-      </div>
-      {/*
-        Fase 40 — tabela no lugar da lista de texto corrido. Colunas
-        numéricas alinhadas à direita e linha TOTAL fixa no rodapé, para
-        comparar instâncias sem precisar ler frase por frase.
-      */}
-      <div className="flex min-h-0 flex-1 flex-col">
-        {rows.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center text-center text-[12px] font-light text-text-faint">
-            Sem novas interações.
-          </div>
-        ) : (
-          <>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <table className="w-full table-fixed border-collapse text-[12px]">
-                <colgroup>
-                  <col style={{ width: '36%' }} />
-                  <col style={{ width: '17%' }} />
-                  <col style={{ width: '17%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '15%' }} />
-                </colgroup>
-                <thead className="sticky top-0 bg-surface">
-                  <tr className="text-[10.5px] font-medium uppercase tracking-wide text-text-faint">
-                    <th className="pb-2 pr-2 text-left font-medium">Instância</th>
-                    <th className="pb-2 px-1.5 text-right font-medium">Interações</th>
-                    <th className="pb-2 px-1.5 text-right font-medium">Recebidas</th>
-                    <th className="pb-2 px-1.5 text-right font-medium">Enviadas</th>
-                    <th className="pb-2 pl-1.5 text-right font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((a) => (
-                    <tr key={a.accountId} className="border-t border-border/60">
-                      <td className="py-2 pr-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.color }} />
-                          <span className="truncate font-medium text-text">{a.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-2 px-1.5 text-right tabular-nums text-text-dim">{a.newConversations}</td>
-                      <td className="py-2 px-1.5 text-right tabular-nums text-text-dim">{a.received}</td>
-                      <td className="py-2 px-1.5 text-right tabular-nums text-text-dim">{a.sent}</td>
-                      <td className="py-2 pl-1.5 text-right font-semibold tabular-nums text-text">{a.messages}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Mesmas larguras da tabela acima para as colunas baterem. */}
-            <table className="w-full shrink-0 table-fixed border-collapse border-t-2 border-border text-[12px]">
-              <colgroup>
-                <col style={{ width: '36%' }} />
-                <col style={{ width: '17%' }} />
-                <col style={{ width: '17%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '15%' }} />
-              </colgroup>
-              <tbody>
-                <tr>
-                  <td className="py-2 pr-2 text-[10.5px] font-semibold uppercase tracking-wide text-text-dim">Total</td>
-                  <td className="py-2 px-1.5 text-right font-semibold tabular-nums text-text">
-                    {report?.totalConversations ?? 0}
-                  </td>
-                  <td className="py-2 px-1.5 text-right font-semibold tabular-nums text-text">
-                    {report?.totalReceived ?? 0}
-                  </td>
-                  <td className="py-2 px-1.5 text-right font-semibold tabular-nums text-text">{report?.totalSent ?? 0}</td>
-                  <td className="py-2 pl-1.5 text-right font-semibold tabular-nums text-text">
-                    {report?.totalMessages ?? 0}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </>
+        {ordenados.length > LIMITE && (
+          <button onClick={() => setVerTodas((v) => !v)} className="text-[12px] font-medium text-accent hover:underline">
+            {verTodas ? 'Ver menos' : 'Ver todas'}
+          </button>
         )}
+      </div>
+
+      {ordenados.length === 0 ? (
+        <div className="min-h-0 flex-1">
+          <EmptyChartState loading={loading} />
+        </div>
+      ) : (
+        <div className="mw-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+          {visiveis.map((a, i) => {
+            const pe = pct(a.sent, a.total);
+            const pr = pct(a.received, a.total);
+            return (
+              <div key={a.name + i} className="min-w-0">
+                <div className="mb-1 flex items-center justify-between gap-3 text-[12.5px]">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Dot color={a.color} />
+                    <span className="truncate font-medium text-text">{a.name}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-text-dim">
+                    <span className="font-semibold text-text">{a.total}</span> total ({a.sent} env / {a.received} rec)
+                  </span>
+                </div>
+                <div className="flex h-3.5 overflow-hidden rounded-sm bg-input text-[9.5px] font-semibold leading-[14px]">
+                  {a.sent > 0 && (
+                    <div
+                      className="overflow-hidden whitespace-nowrap px-1 text-white/90"
+                      style={{ width: `${pe}%`, background: '#8B6FF5' }}
+                      title={`${a.sent} enviadas`}
+                    >
+                      {pe}%
+                    </div>
+                  )}
+                  {a.received > 0 && (
+                    <div
+                      className="overflow-hidden whitespace-nowrap px-1 text-right text-accent-contrast"
+                      style={{ width: `${pr}%`, background: 'var(--color-accent)' }}
+                      title={`${a.received} recebidas`}
+                    >
+                      {pr}%
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-3 flex shrink-0 items-center justify-between gap-3 text-[11.5px]">
+        <span className="min-w-0 truncate text-text-dim">
+          {verTodas
+            ? `Exibindo todas as ${ordenados.length} instâncias`
+            : `Exibindo as ${Math.min(LIMITE, ordenados.length)} instâncias mais ativas`}
+          {updatedAt !== null && (
+            <span className="text-text-faint">
+              {' · '}
+              <UpdatedAgo at={updatedAt} />
+            </span>
+          )}
+        </span>
+        <span className="shrink-0 font-semibold tabular-nums text-accent">Total: {totalVolume} msgs no período</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fase 71 — "Fluxo de mensagens": a mesma série por hora de antes
+ * (summary.timeline), agora em área, com o horário de pico no rodapé. O
+ * seletor de período deste card é o MESMO estado da barra de filtros do
+ * topo; trocar aqui ou lá dá no mesmo. O comparativo com o período anterior
+ * continua como linha tracejada.
+ */
+function FluxoCard({
+  dados,
+  compare,
+  loading,
+  quick,
+  onQuick,
+}: {
+  dados: { hour: string; count: number; prevCount?: number }[];
+  compare: boolean;
+  loading: boolean;
+  quick: AnalyticsPeriod;
+  onQuick: (p: AnalyticsPeriod) => void;
+}) {
+  const pico = useMemo(() => {
+    let melhor: { hora: number; max: number } | null = null;
+    for (const d of dados) {
+      if (d.count > (melhor?.max ?? 0)) melhor = { hora: parseInt(d.hour, 10), max: d.count };
+    }
+    return melhor;
+  }, [dados]);
+  const p2 = (n: number) => String(n).padStart(2, '0');
+
+  return (
+    <div className="flex min-h-[350px] min-w-0 flex-1 flex-col rounded-xl border border-border bg-surface p-5">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+        <p className="flex items-center gap-2 text-[13.5px] font-semibold text-text">
+          <Dot color="var(--color-accent-2)" />
+          Fluxo de mensagens
+        </p>
+        <div className="flex items-center gap-3">
+          {compare && (
+            <div className="flex items-center gap-3 text-[11px] text-text-dim">
+              <LegendItem kind="line" color="var(--color-accent-2)" label="Atual" />
+              <LegendItem kind="dashed" color="var(--color-text-faint)" label="Anterior" />
+            </div>
+          )}
+          <select
+            value={quick}
+            onChange={(e) => onQuick(e.target.value as AnalyticsPeriod)}
+            aria-label="Período do gráfico"
+            className="rounded-lg border border-border bg-input px-2 py-1 text-[12px] text-text outline-none focus:border-accent"
+          >
+            <option value="today">Hoje</option>
+            <option value="7d">Últimos 7 dias</option>
+            <option value="30d">Últimos 30 dias</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1">
+        {dados.every((t) => t.count === 0) ? (
+          <EmptyChartState loading={loading} />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={dados} margin={{ left: 0, right: 12, top: 16, bottom: 4 }}>
+              <defs>
+                <linearGradient id="fluxoGradiente" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" style={{ stopColor: 'var(--color-accent-2)', stopOpacity: 0.35 }} />
+                  <stop offset="100%" style={{ stopColor: 'var(--color-accent-2)', stopOpacity: 0 }} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="var(--color-border)" strokeOpacity={0.5} />
+              <XAxis
+                dataKey="hour"
+                interval={2}
+                tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              {/* Fase 45: topo da escala 20% acima do maior valor (mínimo 4). */}
+              <YAxis hide allowDecimals={false} domain={[0, (dataMax: number) => Math.max(4, Math.ceil((dataMax || 0) * 1.2))]} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={{ color: 'var(--color-text)' }} />
+              <Area
+                type="monotone"
+                dataKey="count"
+                name="Atual"
+                stroke="var(--color-accent-2)"
+                strokeWidth={2}
+                fill="url(#fluxoGradiente)"
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+              {compare && (
+                <Line
+                  type="monotone"
+                  dataKey="prevCount"
+                  name="Anterior"
+                  stroke="var(--color-text-faint)"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  dot={false}
+                  activeDot={{ r: 3 }}
+                />
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {pico && (
+        <div className="mt-3 flex shrink-0 items-center justify-between gap-3 border-t border-border pt-3 text-[12px]">
+          <span className="text-text-dim">
+            Pico registrado entre {p2(pico.hora)}:00 e {p2((pico.hora + 1) % 24)}:00
+          </span>
+          <span className="font-semibold tabular-nums text-accent">{pico.max} msgs nesse horário</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Fase 71 — "Atividade das instâncias": um card só, com Hoje e Ontem
+ * alternáveis (Hoje ao abrir). Os relatórios são os mesmos de sempre
+ * (chatDaily.today e chatDaily.yesterday, ver chatActivityStore.ts), só
+ * exibidos um de cada vez: as linhas se dividem em duas colunas iguais e o
+ * total atravessa o card. Nenhuma linha é descartada: com mais de 10
+ * instâncias, cada coluna fica com a metade.
+ */
+function AtividadeCard({
+  hoje,
+  ontem,
+}: {
+  hoje: ChatActivityDayReport | undefined;
+  ontem: ChatActivityDayReport | undefined;
+}) {
+  const [dia, setDia] = useState<'hoje' | 'ontem'>('hoje');
+  const report = dia === 'hoje' ? hoje : ontem;
+  const rows = report?.byAccount ?? [];
+  const meio = Math.ceil(rows.length / 2);
+  const colunas = [rows.slice(0, meio), rows.slice(meio)];
+
+  const tabela = (lista: ChatActivityDayReport['byAccount']) => (
+    <table className="w-full table-fixed border-collapse text-[12.5px]">
+      <colgroup>
+        <col style={{ width: '36%' }} />
+        <col style={{ width: '17%' }} />
+        <col style={{ width: '17%' }} />
+        <col style={{ width: '15%' }} />
+        <col style={{ width: '15%' }} />
+      </colgroup>
+      <thead>
+        <tr className="text-[10.5px] font-medium uppercase tracking-wide text-text-faint">
+          <th className="pb-2 pr-2 text-left font-medium">Instância</th>
+          <th className="pb-2 px-1.5 text-right font-medium">Interações</th>
+          <th className="pb-2 px-1.5 text-right font-medium">Recebidas</th>
+          <th className="pb-2 px-1.5 text-right font-medium">Enviadas</th>
+          <th className="pb-2 pl-1.5 text-right font-medium">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {lista.map((a) => (
+          <tr key={a.accountId} className="border-t border-border/60">
+            <td className="py-2.5 pr-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.color }} />
+                <span className="truncate font-medium text-text">{a.name}</span>
+              </div>
+            </td>
+            <td className="py-2.5 px-1.5 text-right tabular-nums text-text-dim">{a.newConversations}</td>
+            <td className="py-2.5 px-1.5 text-right tabular-nums text-accent">{a.received}</td>
+            <td className="py-2.5 px-1.5 text-right tabular-nums" style={{ color: '#8B6FF5' }}>
+              {a.sent}
+            </td>
+            <td className="py-2.5 pl-1.5 text-right font-semibold tabular-nums text-text">{a.messages}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  return (
+    <div className="flex shrink-0 flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[15px] font-semibold text-text">
+            <Dot color="var(--color-accent)" />
+            Atividade das instâncias
+          </p>
+          <p className="mt-1 text-[12px] text-text-dim">
+            {report?.totalConversations ?? 0} interações · {report?.totalMessages ?? 0} mensagens registradas
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {(['hoje', 'ontem'] as const).map((k) => (
+            <button
+              key={k}
+              onClick={() => setDia(k)}
+              aria-pressed={dia === k}
+              className={
+                'rounded-lg border px-4 py-1.5 text-[12.5px] font-semibold transition-colors ' +
+                (dia === k ? 'border-transparent accent-gradient text-accent-contrast' : 'border-border text-text-dim hover:text-text')
+              }
+            >
+              {k === 'hoje' ? 'Hoje' : 'Ontem'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="flex items-center justify-center py-8 text-center text-[12px] font-light text-text-faint">
+          Sem novas interações.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 rounded-lg border border-border">
+          <div className="min-w-0 p-3">{tabela(colunas[0])}</div>
+          <div className="min-w-0 border-l border-border p-3">{tabela(colunas[1])}</div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] items-center rounded-lg bg-input px-4 py-3 text-[13px] font-semibold tabular-nums">
+        <span className="truncate text-accent">
+          Total {dia === 'hoje' ? 'Hoje' : 'Ontem'} ({rows.length} {rows.length === 1 ? 'instância' : 'instâncias'})
+        </span>
+        <span className="text-right text-text" title="Interações">
+          {report?.totalConversations ?? 0}
+        </span>
+        <span className="text-right text-accent" title="Recebidas">
+          {report?.totalReceived ?? 0}
+        </span>
+        <span className="text-right" style={{ color: '#8B6FF5' }} title="Enviadas">
+          {report?.totalSent ?? 0}
+        </span>
+        <span className="text-right text-text" title="Total">
+          {report?.totalMessages ?? 0}
+        </span>
       </div>
     </div>
   );
@@ -817,169 +1039,24 @@ export function AnalyticsModal({
         </KpiCard>
       </div>
 
-      {/*
-        Fase 45: `shrink-0` no lugar de `min-h-0 flex-1`. Antes esta linha
-        dividia o que sobrasse de altura com o resto da página, e ao diminuir
-        a janela os dois cards eram achatados. Agora eles mantêm a altura
-        própria e é a página que rola.
-      */}
+      {/* Fase 71 — os dois cards de cima, lado a lado, na disposição da referência. */}
       <div className="flex shrink-0 gap-4">
-        <ChartCard
-          title="Movimento por instância"
-          subtitle="Comparativo de mensagens recebidas e enviadas"
-          legend={
-            <>
-              <LegendItem kind="square" color="var(--color-accent)" label="Recebidas" />
-              <LegendItem kind="square" color="#8B6FF5" label="Enviadas" />
-            </>
-          }
-          footer={<UpdatedAgo at={updatedAt} />}
-        >
-          {barData.length === 0 ? (
-            <EmptyChartState loading={loading} />
-          ) : (
-            /*
-              Fase 38: com muitas instâncias os nomes do eixo se encavalavam —
-              efeito colateral do `interval={0}` da Fase 32, que passou a
-              forçar TODOS os rótulos a aparecer (antes o Recharts escondia
-              alguns, e barra ficava sem nome). Aqui a altura do gráfico
-              cresce junto com a quantidade de barras, e o card rola por
-              dentro quando não couber. Assim nenhum nome some nem se
-              sobrepõe, seja com 2 instâncias ou com 30.
-            */
-            <div className="mw-scroll h-full overflow-y-auto pr-1">
-              {/* Fase 45: 38px por barra (era 34) e piso maior, para as barras
-                  respirarem e o rótulo nunca encostar na de baixo. */}
-              <div style={{ height: Math.max(barData.length * 38 + 40, 260) }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-                    <CartesianGrid horizontal={false} stroke="var(--color-border)" />
-                    <XAxis
-                      type="number"
-                      tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      // Fase 45: 150px (era 110) para caber o nome completo da
-                      // instância sem cortar em "...".
-                      width={150}
-                      tick={{ fill: 'var(--color-text-dim)', fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      // Fase 32: sem isto o Recharts descarta rótulos quando o
-                      // card fica baixo — aparecia barra sem nome.
-                      interval={0}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'var(--color-surface-hover)' }}
-                      contentStyle={CHART_TOOLTIP_STYLE}
-                      labelStyle={{ color: 'var(--color-text)' }}
-                    />
-                    {/*
-                      Fase 40 — barras empilhadas: cada instância mostra quanto
-                      do volume foi recebido e quanto foi enviado. Só a última
-                      fatia arredonda a ponta direita. Fase 64: a legenda saiu
-                      daqui para o cabeçalho do card.
-                    */}
-                    <Bar dataKey="received" stackId="dir" name="Recebidas" maxBarSize={22} fill="var(--color-accent)" />
-                    <Bar
-                      dataKey="sent"
-                      stackId="dir"
-                      name="Enviadas"
-                      radius={[0, 4, 4, 0]}
-                      maxBarSize={22}
-                      fill="#8B6FF5"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-        </ChartCard>
-
-        <ChartCard
-          title="Horários de pico"
-          subtitle={
-            compare
-              ? 'Distribuição horária do tráfego (período atual vs anterior)'
-              : 'Distribuição horária do tráfego no período'
-          }
-          legend={
-            <>
-              <LegendItem kind="line" color="var(--color-accent-2)" label="Atual" />
-              {compare && <LegendItem kind="dashed" color="var(--color-text-faint)" label="Anterior" />}
-            </>
-          }
-        >
-          {timelineData.every((t) => t.count === 0) ? (
-            <EmptyChartState loading={loading} />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              {/* Fase 45: `top: 16` reserva respiro acima da curva, para o
-                  pico não encostar na borda de cima do card. */}
-              <LineChart data={timelineData} margin={{ left: -12, right: 12, top: 16, bottom: 4 }}>
-                <CartesianGrid vertical={false} stroke="var(--color-border)" />
-                <XAxis
-                  dataKey="hour"
-                  interval={2}
-                  tick={{ fill: 'var(--color-text-faint)', fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                {/*
-                  Fase 45: o topo da escala passa a ser 20% acima do maior
-                  valor do período (mínimo 4), para o pico não colar na borda.
-                */}
-                <YAxis
-                  tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                  domain={[0, (dataMax: number) => Math.max(4, Math.ceil((dataMax || 0) * 1.2))]}
-                />
-                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={{ color: 'var(--color-text)' }} />
-                {/* Fase 64: `name` dá o rótulo do tooltip. Sem ele aparecia
-                    "count", o nome interno do campo. */}
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  name="Atual"
-                  stroke="var(--color-accent-2)"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-                {compare && (
-                  <Line
-                    type="monotone"
-                    dataKey="prevCount"
-                    name="Anterior"
-                    stroke="var(--color-text-faint)"
-                    strokeWidth={1.5}
-                    strokeDasharray="4 4"
-                    dot={false}
-                    activeDot={{ r: 3 }}
-                  />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
+        <MensagensPorInstanciaCard
+          dados={barData}
+          loading={loading}
+          updatedAt={updatedAt}
+          totalVolume={summary?.totalVolume ?? 0}
+        />
+        <FluxoCard dados={timelineData} compare={compare} loading={loading} quick={quick} onQuick={setQuick} />
       </div>
 
       {/*
         Fase 28: relatório fixo de Hoje x Ontem por instância, separado do
         seletor de período acima de propósito (ver chatActivityStore.ts),
         nunca misturando os dois dias e nunca contando de novo o que já foi
-        visto. Fase 64: passou para depois dos gráficos.
+        visto. Fase 71: um card só, com Hoje e Ontem alternáveis.
       */}
-      <div className="flex min-h-[190px] shrink-0 gap-4">
-        <DailyActivityCard title="Atividade de hoje" tone="today" report={chatDaily?.today} />
-        <DailyActivityCard title="Atividade de ontem" tone="yesterday" report={chatDaily?.yesterday} />
-      </div>
+      <AtividadeCard hoje={chatDaily?.today} ontem={chatDaily?.yesterday} />
 
       {/* Fase 64 — barra de status: quantas instâncias estão online e qual período está na tela. */}
       <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-[12px] text-text-dim">
