@@ -140,6 +140,8 @@ export interface DiagnosticsInfo {
   /** Soma do uso de CPU de todos os processos. Pode passar de 100% com vários núcleos. */
   cpuPercent: number;
   processCount: number;
+  /** Fase 66 — memória total do computador, para mostrar quanto o Orbi ocupa dela. */
+  totalSystemMemoryBytes: number;
 }
 
 export interface BackupResult {

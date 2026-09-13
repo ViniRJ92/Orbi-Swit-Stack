@@ -12,7 +12,7 @@
  * Orbi — Criado por Vinicius Braga
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Bell, CalendarDays, CalendarX, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { CalendarEvent, EVENT_CATEGORIES, Holiday } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { EventFormModal } from './EventFormModal';
@@ -148,6 +148,20 @@ export function CalendarPage({ open, onClose }: { open: boolean; onClose: () => 
     return events.filter((e) => e.end >= limite).sort((a, b) => a.start - b.start).slice(0, 8);
   }, [events]);
 
+  // Fase 68 — quantos compromissos de cada categoria caem no mês exibido.
+  const contagemPorCategoria = useMemo(() => {
+    const ini = new Date(cursor.getFullYear(), cursor.getMonth(), 1).getTime();
+    const fim = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1).getTime() - 1;
+    const m = new Map<string, number>();
+    let total = 0;
+    for (const ev of events) {
+      if (ev.start > fim || ev.end < ini) continue;
+      m.set(ev.category, (m.get(ev.category) ?? 0) + 1);
+      total++;
+    }
+    return { m, total };
+  }, [events, cursor]);
+
   function abrirNovo(dia: Date) {
     setEditing(null);
     setFormDate(dia);
@@ -179,50 +193,41 @@ export function CalendarPage({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <section className="flex min-h-0 flex-1 flex-col bg-content">
-      {/* Cabeçalho */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg accent-gradient text-accent-contrast">
-            <CalendarDays size={15} />
-          </span>
-          <h1 className="text-[15px] font-semibold text-text">Agenda</h1>
+      {/* Fase 68 — cabeçalho e controles numa barra só. O "Fechar" continua
+          aqui, na ponta direita, junto do Esc. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-5 py-2.5">
+        <div className="flex items-center gap-2 rounded-lg bg-accent/10 px-2.5 py-1.5 text-accent">
+          <CalendarDays size={16} />
+          <h1 className="text-[14px] font-semibold">Agenda</h1>
         </div>
-        <button
-          className="rounded-lg px-3 py-1.5 text-[12.5px] font-medium text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
-          onClick={onClose}
-        >
-          Fechar
-        </button>
-      </div>
+        <span className="h-6 w-px bg-border" aria-hidden />
 
-      {/* Barra de controles */}
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-6 py-3">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center rounded-lg border border-border bg-input p-0.5">
           <button
             onClick={() => navegar(-1)}
             aria-label="Anterior"
-            className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="rounded-md p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={15} />
           </button>
           <button
             onClick={() => setCursor(new Date())}
-            className="rounded-lg border border-border px-2.5 py-1.5 text-[12.5px] font-medium text-text-dim transition-colors hover:border-accent hover:text-text"
+            className="rounded-md px-2.5 py-1 text-[12.5px] font-semibold text-text transition-colors hover:bg-surface-hover"
           >
             Hoje
           </button>
           <button
             onClick={() => navegar(1)}
             aria-label="Próximo"
-            className="rounded-lg p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="rounded-md p-1.5 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={15} />
           </button>
         </div>
 
-        <span className="text-[13.5px] font-semibold capitalize text-text">{tituloPeriodo}</span>
+        <span className="min-w-0 truncate text-[15px] font-semibold capitalize text-text">{tituloPeriodo}</span>
 
-        <div className="flex items-center gap-1 rounded-lg bg-input p-1">
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-input p-0.5">
           {([['month', 'Mês'], ['week', 'Semana'], ['day', 'Dia']] as [ViewMode, string][]).map(([k, label]) => (
             <button
               key={k}
@@ -254,17 +259,47 @@ export function CalendarPage({ open, onClose }: { open: boolean; onClose: () => 
           <Plus size={14} />
           Novo compromisso
         </button>
+        <button
+          className="rounded-lg px-3 py-1.5 text-[12.5px] font-medium text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+          onClick={onClose}
+        >
+          Fechar
+        </button>
       </div>
 
       <div className="flex min-h-0 flex-1">
         {/* Painel lateral */}
-        <aside className="mw-scroll w-64 shrink-0 overflow-y-auto border-r border-border px-4 py-4">
-          <MiniCalendar cursor={cursor} onPick={(d) => { setCursor(d); if (view === 'month') setView('day'); }} feriados={feriadosPorDia} mostrarFeriados={showHolidays} />
+        {/* Fase 68 — coluna lateral em cartões: calendário, próximos
+            compromissos e contagem por categoria no mês exibido. */}
+        <aside className="mw-scroll flex w-64 shrink-0 flex-col gap-3 overflow-y-auto border-r border-border p-3">
+          <div className="rounded-xl border border-border bg-surface/60 p-3">
+            <MiniCalendar
+              cursor={cursor}
+              onPick={(d) => { setCursor(d); if (view === 'month') setView('day'); }}
+              feriados={feriadosPorDia}
+              mostrarFeriados={showHolidays}
+              onPrev={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
+              onNext={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
+            />
+          </div>
 
-          <div className="mt-5">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-text-faint">Próximos compromissos</p>
+          <div className="rounded-xl border border-border bg-surface/60 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[13px] font-semibold text-text">Próximos compromissos</p>
+              <Bell size={14} className="text-text-faint" />
+            </div>
             {proximos.length === 0 ? (
-              <p className="text-[12.5px] leading-6 text-text-faint">Nada agendado por enquanto.</p>
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <CalendarX size={22} className="text-text-faint" />
+                <p className="text-[12.5px] text-text-dim">Nada agendado por enquanto.</p>
+                <button
+                  onClick={() => abrirNovo(new Date())}
+                  className="flex items-center gap-1 text-[12.5px] font-semibold text-accent hover:underline"
+                >
+                  <Plus size={13} />
+                  Agendar compromisso
+                </button>
+              </div>
             ) : (
               <div className="flex flex-col gap-1.5">
                 {proximos.map((ev) => {
@@ -290,6 +325,26 @@ export function CalendarPage({ open, onClose }: { open: boolean; onClose: () => 
                 })}
               </div>
             )}
+          </div>
+
+          <div className="rounded-xl border border-border bg-surface/60 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[13px] font-semibold text-text">Categorias</p>
+              <span className="text-[11.5px] tabular-nums text-text-faint">{contagemPorCategoria.total} no mês</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {EVENT_CATEGORIES.map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-md px-1.5 py-1.5 text-[12.5px]">
+                  <span className="flex items-center gap-2 text-text-dim">
+                    <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
+                    {c.label}
+                  </span>
+                  <span className="font-semibold tabular-nums" style={{ color: c.color }}>
+                    {contagemPorCategoria.m.get(c.id) ?? 0}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </aside>
 
@@ -337,11 +392,16 @@ function MiniCalendar({
   onPick,
   feriados,
   mostrarFeriados,
+  onPrev,
+  onNext,
 }: {
   cursor: Date;
   onPick: (d: Date) => void;
   feriados: Map<string, Holiday>;
   mostrarFeriados: boolean;
+  /** Fase 68 — setas de mês no próprio mini-calendário. */
+  onPrev: () => void;
+  onNext: () => void;
 }) {
   const primeiro = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const inicio = startOfWeek(primeiro);
@@ -350,9 +410,27 @@ function MiniCalendar({
 
   return (
     <div>
-      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-text-faint">
-        {MESES[cursor.getMonth()]} {cursor.getFullYear()}
-      </p>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[11.5px] font-bold uppercase tracking-wider text-text-dim">
+          {MESES[cursor.getMonth()]} {cursor.getFullYear()}
+        </p>
+        <div className="flex items-center">
+          <button
+            onClick={onPrev}
+            aria-label="Mês anterior"
+            className="rounded p-0.5 text-text-faint transition-colors hover:bg-surface-hover hover:text-text"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            onClick={onNext}
+            aria-label="Próximo mês"
+            className="rounded p-0.5 text-text-faint transition-colors hover:bg-surface-hover hover:text-text"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {DIAS_SEMANA.map((d) => (
           <span key={d} className="py-1 text-[10px] font-medium text-text-faint">
@@ -370,7 +448,7 @@ function MiniCalendar({
               onClick={() => onPick(d)}
               title={feriado ? feriados.get(dayKey(d))!.name : undefined}
               className={
-                'relative rounded-md py-1 text-[11.5px] transition-colors ' +
+                'relative mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11.5px] transition-colors ' +
                 (selecionado
                   ? 'accent-gradient font-semibold text-accent-contrast'
                   : eHoje
@@ -417,7 +495,7 @@ function MonthGrid({
     <div className="flex h-full flex-col">
       <div className="grid shrink-0 grid-cols-7 border-b border-border">
         {DIAS_SEMANA.map((d) => (
-          <span key={d} className="px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-text-faint">
+          <span key={d} className="bg-surface/60 px-2 py-2.5 text-center text-[11.5px] font-bold uppercase tracking-wide text-text-dim">
             {d}
           </span>
         ))}
@@ -435,19 +513,26 @@ function MonthGrid({
               key={k}
               onDoubleClick={() => onDayClick(d)}
               className={
-                'min-h-[92px] border-b border-r border-border px-1.5 py-1.5 transition-colors hover:bg-surface-hover/40 ' +
-                (doMes ? '' : 'opacity-45')
+                'min-h-[92px] border-b border-r border-border px-2 py-1.5 transition-colors hover:bg-surface-hover/40 ' +
+                (doMes ? '' : 'bg-app/40 opacity-45 ') +
+                (eHoje ? 'bg-accent/5' : '')
               }
             >
               <div className="mb-1 flex items-center justify-between">
                 <span
                   className={
-                    'flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11.5px] ' +
-                    (eHoje ? 'accent-gradient font-semibold text-accent-contrast' : 'text-text-dim')
+                    'flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] ' +
+                    (eHoje ? 'accent-gradient font-bold text-accent-contrast' : doMes ? 'font-semibold text-text' : 'text-text-dim')
                   }
                 >
                   {d.getDate()}
                 </span>
+                {/* Fase 68 — marca de hoje e etiqueta de feriado nacional no canto. */}
+                {eHoje ? (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-accent">Hoje</span>
+                ) : feriado ? (
+                  <span className="rounded bg-surface-hover px-1 text-[9.5px] font-bold text-text-faint">BR</span>
+                ) : null}
               </div>
 
               {/* Feriado: etiqueta cinza discreta, para não competir com os
@@ -466,7 +551,8 @@ function MonthGrid({
                   <button
                     key={ev.id}
                     onClick={() => onEventClick(ev)}
-                    className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-text transition-colors hover:bg-surface-hover"
+                    style={{ background: `color-mix(in srgb, ${corDaCategoria(ev.category)} 16%, transparent)` }}
+                    className="flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-text transition-opacity hover:opacity-80"
                   >
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: corDaCategoria(ev.category) }} />
                     <span className="truncate">

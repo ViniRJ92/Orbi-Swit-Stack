@@ -5,6 +5,7 @@
  *
  * Orbi Swit Stack — Criado por Vinicius Braga
  */
+import * as os from 'os';
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -382,6 +383,9 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
       loadedAccounts: statuses.filter((s) => s.loaded).length,
       suspendedAccounts: statuses.filter((s) => s.suspended).length,
       logDir: logger.getLogDir(),
+      // Fase 66 — memória total do computador, para o Diagnóstico mostrar
+      // quanto o Orbi ocupa dela.
+      totalSystemMemoryBytes: os.totalmem(),
       logSizeBytes: logger.getLogSizeBytes(),
       memoryBytes,
       cpuPercent: Math.round(cpuPercent * 10) / 10,

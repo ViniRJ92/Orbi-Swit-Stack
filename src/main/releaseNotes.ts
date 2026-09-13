@@ -467,6 +467,17 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Se você estava digitando na busca de contas do próprio Orbi, o cursor continua lá: só volta para a instância se era ela que estava em uso.',
     '• Com uma janela do aplicativo aberta, o foco continua nela, como antes.',
   ].join('\n'),
+  '0.48.0': [
+    'Analytics, Configurações e Agenda reorganizados',
+    '',
+    '• Analytics: filtros numa barra só, quatro indicadores, gráficos antes das tabelas e barra de status no rodapé.',
+    '• Configurações: cada aba com cabeçalho e cartões. Tema com miniaturas, posição e tamanho da barra em controles segmentados, chaves de liga e desliga.',
+    '• Desempenho: perfis com limite e tempo de ociosidade visíveis, botões de menos e mais, anel de instâncias carregadas, CPU do Orbi com gráfico ao vivo e consumo atual.',
+    '• Diagnóstico: quadros com ícone e barra, incluindo quanto da memória do computador o Orbi usa. Os números se atualizam a cada 2 segundos.',
+    '• Agenda: barra única no topo, coluna lateral com calendário, próximos compromissos e contagem por categoria, e marcação de hoje e feriados no mês.',
+    '• Nenhuma função foi removida. Contagem de mensagens e navegação não foram alteradas.',
+  ].join('
+'),
 };
 
 export interface WhatsNewResult {

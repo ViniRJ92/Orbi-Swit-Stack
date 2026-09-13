@@ -106,6 +106,16 @@ const PERFORMANCE_OPTIONS: { value: PerformanceMode; label: string; description:
   { value: 'custom', label: 'Personalizado', description: 'Você escolhe a quantidade (1-30).', icon: <SlidersHorizontal size={15} /> },
 ];
 
+// Fase 67 — detalhe visível de cada perfil. Os números batem com
+// PERFORMANCE_PRESETS em main/settingsStore.ts (1/6/10 instâncias e 5/15/30
+// minutos de ociosidade; o Personalizado não suspende por ociosidade).
+const PERFIL_INFO: Record<PerformanceMode, { max: string; linha1: string; linha2: string }> = {
+  economy: { max: 'Máx. 1', linha1: 'Até 1 instância carregada.', linha2: 'Suspende ociosas após 5 min.' },
+  balanced: { max: 'Máx. 6', linha1: 'Até 6 instâncias carregadas.', linha2: 'Suspende ociosas após 15 min.' },
+  performance: { max: 'Máx. 10', linha1: 'Até 10 instâncias carregadas.', linha2: 'Suspende ociosas após 30 min.' },
+  custom: { max: '1 a 30', linha1: 'Você escolhe o limite.', linha2: 'Sem suspensão por ociosidade.' },
+};
+
 const CLOSE_OPTIONS: { value: CloseBehavior; label: string; description: string; icon: ReactNode }[] = [
   { value: 'tray', label: 'Bandeja', description: 'Minimiza e mantém as contas ativas.', icon: <Minimize2 size={15} /> },
   { value: 'ask', label: 'Perguntar', description: 'Mostra uma opção toda vez.', icon: <HelpCircle size={15} /> },
@@ -129,13 +139,95 @@ const TABS: { key: TabKey; label: string; icon: ReactNode }[] = [
  * Fase 65 — cabeçalho de cada aba: ícone, título e uma linha dizendo o que a
  * aba reúne. Antes a aba começava direto no primeiro controle.
  */
-function TabHeader({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
+function TabHeader({
+  icon,
+  title,
+  description,
+  aside,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  /** Fase 66 — informação curta à direita do cabeçalho. */
+  aside?: ReactNode;
+}) {
   return (
-    <div className="flex items-start gap-3 pb-1">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">{icon}</span>
-      <div className="min-w-0">
-        <h3 className="text-[15px] font-semibold text-text">{title}</h3>
-        <p className="mt-0.5 text-[12px] leading-snug text-text-dim">{description}</p>
+    <div className="flex items-start justify-between gap-3 pb-1">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">{icon}</span>
+        <div className="min-w-0">
+          <h3 className="text-[15px] font-semibold text-text">{title}</h3>
+          <p className="mt-0.5 text-[12px] leading-snug text-text-dim">{description}</p>
+        </div>
+      </div>
+      {aside && <div className="shrink-0 pt-1 text-right text-[12px] tabular-nums text-text-dim">{aside}</div>}
+    </div>
+  );
+}
+
+/**
+ * Fase 66 — CPU do Orbi com gráfico de linha das últimas leituras. As
+ * leituras vêm do mesmo getDiagnostics de sempre, repetido a cada 2s
+ * enquanto as Configurações estão abertas. A escala vai até 100% ou até o
+ * maior valor lido, porque a soma dos processos pode passar de 100% com
+ * vários núcleos.
+ */
+function CpuChip({ history }: { history: number[] }) {
+  const atual = history.length > 0 ? history[history.length - 1] : null;
+  const max = Math.max(100, ...history);
+  const w = 90;
+  const h = 26;
+  const pontos = history
+    .map((v, i) => `${history.length === 1 ? w : (i / (history.length - 1)) * w},${h - (v / max) * h}`)
+    .join(' ');
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-input px-3 py-1.5">
+      <div className="text-right leading-tight">
+        <div className="text-[11px] text-text-dim">CPU do Orbi</div>
+        <div className="text-[13px] font-semibold tabular-nums text-accent">{atual === null ? '—' : `${atual}%`}</div>
+      </div>
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible" aria-hidden>
+        {history.length > 1 && (
+          <polyline
+            points={pontos}
+            fill="none"
+            stroke="var(--color-accent)"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        )}
+      </svg>
+    </div>
+  );
+}
+
+/** Fase 66 — anel com quantas instâncias estão carregadas diante do limite escolhido. */
+function LoadedRing({ loaded, limit }: { loaded: number; limit: number }) {
+  const r = 11;
+  const c = 2 * Math.PI * r;
+  const frac = limit > 0 ? Math.min(1, loaded / limit) : 0;
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-border bg-input px-2.5 py-1.5">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden>
+        <circle cx="14" cy="14" r={r} fill="none" stroke="var(--color-border)" strokeWidth="3" />
+        <circle
+          cx="14"
+          cy="14"
+          r={r}
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="3"
+          strokeDasharray={`${c * frac} ${c}`}
+          strokeLinecap="round"
+          transform="rotate(-90 14 14)"
+        />
+      </svg>
+      <div className="leading-tight">
+        <div className="text-[11px] text-text-dim">Carregadas</div>
+        <div className="text-[12.5px] font-semibold tabular-nums text-text">
+          {loaded} / {limit}
+        </div>
       </div>
     </div>
   );
@@ -202,20 +294,35 @@ function ToggleRow({
 }) {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-4">
-      <span className="flex min-w-0 items-start gap-3">
-        {icon && <span className="mt-0.5 shrink-0 text-text-dim">{icon}</span>}
+      <span className="flex min-w-0 items-center gap-3">
+        {icon && (
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-input text-accent">{icon}</span>
+        )}
         <span className="min-w-0">
           <span className="block text-[13.5px] font-medium text-text">{title}</span>
           {description && <span className="mt-0.5 block text-[12px] leading-snug text-text-dim">{description}</span>}
         </span>
       </span>
+      {/* Fase 67 — chave de liga/desliga. A caixa de seleção continua sendo o
+          controle de verdade (clicar na linha a aciona, como antes); só fica
+          invisível, e a chave desenhada acompanha o estado dela. A bolinha
+          tem 20px e anda 20px dentro de uma área útil de 40px, então nunca
+          escapa da cápsula (lição da Fase 44). */}
       <input
         type="checkbox"
         checked={checked}
         onChange={onChange}
         disabled={disabled}
-        className="h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+        className="peer sr-only"
       />
+      <span
+        aria-hidden
+        className="inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-input p-0.5 ring-1 ring-border transition-colors peer-checked:bg-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent"
+      >
+        <span
+          className={'h-5 w-5 rounded-full bg-white shadow transition-transform ' + (checked ? 'translate-x-5' : 'translate-x-0')}
+        />
+      </span>
     </label>
   );
 }
@@ -232,6 +339,7 @@ function OptionTile({
   label,
   title,
   layout = 'column',
+  segment = false,
 }: {
   active: boolean;
   onClick: () => void;
@@ -239,6 +347,8 @@ function OptionTile({
   label: string;
   title?: string;
   layout?: 'column' | 'row';
+  /** Fase 68 — opção dentro de um controle segmentado (sem borda quando não escolhida). */
+  segment?: boolean;
 }) {
   return (
     <button
@@ -247,15 +357,54 @@ function OptionTile({
       aria-pressed={active}
       className={
         'flex items-center justify-center gap-1.5 rounded-lg border px-2 text-xs transition-colors ' +
-        (layout === 'column' ? 'flex-col py-3 ' : 'py-2.5 ') +
+        (layout === 'column' ? (segment ? 'flex-col py-2 ' : 'flex-col py-3 ') : segment ? 'py-2 ' : 'py-2.5 ') +
         (active
-          ? 'border-accent bg-accent/10 text-accent'
-          : 'border-border text-text-dim hover:border-border-strong hover:text-text')
+          ? 'border-accent bg-accent/10 font-semibold text-accent'
+          : segment
+            ? 'border-transparent text-text-dim hover:text-text'
+            : 'border-border text-text-dim hover:border-border-strong hover:text-text')
       }
     >
       {icon}
       {label}
     </button>
+  );
+}
+
+/**
+ * Fase 68 — miniatura de cada tema. Usa as cores reais de cada tema
+ * (index.css), não os tokens do tema atual, porque mostra como o OUTRO fica.
+ */
+function ThemePreview({ kind }: { kind: ThemePreference }) {
+  if (kind === 'system') {
+    return (
+      <div className="relative h-20" style={{ background: 'linear-gradient(90deg, #0d1418 50%, #e9edef 50%)' }}>
+        <div className="absolute inset-0 flex items-center justify-center text-text-faint">
+          <Monitor size={20} />
+        </div>
+      </div>
+    );
+  }
+  const escuro = kind === 'dark';
+  const fundo = escuro ? '#0d1418' : '#e9edef';
+  const painel = escuro ? '#1a252c' : '#ffffff';
+  const linha = escuro ? '#26333b' : '#d3d8db';
+  const acento = escuro ? '#25d366' : '#0e9c86';
+  return (
+    <div className="flex h-20 flex-col gap-1.5 p-2" style={{ background: fundo }}>
+      <div className="flex gap-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+      </div>
+      <div className="flex flex-1 gap-1.5">
+        <div className="w-1/3 rounded" style={{ background: painel }} />
+        <div className="flex flex-1 flex-col gap-1 rounded p-1.5" style={{ background: painel }}>
+          <span className="h-1.5 w-3/4 rounded-full" style={{ background: acento }} />
+          <span className="h-1 w-full rounded-full" style={{ background: linha }} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -268,14 +417,38 @@ function Kbd({ children }: { children: ReactNode }) {
  * principal) e o rótulo recua para o cinza secundário. Fase 65: rótulo em
  * cima e uma dica curta embaixo, dentro de cada quadro.
  */
-function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
+function Metric({
+  label,
+  value,
+  hint,
+  percent,
+  icon,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  percent?: number;
+  icon?: ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-border px-3 py-2.5">
-      <div className="text-[12px] text-text-dim">{label}</div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[12px] text-text-dim">{label}</span>
+        {icon && <span className="shrink-0 text-accent">{icon}</span>}
+      </div>
       <div className="mt-1 text-[20px] font-bold leading-tight text-text">{value}</div>
       <div className="mt-0.5 truncate text-[11px] text-text-faint" title={hint}>
         {hint}
       </div>
+      {/* Fase 66 — barra de proporção, só quando existe um total de verdade para comparar. */}
+      {percent !== undefined && (
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-input">
+          <div
+            className="h-full rounded-full accent-gradient transition-[width] duration-500"
+            style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -295,7 +468,8 @@ function SecondaryButton({ children, onClick, icon }: { children: ReactNode; onC
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 /** Uma linha da tabela de instâncias: nome editável, agrupamento, serviço, status e ações. */
@@ -416,14 +590,14 @@ function InstanceRow({
       <td className="px-2 py-2">
         <div className="flex items-center gap-0.5">
           <button
-            className="rounded-lg p-1 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-input text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
             title={isSuspended ? 'Ativar instância' : 'Suspender instância'}
             onClick={() => (isSuspended ? switchAccount(account.id) : suspendAccount(account.id))}
           >
             {isSuspended ? <Play size={14} /> : <Pause size={14} />}
           </button>
           <button
-            className="rounded-lg p-1 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-input text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
             title="Escolher imagem"
             onClick={handlePickIcon}
           >
@@ -442,7 +616,7 @@ function InstanceRow({
           </div>
           {account.iconDataUrl && (
             <button
-              className="rounded-lg p-1 text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+              className="flex h-6 w-6 items-center justify-center rounded-md bg-input text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
               title="Usar ícone padrão do serviço"
               onClick={() => resetAccountIcon(account.id)}
             >
@@ -450,7 +624,7 @@ function InstanceRow({
             </button>
           )}
           <button
-            className="rounded-lg p-1 text-text-faint transition-colors hover:bg-danger/10 hover:text-danger"
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-input text-text-faint transition-colors hover:bg-danger/10 hover:text-danger"
             title="Excluir instância"
             onClick={() => removeAccountWithConfirm(account.id, account.name)}
           >
@@ -507,17 +681,43 @@ function GeneralAppearanceTab({
         />
       </div>
 
-      <Card title="Aparência" icon={<Sun size={15} />} description="Tema de cores da interface.">
-        <div className="grid grid-cols-3 gap-2">
-          {THEME_OPTIONS.map((opt) => (
-            <OptionTile
-              key={opt.value}
-              active={theme === opt.value}
-              onClick={() => setTheme(opt.value)}
-              icon={opt.icon}
-              label={opt.label}
-            />
-          ))}
+      <Card title="Tema visual" icon={<Sun size={15} />} description="Esquema de cores da interface do Orbi.">
+        <div className="grid grid-cols-3 gap-3">
+          {THEME_OPTIONS.map((opt) => {
+            const ativo = theme === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setTheme(opt.value)}
+                aria-pressed={ativo}
+                className={
+                  'overflow-hidden rounded-xl border text-left transition-colors ' +
+                  (ativo ? 'border-accent ring-1 ring-accent/50' : 'border-border hover:border-border-strong')
+                }
+              >
+                <ThemePreview kind={opt.value} />
+                <span
+                  className={
+                    'flex items-center justify-between gap-2 px-3 py-2 text-[12.5px] ' +
+                    (ativo ? 'font-semibold text-accent' : 'text-text-dim')
+                  }
+                >
+                  <span className="flex items-center gap-1.5">
+                    {opt.icon}
+                    {opt.label}
+                  </span>
+                  <span
+                    className={
+                      'flex h-4 w-4 items-center justify-center rounded-full border ' +
+                      (ativo ? 'border-accent' : 'border-border-strong')
+                    }
+                  >
+                    {ativo && <span className="h-2 w-2 rounded-full bg-accent" />}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Card>
 
@@ -529,11 +729,11 @@ function GeneralAppearanceTab({
           icon={<PanelLeft size={15} />}
           description="Em qual lado da janela a lista de contas fica."
         >
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-4 gap-1 rounded-lg border border-border bg-input p-1">
             {SIDEBAR_POSITION_OPTIONS.map((opt) => (
               <OptionTile
                 key={opt.value}
-                layout="row"
+                segment
                 active={sidebarPosition === opt.value}
                 onClick={() => applySidebarPosition(opt.value)}
                 icon={opt.icon}
@@ -548,10 +748,12 @@ function GeneralAppearanceTab({
           icon={<Square size={15} />}
           description="Ícones, texto e espaçamento das contas na barra, em qualquer posição."
         >
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-input p-1">
             {ICON_SIZE_OPTIONS.map((opt) => (
               <OptionTile
                 key={opt.value}
+                layout="row"
+                segment
                 active={iconSize === opt.value}
                 onClick={() => applyIconSize(opt.value)}
                 icon={opt.icon}
@@ -632,7 +834,7 @@ function GeneralAppearanceTab({
   );
 }
 
-function InstancesTab() {
+function InstancesTab({ diagnostics }: { diagnostics: DiagnosticsInfo | null }) {
   const accounts = useAppStore((s) => s.accounts);
   const groups = useAppStore((s) => s.groups);
   const createGroup = useAppStore((s) => s.createGroup);
@@ -739,6 +941,11 @@ function InstancesTab() {
         icon={<Layers size={17} />}
         title="Instâncias & Agrupamentos"
         description="Cada instância roda em uma sessão isolada, guardada apenas neste computador."
+        aside={
+          diagnostics
+            ? `${diagnostics.loadedAccounts}/${diagnostics.totalAccounts} em memória · ${formatBytes(diagnostics.memoryBytes)}`
+            : undefined
+        }
       />
 
       {/* Fase 65: agrupamentos num cartão próprio. As pílulas continuam
@@ -790,7 +997,8 @@ function InstancesTab() {
                   title={`Cor do agrupamento ${g.name}`}
                   size={12}
                 />
-                {g.name}
+                <span className="font-medium text-text">{g.name}</span>
+                <span className="tabular-nums text-text-faint">{accounts.filter((a) => a.groupId === g.id).length}</span>
                 <button
                   className="rounded-full p-0.5 hover:bg-surface-hover hover:text-text"
                   onClick={() => startRenameGroup(g.id, g.name)}
@@ -907,12 +1115,15 @@ function InstancesTab() {
           <div className="-mx-4 -mb-4 border-t border-border">
             <table className="w-full table-fixed border-collapse text-left">
               <colgroup>
+                {/* Fase 68: Ações ganhou largura para os botões em caixa; a
+                    soma das colunas fixas continua 464px, então a coluna de
+                    nome mantém exatamente a mesma largura. */}
                 <col style={{ width: 34 }} />
                 <col />
-                <col style={{ width: 118 }} />
-                <col style={{ width: 84 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 128 }} />
+                <col style={{ width: 108 }} />
+                <col style={{ width: 64 }} />
+                <col style={{ width: 92 }} />
+                <col style={{ width: 166 }} />
               </colgroup>
               {/* O fio de baixo vem de `box-shadow`, não de `border-bottom`:
                   com `border-collapse` a borda de um cabeçalho fixo não
@@ -976,6 +1187,8 @@ function PerformanceNotificationsTab({
   toggleWindowsNotifications,
   toastNotificationsEnabled,
   toggleToastNotifications,
+  diagnostics,
+  cpuHistory,
 }: {
   performanceMode: PerformanceMode;
   applyPerformanceMode: (m: PerformanceMode) => void;
@@ -988,6 +1201,9 @@ function PerformanceNotificationsTab({
   toggleWindowsNotifications: () => void;
   toastNotificationsEnabled: boolean;
   toggleToastNotifications: () => void;
+  /** Fase 66 — consumo atual e histórico de CPU para os gráficos. */
+  diagnostics: DiagnosticsInfo | null;
+  cpuHistory: number[];
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -1001,9 +1217,11 @@ function PerformanceNotificationsTab({
         title="Desempenho"
         icon={<Zap size={15} />}
         description="Controla quantas instâncias ficam prontas ao mesmo tempo. As demais são suspensas automaticamente em segundo plano assim que o limite escolhido é ultrapassado."
+        action={<CpuChip history={cpuHistory} />}
       >
         {/* Fase 65: a descrição de cada perfil, que só aparecia ao passar o
             mouse, agora fica visível dentro da própria opção. */}
+        <p className="mb-2 text-[12px] font-medium text-text-dim">Perfil</p>
         <div className="grid grid-cols-4 gap-2">
           {PERFORMANCE_OPTIONS.map((opt) => {
             const ativo = performanceMode === opt.value;
@@ -1018,9 +1236,20 @@ function PerformanceNotificationsTab({
                   (ativo ? 'border-accent bg-accent/10' : 'border-border hover:border-border-strong')
                 }
               >
-                <span className={ativo ? 'text-accent' : 'text-text-dim'}>{opt.icon}</span>
-                <span className={'text-[12.5px] font-semibold ' + (ativo ? 'text-accent' : 'text-text')}>{opt.label}</span>
-                <span className="text-[11px] leading-snug text-text-dim">{opt.description}</span>
+                <span className="flex w-full items-start justify-between gap-2">
+                  <span
+                    className={
+                      'flex h-8 w-8 items-center justify-center rounded-lg ' +
+                      (ativo ? 'accent-gradient text-accent-contrast' : 'bg-input text-text-dim')
+                    }
+                  >
+                    {opt.icon}
+                  </span>
+                  <span className="text-[11px] tabular-nums text-text-faint">{PERFIL_INFO[opt.value].max}</span>
+                </span>
+                <span className={'mt-1 text-[12.5px] font-semibold ' + (ativo ? 'text-accent' : 'text-text')}>{opt.label}</span>
+                <span className="text-[11px] leading-snug text-text-dim">{PERFIL_INFO[opt.value].linha1}</span>
+                <span className="text-[11px] leading-snug text-text-dim">{PERFIL_INFO[opt.value].linha2}</span>
               </button>
             );
           })}
@@ -1033,6 +1262,17 @@ function PerformanceNotificationsTab({
                 Entre {customMaxLoadedRange.min} e {customMaxLoadedRange.max} no perfil Personalizado.
               </span>
             </label>
+            <div className="flex shrink-0 items-center gap-1.5">
+            {/* Fase 67 — botões de menos e mais, usando o mesmo applyCustomMaxLoaded do campo. */}
+            <button
+              type="button"
+              aria-label="Diminuir instâncias simultâneas"
+              onClick={() => applyCustomMaxLoaded(Math.max(customMaxLoadedRange.min, customMaxLoaded - 1))}
+              disabled={customMaxLoaded <= customMaxLoadedRange.min}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-input text-lg text-text-dim transition-colors hover:text-text disabled:opacity-40"
+            >
+              −
+            </button>
             <input
               id="custom-max-loaded"
               type="number"
@@ -1043,8 +1283,21 @@ function PerformanceNotificationsTab({
                 const value = Number(e.target.value);
                 if (!Number.isNaN(value)) applyCustomMaxLoaded(value);
               }}
-              className="w-16 rounded-lg border border-border bg-input px-2 py-1 text-center text-sm text-text focus:border-accent"
+              className="h-9 w-16 rounded-lg border border-border bg-input px-2 text-center text-sm font-semibold text-accent focus:border-accent"
             />
+            <button
+              type="button"
+              aria-label="Aumentar instâncias simultâneas"
+              onClick={() => applyCustomMaxLoaded(Math.min(customMaxLoadedRange.max, customMaxLoaded + 1))}
+              disabled={customMaxLoaded >= customMaxLoadedRange.max}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-input text-lg text-text-dim transition-colors hover:text-text disabled:opacity-40"
+            >
+              +
+            </button>
+            <span className="ml-1.5">
+              {diagnostics && <LoadedRing loaded={diagnostics.loadedAccounts} limit={customMaxLoaded} />}
+            </span>
+            </div>
           </div>
         )}
       </Card>
@@ -1092,6 +1345,29 @@ function PerformanceNotificationsTab({
           </div>
         </div>
       </Card>
+
+      {/* Fase 66 — consumo atual, relido a cada 2s com as Configurações abertas. */}
+      {diagnostics && (
+        <section className="flex items-center justify-between gap-4 rounded-xl border border-border bg-app/40 px-4 py-3">
+          <div className="min-w-0">
+            <h4 className="text-[13.5px] font-semibold text-text">Consumo atual do Orbi</h4>
+            <p className="mt-0.5 text-[12px] text-text-dim">
+              {formatBytes(diagnostics.memoryBytes)} de memória em {diagnostics.processCount} processos do Orbi.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-4 text-right">
+            <div>
+              <div className="text-[11px] text-text-dim">Carregadas</div>
+              <div className="text-[18px] font-bold tabular-nums text-text">{diagnostics.loadedAccounts}</div>
+            </div>
+            <span className="h-8 w-px bg-border" aria-hidden />
+            <div>
+              <div className="text-[11px] text-text-dim">Suspensas</div>
+              <div className="text-[18px] font-bold tabular-nums text-accent">{diagnostics.suspendedAccounts}</div>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -1233,12 +1509,55 @@ function BackupDiagnosticsTab({
         */}
         {diagnostics && (
           <div className="grid grid-cols-3 gap-2">
-            <Metric label="Instâncias" value={String(diagnostics.totalAccounts)} hint="configuradas" />
-            <Metric label="Carregadas" value={String(diagnostics.loadedAccounts)} hint="em memória" />
-            <Metric label="Log" value={formatBytes(diagnostics.logSizeBytes)} hint="tamanho do arquivo" />
-            <Metric label="Memória" value={formatBytes(diagnostics.memoryBytes)} hint="soma dos processos" />
-            <Metric label="CPU" value={`${diagnostics.cpuPercent}%`} hint="cada núcleo conta separado" />
-            <Metric label="Processos" value={String(diagnostics.processCount)} hint="do Orbi" />
+            <Metric
+              label="Instâncias"
+              icon={<Layers size={15} />}
+              value={String(diagnostics.totalAccounts)}
+              hint="configuradas"
+              percent={diagnostics.totalAccounts > 0 ? 100 : 0}
+            />
+            <Metric
+              label="Carregadas"
+              icon={<CheckCircle2 size={15} />}
+              value={String(diagnostics.loadedAccounts)}
+              hint={`${diagnostics.totalAccounts > 0 ? Math.round((diagnostics.loadedAccounts / diagnostics.totalAccounts) * 100) : 0}% em memória`}
+              percent={diagnostics.totalAccounts > 0 ? (diagnostics.loadedAccounts / diagnostics.totalAccounts) * 100 : 0}
+            />
+            <Metric
+              label="Log"
+              icon={<FileText size={15} />}
+              value={formatBytes(diagnostics.logSizeBytes)}
+              hint="limite de 5 MB por arquivo"
+              percent={(diagnostics.logSizeBytes / (5 * 1024 * 1024)) * 100}
+            />
+            <Metric
+              label="Memória"
+              icon={<GaugeIcon size={15} />}
+              value={formatBytes(diagnostics.memoryBytes)}
+              hint={
+                diagnostics.totalSystemMemoryBytes
+                  ? `${((diagnostics.memoryBytes / diagnostics.totalSystemMemoryBytes) * 100).toFixed(1)}% da memória do PC`
+                  : 'soma dos processos'
+              }
+              percent={
+                diagnostics.totalSystemMemoryBytes
+                  ? (diagnostics.memoryBytes / diagnostics.totalSystemMemoryBytes) * 100
+                  : undefined
+              }
+            />
+            <Metric
+              label="CPU"
+              icon={<Zap size={15} />}
+              value={`${diagnostics.cpuPercent}%`}
+              hint="cada núcleo conta separado"
+              percent={diagnostics.cpuPercent}
+            />
+            <Metric
+              label="Processos"
+              icon={<SlidersHorizontal size={15} />}
+              value={String(diagnostics.processCount)}
+              hint="do Orbi"
+            />
           </div>
         )}
         {logLines && (
@@ -1313,18 +1632,26 @@ function UpdatesTab({
         description="O Orbi verifica sozinho ao abrir e a cada 4 horas. Baixar e instalar só acontece com o seu clique."
       />
 
-      <Card
-        title="Versão instalada"
-        icon={<Info size={15} />}
-        description="Orbi"
-        action={
-          <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12px] font-medium text-text-dim">v{version}</span>
-        }
-      />
+      <section className="flex items-center justify-between gap-3 rounded-xl border border-border bg-app/40 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-input text-accent">
+            <Layers size={18} />
+          </span>
+          <div>
+            <div className="text-[12px] text-text-dim">Versão instalada</div>
+            <div className="text-[14px] font-semibold text-text">Orbi</div>
+          </div>
+        </div>
+        <span className="rounded-md bg-input px-2.5 py-1 text-[15px] font-bold tabular-nums text-accent">v{version}</span>
+      </section>
 
       {/* Fase 65: os estados abaixo são exatamente os mesmos de antes; só
           passaram a morar dentro de um cartão. */}
-      <Card title="Atualização" icon={<DownloadCloudIcon size={15} />}>
+      <section className="rounded-xl border border-border border-l-4 border-l-accent bg-app/40 p-4">
+        <h4 className="mb-3 flex items-center gap-2 text-[13.5px] font-semibold text-text">
+          <DownloadCloudIcon size={15} className="text-text-dim" />
+          Atualização
+        </h4>
         {updateState.phase === 'idle' && (
           <p className="text-xs text-text-dim">Ainda não verificado nesta sessão.</p>
         )}
@@ -1400,7 +1727,7 @@ function UpdatesTab({
             </SecondaryButton>
           </div>
         )}
-      </Card>
+      </section>
     </div>
   );
 }
@@ -1468,6 +1795,23 @@ export function SettingsModal({
     window.multiwhats.getDiagnostics().then(setDiagnostics);
     loadGroups();
   }, [open, loadGroups]);
+
+  // Fase 66 — com as Configurações abertas, o consumo é relido a cada 2s
+  // para os gráficos acompanharem em tempo real. Guarda as últimas 30
+  // leituras de CPU para o gráfico de linha. Para de ler ao fechar.
+  const [cpuHistory, setCpuHistory] = useState<number[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    setCpuHistory([]);
+    const ler = () =>
+      window.multiwhats.getDiagnostics().then((d) => {
+        setDiagnostics(d);
+        setCpuHistory((h) => [...h, d.cpuPercent].slice(-30));
+      });
+    ler();
+    const id = setInterval(ler, 2000);
+    return () => clearInterval(id);
+  }, [open]);
 
   const toggleStartup = async () => {
     const applied = await window.multiwhats.setStartupSetting(!startup);
@@ -1602,7 +1946,7 @@ export function SettingsModal({
             toggleConfirmBeforeRemove={toggleConfirmBeforeRemove}
           />
         )}
-        {activeTab === 'instances' && <InstancesTab />}
+        {activeTab === 'instances' && <InstancesTab diagnostics={diagnostics} />}
         {activeTab === 'performance' && (
           <PerformanceNotificationsTab
             performanceMode={performanceMode}
@@ -1616,6 +1960,8 @@ export function SettingsModal({
             toggleWindowsNotifications={toggleWindowsNotifications}
             toastNotificationsEnabled={toastNotificationsEnabled}
             toggleToastNotifications={toggleToastNotifications}
+            diagnostics={diagnostics}
+            cpuHistory={cpuHistory}
           />
         )}
         {activeTab === 'backup' && (
