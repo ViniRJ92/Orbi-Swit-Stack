@@ -499,9 +499,11 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Os números e a forma de contar não mudaram.',
   ].join('\n'),
   '0.48.4': [
-    'Analytics: espaço entre os dois quadros de Atividade das instâncias',
+    'Barra de contas mais compacta e Analytics com espaço entre os quadros',
     '',
-    '• As duas colunas agora são quadros separados, com um espaçamento leve entre eles.',
+    '• Barra de contas: o nome da instância conectada fica numa linha só, ao lado do ícone, e cada item ocupa menos altura.',
+    '• Estados como Aguardando QR Code continuam na segunda linha. Contadores, favoritos, pastas e atalhos seguem iguais.',
+    '• Analytics: as duas colunas de Atividade das instâncias agora são quadros separados, com um espaçamento leve entre eles.',
   ].join('\n'),
 };
 

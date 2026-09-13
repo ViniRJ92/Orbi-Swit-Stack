@@ -59,7 +59,7 @@ export const ICON_SIZE_SPECS: Record<
     rowNameText: 'text-[12px]',
     rowStatusText: 'text-[10px]',
     rowPadX: 'px-2',
-    rowPadY: 'py-1.5',
+    rowPadY: 'py-1',
     rowGap: 'gap-2',
     tileAvatar: 22,
     tileGlyph: 10,
@@ -76,7 +76,7 @@ export const ICON_SIZE_SPECS: Record<
     rowNameText: 'text-sm',
     rowStatusText: 'text-[11px]',
     rowPadX: 'px-2.5',
-    rowPadY: 'py-2.5',
+    rowPadY: 'py-1.5',
     rowGap: 'gap-2.5',
     tileAvatar: 28,
     tileGlyph: 13,
@@ -93,7 +93,7 @@ export const ICON_SIZE_SPECS: Record<
     rowNameText: 'text-[15px]',
     rowStatusText: 'text-[12px]',
     rowPadX: 'px-3',
-    rowPadY: 'py-3',
+    rowPadY: 'py-2',
     rowGap: 'gap-3',
     tileAvatar: 38,
     tileGlyph: 18,
@@ -149,6 +149,8 @@ export function AccountItem({
 
   const isActive = !!status?.isActive;
   const spec = ICON_SIZE_SPECS[iconSize];
+  const statusLabel = accountStatusLabel(account, status);
+  const mostrarSegundaLinha = statusLabel !== 'Conectado' && statusLabel !== 'Aberto';
 
   const dragProps = {
     draggable: !!drag,
@@ -308,13 +310,24 @@ export function AccountItem({
           />
         </div>
 
+        {/* Fase 72 — nome mais compacto: quando a instância está conectada
+            (ou aberta), a segunda linha some e o nome fica sozinho ao lado do
+            ícone. Estados que pedem atenção (Aguardando QR Code, Falha,
+            Suspensa, telefone) continuam na segunda linha, como antes. O atalho
+            Ctrl+N só ocupa espaço quando o mouse está em cima. */}
         <div className="min-w-0 flex-1">
-          <div className={'flex items-center gap-1 truncate font-medium text-text ' + spec.rowNameText}>
+          <div className={'flex items-center gap-1 font-semibold leading-tight text-text ' + spec.rowNameText}>
             {account.favorite && <Star size={11} className="shrink-0 text-accent" fill="currentColor" />}
             <span className="truncate">{account.name}</span>
+            {!mostrarSegundaLinha && index < 9 && (
+              <span className="hidden shrink-0 rounded border border-border px-1 text-[10px] font-normal text-text-faint group-hover:inline">
+                Ctrl+{index + 1}
+              </span>
+            )}
           </div>
-          <div className={'flex items-center gap-1.5 ' + spec.rowStatusText + ' ' + (status?.loadError ? 'text-danger' : 'text-text-dim')}>
-            <span className="truncate">{accountStatusLabel(account, status)}</span>
+          {mostrarSegundaLinha && (
+          <div className={'mt-0.5 flex items-center gap-1.5 leading-tight ' + spec.rowStatusText + ' ' + (status?.loadError ? 'text-danger' : 'text-text-dim')}>
+            <span className="truncate">{statusLabel}</span>
             {status?.loadError && (
               <button
                 className="ml-0.5 flex items-center gap-1 rounded border border-danger/40 px-1.5 py-0.5 text-[10px] text-danger transition-colors hover:bg-danger/10"
@@ -328,11 +341,12 @@ export function AccountItem({
               </button>
             )}
             {index < 9 && !status?.loadError && (
-              <span className="rounded border border-border px-1 text-[10px] text-text-faint opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="hidden shrink-0 rounded border border-border px-1 text-[10px] text-text-faint group-hover:inline">
                 Ctrl+{index + 1}
               </span>
             )}
           </div>
+          )}
         </div>
 
         {!!status && status.unreadCount > 0 && (
