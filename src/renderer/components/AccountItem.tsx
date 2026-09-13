@@ -59,7 +59,7 @@ export const ICON_SIZE_SPECS: Record<
     rowNameText: 'text-[12px]',
     rowStatusText: 'text-[10px]',
     rowPadX: 'px-2',
-    rowPadY: 'py-1',
+    rowPadY: 'py-0.5',
     rowGap: 'gap-2',
     tileAvatar: 22,
     tileGlyph: 10,
@@ -70,14 +70,14 @@ export const ICON_SIZE_SPECS: Record<
     tileGap: 2,
   },
   medium: {
-    rowAvatar: 36,
-    rowGlyph: 16,
-    rowStatusDot: 12,
-    rowNameText: 'text-sm',
-    rowStatusText: 'text-[11px]',
-    rowPadX: 'px-2.5',
-    rowPadY: 'py-1.5',
-    rowGap: 'gap-2.5',
+    rowAvatar: 22,
+    rowGlyph: 14,
+    rowStatusDot: 8,
+    rowNameText: 'text-[14px]',
+    rowStatusText: 'text-[10.5px]',
+    rowPadX: 'px-1.5',
+    rowPadY: 'py-1',
+    rowGap: 'gap-1.5',
     tileAvatar: 28,
     tileGlyph: 13,
     tileStatusDot: 9,
@@ -87,14 +87,14 @@ export const ICON_SIZE_SPECS: Record<
     tileGap: 3,
   },
   large: {
-    rowAvatar: 44,
-    rowGlyph: 20,
-    rowStatusDot: 14,
-    rowNameText: 'text-[15px]',
-    rowStatusText: 'text-[12px]',
-    rowPadX: 'px-3',
-    rowPadY: 'py-2',
-    rowGap: 'gap-3',
+    rowAvatar: 24,
+    rowGlyph: 15,
+    rowStatusDot: 8,
+    rowNameText: 'text-[14px]',
+    rowStatusText: 'text-[10.5px]',
+    rowPadX: 'px-1.5',
+    rowPadY: 'py-1.5',
+    rowGap: 'gap-1',
     tileAvatar: 38,
     tileGlyph: 18,
     tileStatusDot: 12,
@@ -283,31 +283,29 @@ export function AccountItem({
           (isActive ? 'bg-surface mw-selected' : status?.loadError ? 'bg-danger/5' : 'hover:bg-surface-hover') +
           (drag?.isOver ? ' ring-1 ring-accent' : '')
         }
+        title={index < 9 ? `Ctrl+${index + 1}` : undefined}
         onClick={() => switchAccount(account.id)}
       >
         {isActive && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full accent-gradient" />}
 
+        <span
+          className={'shrink-0 rounded-full ' + statusDotClass(status)}
+          style={{ width: spec.rowStatusDot, height: spec.rowStatusDot }}
+        />
         <div className="relative shrink-0">
           <div
-            className="flex items-center justify-center overflow-hidden rounded-full ring-2 ring-transparent"
+            className="flex items-center justify-center overflow-hidden rounded-md bg-surface-hover"
             style={{
               width: spec.rowAvatar,
               height: spec.rowAvatar,
-              background: account.iconDataUrl ? 'transparent' : account.color,
             }}
           >
             {account.iconDataUrl ? (
               <img src={account.iconDataUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <ServiceGlyph service={account.service} size={spec.rowGlyph} color="#fff" />
+              <ServiceGlyph service={account.service} size={spec.rowGlyph} color={account.color} />
             )}
           </div>
-          <span
-            className={
-              'absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-sidebar ' + statusDotClass(status)
-            }
-            style={{ width: spec.rowStatusDot, height: spec.rowStatusDot }}
-          />
         </div>
 
         {/* Fase 72 — nome mais compacto: quando a instância está conectada
@@ -319,11 +317,6 @@ export function AccountItem({
           <div className={'flex items-center gap-1 font-semibold leading-tight text-text ' + spec.rowNameText}>
             {account.favorite && <Star size={11} className="shrink-0 text-accent" fill="currentColor" />}
             <span className="truncate">{account.name}</span>
-            {!mostrarSegundaLinha && index < 9 && (
-              <span className="hidden shrink-0 rounded border border-border px-1 text-[10px] font-normal text-text-faint group-hover:inline">
-                Ctrl+{index + 1}
-              </span>
-            )}
           </div>
           {mostrarSegundaLinha && (
           <div className={'mt-0.5 flex items-center gap-1.5 leading-tight ' + spec.rowStatusText + ' ' + (status?.loadError ? 'text-danger' : 'text-text-dim')}>
@@ -339,11 +332,6 @@ export function AccountItem({
                 <RotateCw size={10} />
                 Tentar de novo
               </button>
-            )}
-            {index < 9 && !status?.loadError && (
-              <span className="hidden shrink-0 rounded border border-border px-1 text-[10px] text-text-faint group-hover:inline">
-                Ctrl+{index + 1}
-              </span>
             )}
           </div>
           )}
@@ -361,7 +349,9 @@ export function AccountItem({
 
         <button
           className={
-            'hidden shrink-0 rounded-md p-1.5 transition-colors hover:bg-surface group-hover:block ' +
+            'absolute hidden rounded-md p-1 transition-colors hover:bg-surface-hover group-hover:block ' +
+            (status && status.unreadCount > 0 ? 'right-9 ' : 'right-1.5 ') +
+            (mostrarSegundaLinha ? 'top-0.5 ' : 'top-1/2 -translate-y-1/2 ') +
             (account.favorite ? 'text-accent' : 'text-text-dim hover:text-text')
           }
           title={account.favorite ? 'Remover dos favoritos' : 'Marcar como favorita'}

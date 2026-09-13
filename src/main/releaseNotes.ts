@@ -505,6 +505,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Estados como Aguardando QR Code continuam na segunda linha. Contadores, favoritos, pastas e atalhos seguem iguais.',
     '• Analytics: as duas colunas de Atividade das instâncias agora são quadros separados, com um espaçamento leve entre eles.',
   ].join('\n'),
+  '0.48.5': [
+    'Barra de contas no novo formato compacto',
+    '',
+    '• Cada instância mostra a bolinha de status, um ícone pequeno e o nome logo ao lado.',
+    '• Instâncias conectadas mostram só o nome. Aguardando QR Code e outros estados aparecem embaixo.',
+    '• Nomes e status aparecem inteiros, e a estrela de favorito não empurra mais o nome.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
