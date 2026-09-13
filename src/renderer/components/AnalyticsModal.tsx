@@ -28,21 +28,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowUpDown,
   BarChart3,
   CalendarRange,
   Download,
+  Gauge,
+  Radio,
   RefreshCw,
-  TrendingUp,
-  Users,
-  Wifi,
-  WifiOff,
+  Trophy,
   X,
 } from 'lucide-react';
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -89,49 +88,94 @@ function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}h`;
 }
 
+/**
+ * Fase 64 — variação percentual do volume contra o período anterior, no
+ * formato curto do card ("-90.9% vs anterior"). Sem base anterior não existe
+ * porcentagem, então mostra a diferença absoluta.
+ */
 function formatDelta(current: number, previous: number): { text: string; positive: boolean } | null {
-  const diff = current - previous;
-  if (diff === 0) return { text: 'igual ao período anterior', positive: true };
-  const pct = previous > 0 ? Math.round((diff / previous) * 100) : null;
-  const sign = diff > 0 ? '+' : '';
-  const pctText = pct !== null ? ` (${sign}${pct}%)` : '';
-  return { text: `${sign}${diff}${pctText} vs. período anterior`, positive: diff >= 0 };
+  if (previous === 0) {
+    if (current === 0) return { text: 'igual ao anterior', positive: true };
+    return { text: `+${current} vs anterior`, positive: true };
+  }
+  const pct = ((current - previous) / previous) * 100;
+  const sign = pct > 0 ? '+' : '';
+  return { text: `${sign}${pct.toFixed(1)}% vs anterior`, positive: pct >= 0 };
 }
 
+/** Bolinha de cor usada nas legendas e nos rodapés dos cards. */
+function Dot({ color, className = '' }: { color?: string; className?: string }) {
+  return (
+    <span
+      className={'inline-block h-1.5 w-1.5 shrink-0 rounded-full ' + className}
+      style={color ? { background: color } : undefined}
+      aria-hidden
+    />
+  );
+}
+
+/**
+ * Fase 64 — card de indicador no novo arranjo: rótulo à esquerda e ícone à
+ * direita no topo, o valor no meio e uma linha de detalhe no rodapé. O
+ * detalhe deixou de ser cinza fino, que quase não se lia.
+ */
 function KpiCard({
   icon,
   label,
-  value,
-  detail,
-  deltaPositive,
+  children,
+  footer,
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
-  detail?: string;
-  deltaPositive?: boolean;
+  children: React.ReactNode;
+  footer: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-2.5 rounded-xl border border-border bg-surface px-5 py-4">
-      <div className="flex items-center gap-2 text-text-faint">
-        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-surface-hover text-accent">{icon}</span>
-        <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
+    <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface px-5 py-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-[12px] font-medium text-text-dim">{label}</span>
+        <span className="shrink-0 text-accent">{icon}</span>
       </div>
-      <div>
-        <p className="text-2xl font-semibold text-text">{value}</p>
-        {detail && (
-          <p
-            className={
-              'mt-1 truncate text-[11.5px] font-light ' +
-              (deltaPositive === undefined ? 'text-text-faint' : deltaPositive ? 'text-emerald-400' : 'text-red-400')
-            }
-          >
-            {detail}
-          </p>
-        )}
-      </div>
+      <div className="min-w-0">{children}</div>
+      <div className="mt-auto flex min-w-0 items-center gap-3 text-[11.5px] text-text-dim">{footer}</div>
     </div>
   );
+}
+
+/** Item de legenda no cabeçalho dos gráficos. */
+function LegendItem({ color, label, kind }: { color: string; label: string; kind: 'square' | 'line' | 'dashed' }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {kind === 'square' ? (
+        <span className="h-2 w-2 rounded-sm" style={{ background: color }} aria-hidden />
+      ) : (
+        <span
+          className={'w-3.5 border-t-2 ' + (kind === 'dashed' ? 'border-dashed' : '')}
+          style={{ borderColor: color }}
+          aria-hidden
+        />
+      )}
+      {label}
+    </span>
+  );
+}
+
+/** "Atualizado há 12s". Só este texto se redesenha a cada segundo, não a página inteira. */
+function UpdatedAgo({ at }: { at: number | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (at === null) return null;
+  const s = Math.max(0, Math.round((now - at) / 1000));
+  return <>{s < 60 ? `Atualizado há ${s}s` : `Atualizado há ${Math.floor(s / 60)} min`}</>;
+}
+
+/** dd/mm/aaaa no fuso do próprio computador. */
+function formatDateBR(ts: number): string {
+  const d = new Date(ts);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
 /**
@@ -139,12 +183,34 @@ function KpiCard({
  * sobrasse na página; ao diminuir a janela ele era espremido e as barras e
  * rótulos apareciam cortados. Agora ele nunca encolhe abaixo desse piso, e a
  * própria página rola quando não couber.
+ *
+ * Fase 64 — cabeçalho com título, subtítulo e legenda à direita, e um rodapé
+ * opcional. A legenda saiu de dentro do gráfico para este cabeçalho.
  */
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({
+  title,
+  subtitle,
+  legend,
+  footer,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  legend?: React.ReactNode;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex min-h-[350px] flex-1 flex-col rounded-xl border border-border bg-surface p-5">
-      <p className="mb-3 shrink-0 text-[12.5px] font-semibold text-text-dim">{title}</p>
+    <div className="flex min-h-[350px] min-w-0 flex-1 flex-col rounded-xl border border-border bg-surface p-5">
+      <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13.5px] font-semibold text-text">{title}</p>
+          <p className="mt-0.5 truncate text-[11.5px] text-text-dim">{subtitle}</p>
+        </div>
+        {legend && <div className="flex shrink-0 items-center gap-3 text-[11px] text-text-dim">{legend}</div>}
+      </div>
       <div className="min-h-0 flex-1">{children}</div>
+      {footer && <div className="mt-2 shrink-0 text-right text-[11px] text-text-faint">{footer}</div>}
     </div>
   );
 }
@@ -156,13 +222,25 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
  * pessoa nenhuma, só o nome da própria instância (conta) e números
  * agregados — ver chatActivityStore.ts para a fonte do dado.
  */
-function DailyActivityCard({ title, report }: { title: string; report: ChatActivityDayReport | undefined }) {
+function DailyActivityCard({
+  title,
+  tone,
+  report,
+}: {
+  title: string;
+  /** Fase 64 — cor da bolinha ao lado do título: destaque para hoje, neutra para ontem. */
+  tone: 'today' | 'yesterday';
+  report: ChatActivityDayReport | undefined;
+}) {
   const rows = report?.byAccount ?? [];
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 rounded-xl border border-border bg-surface p-5">
       <div className="flex shrink-0 items-center justify-between">
-        <p className="text-[13.5px] font-semibold text-text">{title}</p>
-        <span className="text-[11.5px] font-light text-text-faint">
+        <p className="flex items-center gap-2 text-[13.5px] font-semibold text-text">
+          <Dot className={tone === 'today' ? 'bg-accent' : 'bg-text-faint'} />
+          {title}
+        </p>
+        <span className="text-[11.5px] text-text-dim">
           {report?.totalConversations ?? 0} interações · {report?.totalMessages ?? 0} mensagens
         </span>
       </div>
@@ -296,6 +374,8 @@ export function AnalyticsModal({
   // Fase 43 — `null` = todos os agrupamentos.
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  // Fase 64 — instante da última atualização bem-sucedida, para o "Atualizado há".
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const groups = useAppStore((s) => s.groups);
 
   const prevStatusesRef = useRef<Map<string, AccountStatus>>(new Map());
@@ -334,6 +414,7 @@ export function AnalyticsModal({
         const result = await window.multiwhats.getAnalyticsSummary(range, groupFilter);
         if (cancelled) return;
         setSummary(result);
+        setUpdatedAt(Date.now());
         if (compare) {
           const prevResult = await window.multiwhats.getAnalyticsSummary(previousRange(range), groupFilter);
           if (!cancelled) setPrevSummary(prevResult);
@@ -460,6 +541,18 @@ export function AnalyticsModal({
 
   const volumeDelta = compare && summary && prevSummary ? formatDelta(summary.totalVolume, prevSummary.totalVolume) : null;
 
+  // Fase 64 — só apresentação: cor, participação no volume e quantas contas
+  // tiveram movimento, tudo derivado do mesmo resumo já carregado.
+  const leaderInfo = useMemo(() => {
+    if (!summary?.leader) return null;
+    const leader = summary.leader;
+    const row = summary.byAccount.find((a) => a.accountId === leader.accountId);
+    const pct = summary.totalVolume > 0 ? Math.round((leader.total / summary.totalVolume) * 100) : 0;
+    return { name: leader.name, total: leader.total, color: row?.color ?? 'var(--color-accent)', pct };
+  }, [summary]);
+  const activeAccounts = summary ? summary.byAccount.filter((a) => a.total > 0).length : 0;
+  const periodo = summary?.range ?? currentRange();
+
   function dismissAlert(id: string) {
     setAlerts((list) => list.filter((a) => a.id !== id));
   }
@@ -494,29 +587,21 @@ export function AnalyticsModal({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
       {/*
-        Barra superior: atalhos rápidos + intervalo customizado + comparação.
-        Fase 39: `w-full` + `pb-1` garantem que esta linha ocupe exatamente a
-        mesma largura dos cards abaixo e nunca encoste neles — o switch de
-        comparação, por ficar no extremo direito, era o primeiro a aparentar
-        invadir a borda do card de baixo.
+        Fase 64 — nova disposição, a pedido do usuário: filtros numa barra só,
+        indicadores em quatro cards, gráficos ANTES das tabelas (a visão geral
+        vem primeiro, o detalhe depois) e uma barra de status no rodapé.
+        Só muda a apresentação: os dados continuam vindo exatamente das mesmas
+        chamadas (getAnalyticsSummary e getChatActivityDaily).
 
-        Fase 41: `flex-wrap` + `ml-auto` não resolveram — o switch continuava
-        terminando alguns pixels além da borda direita dos cards. Motivo: num
-        flex com quebra, `ml-auto` alinha pela linha do flex, que pode ficar
-        mais larga que o container quando um item tem largura fixa e não pode
-        encolher. Trocado por GRADE de três colunas
-        (conteúdo | espaço elástico | conteúdo): a coluna da direita termina
-        exatamente na borda do container, a mesma dos cards, sem depender de
-        como os itens se acomodam.
+        A barra de filtros usa `flex-wrap` dentro de um card com preenchimento.
+        O problema da Fase 41 (o switch escapando pela borda) vinha de um item
+        que não podia encolher; aqui nenhum item passa da largura do card, e o
+        "Comparar" virou caixa de seleção comum.
       */}
-      <div className="grid w-full shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pb-1">
-        {/* Coluna 1: seletor de período + intervalo customizado. `min-w-0`
-            permite que ela encolha, para a coluna da direita nunca ser
-            empurrada além da borda. */}
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 rounded-lg bg-input p-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-2">
+        <div className="flex items-center gap-1 rounded-lg bg-input p-1">
           {PERIODS.map((p) => (
             <button
               key={p.key}
@@ -561,72 +646,47 @@ export function AnalyticsModal({
             />
           </div>
         )}
-        </div>
 
-        {/*
-          Coluna 2: termina exatamente na borda direita do container — a
-          mesma dos cards abaixo. `justify-self-end` alinha pela grade, não
-          por espaço sobrando de flex, que era o que fazia o switch escapar.
-        */}
-        <div className="flex shrink-0 items-center justify-self-end gap-3">
-          {/* Fase 43 — filtro por agrupamento (Vendas, Suporte). */}
-          {groups.length > 0 && (
+        {/* Fase 43 — filtro por agrupamento. */}
+        {groups.length > 0 && (
+          <label className="flex items-center gap-2 rounded-lg border border-border bg-input py-1 pl-2.5 pr-1.5 text-[12px] text-text-dim">
+            Agrupamento
             <select
               value={groupFilter ?? ''}
               onChange={(e) => setGroupFilter(e.target.value || null)}
-              className="rounded-lg border border-border bg-input px-2.5 py-1.5 text-[12px] text-text outline-none focus:border-accent"
+              className="bg-input py-0.5 text-[12.5px] font-medium text-text outline-none"
               aria-label="Filtrar por agrupamento"
             >
-              <option value="">Todos os agrupamentos</option>
+              <option value="">Todas as instâncias</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
                 </option>
               ))}
             </select>
-          )}
+          </label>
+        )}
 
-          {/* Fase 43 — exporta o período em CSV, pela mesma agregação da tela. */}
-          <button
-            onClick={exportCsv}
-            disabled={exporting}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-text-dim transition-colors hover:border-border-strong hover:bg-surface-hover hover:text-text disabled:opacity-50"
-            title="Salvar o período selecionado em CSV"
-          >
-            <Download size={13} />
-            {exporting ? 'Salvando…' : 'CSV'}
-          </button>
-
-        <label className="flex shrink-0 items-center gap-2 text-[12px] font-medium text-text-dim">
+        <label className="flex cursor-pointer items-center gap-2 px-1 text-[12.5px] text-text-dim">
+          <input
+            type="checkbox"
+            checked={compare}
+            onChange={(e) => setCompare(e.target.checked)}
+            className="h-4 w-4 accent-[var(--color-accent)]"
+          />
           Comparar com período anterior
-          {/*
-            Fase 44 — o botão foi refeito. A bolinha era posicionada de forma
-            ABSOLUTA (`absolute top-0.5` + `translate-x-4`) dentro de uma
-            cápsula de 36px. Sem o deslocamento estar preso à área interna, ela
-            escapava pela direita e aparecia meio fora da cápsula.
-            Correção: `inline-flex` + `items-center` + `p-0.5` criam uma área
-            interna de 32px (36 menos 2px de cada lado); a bolinha tem 16px e
-            desloca no máximo 16px, então encosta exatamente na borda interna e
-            nunca ultrapassa. Sem posicionamento absoluto.
-          */}
-          <button
-            role="switch"
-            aria-checked={compare}
-            onClick={() => setCompare((v) => !v)}
-            className={
-              'inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ' +
-              (compare ? 'accent-gradient' : 'bg-input')
-            }
-          >
-            <span
-              className={
-                'h-4 w-4 rounded-full bg-white shadow transition-transform ' +
-                (compare ? 'translate-x-4' : 'translate-x-0')
-              }
-            />
-          </button>
         </label>
-        </div>
+
+        {/* Fase 43 — exporta o período em CSV, pela mesma agregação da tela. */}
+        <button
+          onClick={exportCsv}
+          disabled={exporting}
+          className="ml-auto flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-hover disabled:opacity-50"
+          title="Salvar o período selecionado em CSV"
+        >
+          <Download size={14} />
+          {exporting ? 'Salvando…' : 'Exportar CSV'}
+        </button>
       </div>
 
       {/* Sub-topo: alertas do sistema em tempo real */}
@@ -658,72 +718,103 @@ export function AnalyticsModal({
         </div>
       )}
 
-      {/* Topo do painel: saúde da conexão */}
-      <div className="flex shrink-0 gap-4">
-        <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-400">
-            <Wifi size={13} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-text">{healthCounts.online}</p>
-            <p className="text-[11px] font-light text-text-faint">Online</p>
-          </div>
-        </div>
-        <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-red-500/15 text-red-400">
-            <WifiOff size={13} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-text">{healthCounts.offline}</p>
-            <p className="text-[11px] font-light text-text-faint">Offline</p>
-          </div>
-        </div>
-        <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-5 py-3.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 text-amber-400">
-            <RefreshCw size={13} />
-          </span>
-          <div>
-            <p className="text-xl font-semibold text-text">{healthCounts.reconnecting}</p>
-            <p className="text-[11px] font-light text-text-faint">Reconectando</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex shrink-0 gap-4">
-        <KpiCard
-          icon={<BarChart3 size={13} />}
-          label="Volume total"
-          value={String(summary?.totalVolume ?? 0)}
-          // Fase 40: a divisão recebidas/enviadas fica sempre visível aqui,
-          // e a comparação com o período anterior vai junto quando ligada.
-          detail={`${summary?.totalReceived ?? 0} recebidas · ${summary?.totalSent ?? 0} enviadas${
-            volumeDelta ? ` · ${volumeDelta.text}` : ''
-          }`}
-          deltaPositive={volumeDelta ? volumeDelta.positive : undefined}
-        />
-        <KpiCard
-          icon={<TrendingUp size={13} />}
-          label="Instância líder"
-          value={summary?.leader ? summary.leader.name : '—'}
-          detail={summary?.leader ? `${summary.leader.total} mensagens` : 'sem movimento no período'}
-        />
-        <KpiCard
-          icon={<Users size={13} />}
-          label="Média por conta"
-          value={summary ? summary.averagePerAccount.toFixed(1) : '0'}
-          detail="entre as contas com atividade"
-        />
-      </div>
-
       {/*
-        Fase 28: relatório fixo de Hoje x Ontem por instância, separado do
-        seletor de período acima de propósito (ver chatActivityStore.ts) —
-        "Atendimento 1 teve 4 novas interações — 13 mensagens", nunca
-        misturando os dois dias e nunca contando de novo o que já foi visto.
+        Fase 64 — quatro indicadores. Os antigos cards separados de Online,
+        Offline e Reconectando viraram "Sessões ativas", com os outros dois
+        estados no rodapé. Duas colunas em janela estreita, quatro a partir
+        de 1280px, para nenhum número ficar espremido.
       */}
-      <div className="flex min-h-[190px] shrink-0 gap-4">
-        <DailyActivityCard title="Atividade de hoje" report={chatDaily?.today} />
-        <DailyActivityCard title="Atividade de ontem" report={chatDaily?.yesterday} />
+      <div className="grid shrink-0 grid-cols-2 gap-4 xl:grid-cols-4">
+        <KpiCard
+          icon={<Radio size={16} />}
+          label="Sessões ativas"
+          footer={
+            <>
+              <span className="flex items-center gap-1.5">
+                <Dot className="bg-red-400" />
+                {healthCounts.offline} Offline
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Dot className="bg-amber-400" />
+                {healthCounts.reconnecting} Reconectando
+              </span>
+            </>
+          }
+        >
+          <p className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-semibold text-text">{healthCounts.online}</span>
+            <span className="text-[12px] text-text-dim">online</span>
+          </p>
+        </KpiCard>
+
+        <KpiCard
+          icon={<ArrowUpDown size={16} />}
+          label="Volume total"
+          footer={
+            <>
+              <span className="flex items-center gap-1.5">
+                <Dot color="var(--color-accent)" />
+                {summary?.totalReceived ?? 0} recebidas
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Dot color="#8B6FF5" />
+                {summary?.totalSent ?? 0} enviadas
+              </span>
+            </>
+          }
+        >
+          <p className="flex min-w-0 items-baseline gap-2">
+            <span className="text-2xl font-semibold text-text">{summary?.totalVolume ?? 0}</span>
+            {volumeDelta && (
+              <span
+                className={
+                  'truncate text-[12px] font-medium ' + (volumeDelta.positive ? 'text-emerald-400' : 'text-red-400')
+                }
+              >
+                {volumeDelta.text}
+              </span>
+            )}
+          </p>
+        </KpiCard>
+
+        <KpiCard
+          icon={<Trophy size={16} />}
+          label="Instância líder"
+          footer={
+            leaderInfo ? (
+              <>
+                <span>{leaderInfo.pct}% do volume</span>
+                <span className="ml-auto">{activeAccounts} com atividade</span>
+              </>
+            ) : (
+              <span>sem movimento no período</span>
+            )
+          }
+        >
+          {leaderInfo ? (
+            <>
+              <p className="flex min-w-0 items-center gap-2">
+                <Dot color={leaderInfo.color} />
+                <span className="truncate text-[15px] font-semibold text-text">{leaderInfo.name}</span>
+              </p>
+              <p className="mt-0.5 flex items-baseline gap-1.5">
+                <span className="text-lg font-semibold text-text">{leaderInfo.total}</span>
+                <span className="text-[12px] text-text-dim">mensagens</span>
+              </p>
+            </>
+          ) : (
+            <p className="text-2xl font-semibold text-text">—</p>
+          )}
+        </KpiCard>
+
+        <KpiCard icon={<Gauge size={16} />} label="Média por conta" footer={<span>Entre as contas com atividade</span>}>
+          <p className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-semibold text-text">
+              {summary ? summary.averagePerAccount.toFixed(1) : '0'}
+            </span>
+            <span className="text-[12px] text-text-dim">msg / conta</span>
+          </p>
+        </KpiCard>
       </div>
 
       {/*
@@ -733,7 +824,17 @@ export function AnalyticsModal({
         própria e é a página que rola.
       */}
       <div className="flex shrink-0 gap-4">
-        <ChartCard title="Movimento por instância">
+        <ChartCard
+          title="Movimento por instância"
+          subtitle="Comparativo de mensagens recebidas e enviadas"
+          legend={
+            <>
+              <LegendItem kind="square" color="var(--color-accent)" label="Recebidas" />
+              <LegendItem kind="square" color="#8B6FF5" label="Enviadas" />
+            </>
+          }
+          footer={<UpdatedAgo at={updatedAt} />}
+        >
           {barData.length === 0 ? (
             <EmptyChartState loading={loading} />
           ) : (
@@ -750,56 +851,69 @@ export function AnalyticsModal({
               {/* Fase 45: 38px por barra (era 34) e piso maior, para as barras
                   respirarem e o rótulo nunca encostar na de baixo. */}
               <div style={{ height: Math.max(barData.length * 38 + 40, 260) }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-                <CartesianGrid horizontal={false} stroke="var(--color-border)" />
-                <XAxis type="number" tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  // Fase 45: 150px (era 110) para caber o nome completo da
-                  // instância sem cortar em "...".
-                  width={150}
-                  tick={{ fill: 'var(--color-text-dim)', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  // Fase 32: sem isto o Recharts descarta rótulos quando o
-                  // card fica baixo — aparecia barra sem nome (duas barras,
-                  // um nome só), fazendo parecer que a instância líder do
-                  // card ao lado nem estava no gráfico.
-                  interval={0}
-                />
-                <Tooltip
-                  cursor={{ fill: 'var(--color-surface-hover)' }}
-                  contentStyle={CHART_TOOLTIP_STYLE}
-                  labelStyle={{ color: 'var(--color-text)' }}
-                />
-                {/*
-                  Fase 40 — barras empilhadas: cada instância mostra quanto
-                  do volume foi recebido e quanto foi enviado. Só a última
-                  fatia arredonda a ponta direita, para a barra parecer uma
-                  peça só.
-                */}
-                {/* Fase 45: `height` maior + `paddingBottom` afastam a legenda
-                    da primeira barra, que ficava colada nela. */}
-                <Legend
-                  verticalAlign="top"
-                  align="right"
-                  height={34}
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: 11, color: 'var(--color-text-faint)', paddingBottom: 12 }}
-                />
-                <Bar dataKey="received" stackId="dir" name="Recebidas" maxBarSize={22} fill="var(--color-accent)" />
-                <Bar dataKey="sent" stackId="dir" name="Enviadas" radius={[0, 4, 4, 0]} maxBarSize={22} fill="#8B6FF5" />
-              </BarChart>
-            </ResponsiveContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
+                    <CartesianGrid horizontal={false} stroke="var(--color-border)" />
+                    <XAxis
+                      type="number"
+                      tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      // Fase 45: 150px (era 110) para caber o nome completo da
+                      // instância sem cortar em "...".
+                      width={150}
+                      tick={{ fill: 'var(--color-text-dim)', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      // Fase 32: sem isto o Recharts descarta rótulos quando o
+                      // card fica baixo — aparecia barra sem nome.
+                      interval={0}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'var(--color-surface-hover)' }}
+                      contentStyle={CHART_TOOLTIP_STYLE}
+                      labelStyle={{ color: 'var(--color-text)' }}
+                    />
+                    {/*
+                      Fase 40 — barras empilhadas: cada instância mostra quanto
+                      do volume foi recebido e quanto foi enviado. Só a última
+                      fatia arredonda a ponta direita. Fase 64: a legenda saiu
+                      daqui para o cabeçalho do card.
+                    */}
+                    <Bar dataKey="received" stackId="dir" name="Recebidas" maxBarSize={22} fill="var(--color-accent)" />
+                    <Bar
+                      dataKey="sent"
+                      stackId="dir"
+                      name="Enviadas"
+                      radius={[0, 4, 4, 0]}
+                      maxBarSize={22}
+                      fill="#8B6FF5"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           )}
         </ChartCard>
 
-        <ChartCard title="Horários de pico">
+        <ChartCard
+          title="Horários de pico"
+          subtitle={
+            compare
+              ? 'Distribuição horária do tráfego (período atual vs anterior)'
+              : 'Distribuição horária do tráfego no período'
+          }
+          legend={
+            <>
+              <LegendItem kind="line" color="var(--color-accent-2)" label="Atual" />
+              {compare && <LegendItem kind="dashed" color="var(--color-text-faint)" label="Anterior" />}
+            </>
+          }
+        >
           {timelineData.every((t) => t.count === 0) ? (
             <EmptyChartState loading={loading} />
           ) : (
@@ -817,9 +931,7 @@ export function AnalyticsModal({
                 />
                 {/*
                   Fase 45: o topo da escala passa a ser 20% acima do maior
-                  valor do período (mínimo 4). Antes o eixo terminava
-                  exatamente no pico, então o valor mais alto ficava colado na
-                  borda e a curva parecia achatada contra o topo.
+                  valor do período (mínimo 4), para o pico não colar na borda.
                 */}
                 <YAxis
                   tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }}
@@ -829,9 +941,12 @@ export function AnalyticsModal({
                   domain={[0, (dataMax: number) => Math.max(4, Math.ceil((dataMax || 0) * 1.2))]}
                 />
                 <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={{ color: 'var(--color-text)' }} />
+                {/* Fase 64: `name` dá o rótulo do tooltip. Sem ele aparecia
+                    "count", o nome interno do campo. */}
                 <Line
                   type="monotone"
                   dataKey="count"
+                  name="Atual"
                   stroke="var(--color-accent-2)"
                   strokeWidth={2}
                   dot={false}
@@ -841,6 +956,7 @@ export function AnalyticsModal({
                   <Line
                     type="monotone"
                     dataKey="prevCount"
+                    name="Anterior"
                     stroke="var(--color-text-faint)"
                     strokeWidth={1.5}
                     strokeDasharray="4 4"
@@ -852,6 +968,36 @@ export function AnalyticsModal({
             </ResponsiveContainer>
           )}
         </ChartCard>
+      </div>
+
+      {/*
+        Fase 28: relatório fixo de Hoje x Ontem por instância, separado do
+        seletor de período acima de propósito (ver chatActivityStore.ts),
+        nunca misturando os dois dias e nunca contando de novo o que já foi
+        visto. Fase 64: passou para depois dos gráficos.
+      */}
+      <div className="flex min-h-[190px] shrink-0 gap-4">
+        <DailyActivityCard title="Atividade de hoje" tone="today" report={chatDaily?.today} />
+        <DailyActivityCard title="Atividade de ontem" tone="yesterday" report={chatDaily?.yesterday} />
+      </div>
+
+      {/* Fase 64 — barra de status: quantas instâncias estão online e qual período está na tela. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-[12px] text-text-dim">
+        <span className="flex items-center gap-2">
+          <Dot color="var(--color-accent)" />
+          Instâncias Online:
+          <span className="font-semibold text-accent">
+            {healthCounts.online} / {accounts.length}
+          </span>
+        </span>
+        <span className="h-3.5 w-px bg-border" aria-hidden />
+        <span>
+          Período:{' '}
+          <span className="font-semibold text-text">
+            {formatDateBR(periodo.startTs)} a {formatDateBR(periodo.endTs)}
+          </span>
+        </span>
+        <span className="ml-auto text-text-faint">Só conversas com pessoas. Grupos ficam fora da contagem.</span>
       </div>
       </div>
     </section>
