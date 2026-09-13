@@ -483,6 +483,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Na aba Backup & Diagnóstico, as últimas linhas do log já aparecem ao abrir, com data, nível e mensagem.',
     '• O botão de ocultar e mostrar o log continua funcionando.',
   ].join('\n'),
+  '0.48.2': [
+    'Log de diagnóstico: mais recente em cima e botão para limpar',
+    '',
+    '• As linhas do log agora aparecem da mais recente para a mais antiga.',
+    '• Novo botão Limpar log, com confirmação. Não afeta instâncias, conversas nem configurações.',
+    '• A data e a hora de cada linha não quebram mais em duas linhas.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

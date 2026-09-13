@@ -74,6 +74,20 @@ export const logger = {
       return 0;
     }
   },
+  /**
+   * Fase 70 — apaga o log de diagnóstico (o arquivo atual e o antigo da
+   * rotação) e registra que foi limpo, para o painel mostrar o que houve.
+   */
+  clear: (): void => {
+    ensureInitialized();
+    try {
+      fs.writeFileSync(logFilePath, '', 'utf-8');
+      fs.rmSync(path.join(logDir, 'orbi-swit-stack.old.log'), { force: true });
+    } catch (err) {
+      console.error('[Logger] Falha ao limpar log:', err);
+    }
+    write('INFO', 'Log limpo pelo usuário.');
+  },
   /** Últimas N linhas do log, para um visualizador simples dentro do app (Configurações → Diagnóstico). */
   readTail: (maxLines: number): string[] => {
     ensureInitialized();

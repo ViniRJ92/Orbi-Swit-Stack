@@ -414,9 +414,22 @@ function ThemePreview({ kind }: { kind: ThemePreference }) {
  * a mensagem. Linhas que não seguem o formato (continuação de um erro com
  * várias linhas) aparecem só como texto.
  */
+/**
+ * Fase 70 — junta cada entrada do log com as linhas de continuação dela
+ * (erros com várias linhas), para poder inverter a ordem sem separá-las.
+ */
+function agruparLog(linhas: string[]): string[][] {
+  const grupos: string[][] = [];
+  for (const l of linhas) {
+    if (grupos.length === 0 || /^\[[^\]]+\]\s+\[\w+\]/.test(l)) grupos.push([l]);
+    else grupos[grupos.length - 1].push(l);
+  }
+  return grupos;
+}
+
 function LogLine({ linha }: { linha: string }) {
   const m = /^\[([^\]]+)\]\s+\[(\w+)\]\s+(.*)$/.exec(linha);
-  if (!m) return <div className="truncate pl-[118px] text-text-faint">{linha}</div>;
+  if (!m) return <div className="truncate pl-[170px] text-text-faint">{linha}</div>;
   const d = new Date(m[1]);
   const p2 = (n: number) => String(n).padStart(2, '0');
   const quando = Number.isNaN(d.getTime())
@@ -427,7 +440,7 @@ function LogLine({ linha }: { linha: string }) {
     nivel === 'ERROR' ? 'bg-red-500/15 text-red-400' : nivel === 'WARN' ? 'bg-amber-500/15 text-amber-400' : 'bg-accent/15 text-accent';
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <span className="w-[72px] shrink-0 tabular-nums text-text-faint">{quando}</span>
+      <span className="w-[112px] shrink-0 whitespace-nowrap tabular-nums text-text-faint">{quando}</span>
       <span className={'w-[46px] shrink-0 rounded px-1 text-center text-[10px] font-bold ' + cor}>{nivel}</span>
       <span className="min-w-0 truncate text-text" title={m[3]}>
         {m[3]}
@@ -1462,6 +1475,7 @@ function BackupDiagnosticsTab({
   logLines,
   toggleLogViewer,
   clearAnalytics,
+  clearLogs,
 }: {
   exportBackup: () => void;
   importBackup: () => void;
@@ -1469,6 +1483,8 @@ function BackupDiagnosticsTab({
   logLines: string[] | null;
   toggleLogViewer: () => void;
   clearAnalytics: () => void;
+  /** Fase 70 — apaga o log de diagnóstico. */
+  clearLogs: () => void;
 }) {
   // Fase 52 — estado local: só esta aba precisa saber o resultado da limpeza.
   const [clearingCache, setClearingCache] = useState(false);
@@ -1595,11 +1611,30 @@ function BackupDiagnosticsTab({
           <div className={'rounded-xl border border-border bg-input ' + (diagnostics ? 'mt-3' : '')}>
             <div className="flex items-center justify-between border-b border-border px-3 py-2">
               <span className="text-[12.5px] font-semibold text-text">Log de diagnóstico</span>
-              <span className="text-[11px] text-text-faint">últimas {logLines.length} linhas</span>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-text-faint">últimas {logLines.length} linhas, mais recente em cima</span>
+                <button
+                  onClick={clearLogs}
+                  className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11.5px] text-text-dim transition-colors hover:border-danger/40 hover:text-danger"
+                >
+                  <Trash2 size={12} />
+                  Limpar log
+                </button>
+              </div>
             </div>
             <div className="mw-scroll flex max-h-56 flex-col gap-0.5 overflow-y-auto px-3 py-2 font-mono text-[11px] leading-6">
               {logLines.length > 0 ? (
-                logLines.map((linha, i) => <LogLine key={i} linha={linha} />)
+                // Fase 70 — mais recente em cima. O arquivo guarda da mais
+                // antiga para a mais nova, então a lista é invertida por entrada.
+                agruparLog(logLines)
+                  .reverse()
+                  .map((grupo, i) => (
+                    <div key={i}>
+                      {grupo.map((linha, j) => (
+                        <LogLine key={j} linha={linha} />
+                      ))}
+                    </div>
+                  ))
               ) : (
                 <p className="text-text-faint">Sem entradas no log ainda.</p>
               )}
@@ -1920,6 +1955,17 @@ export function SettingsModal({
     setLogLines(lines);
   };
 
+  // Fase 70 — apaga o log de diagnóstico e recarrega o painel e o tamanho do arquivo.
+  const clearLogs = async () => {
+    const confirmed = window.confirm(
+      'Apagar todas as linhas do log de diagnóstico? Não afeta instâncias, conversas nem configurações.'
+    );
+    if (!confirmed) return;
+    await window.multiwhats.clearLogs();
+    setLogLines(await window.multiwhats.readRecentLogs(80));
+    setDiagnostics(await window.multiwhats.getDiagnostics());
+  };
+
   const clearAnalytics = async () => {
     const confirmed = window.confirm(
       'Apagar todo o histórico do Analytics? Isso remove todas as métricas de mensagens já registradas e não pode ser desfeito.'
@@ -2010,6 +2056,7 @@ export function SettingsModal({
             logLines={logLines}
             toggleLogViewer={toggleLogViewer}
             clearAnalytics={clearAnalytics}
+            clearLogs={clearLogs}
           />
         )}
         {activeTab === 'updates' && (

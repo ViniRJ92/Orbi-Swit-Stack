@@ -39,6 +39,7 @@ const api = {
   setToastNotificationsEnabled: (enabled: boolean) => ipcRenderer.invoke('mw:set-toast-notifications-enabled', enabled),
   getDiagnostics: () => ipcRenderer.invoke('mw:get-diagnostics'),
   readRecentLogs: (maxLines: number) => ipcRenderer.invoke('mw:read-recent-logs', maxLines),
+  clearLogs: () => ipcRenderer.invoke('mw:clear-logs'),
   getCloseBehavior: () => ipcRenderer.invoke('mw:get-close-behavior'),
   setCloseBehavior: (behavior: CloseBehavior) => ipcRenderer.invoke('mw:set-close-behavior', behavior),
   getConfirmBeforeRemove: () => ipcRenderer.invoke('mw:get-confirm-before-remove'),

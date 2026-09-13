@@ -312,6 +312,7 @@ export interface OrbiSwitStackApi {
   setToastNotificationsEnabled: (enabled: boolean) => Promise<boolean>;
   getDiagnostics: () => Promise<DiagnosticsInfo>;
   readRecentLogs: (maxLines: number) => Promise<string[]>;
+  clearLogs: () => Promise<boolean>;
   getCloseBehavior: () => Promise<CloseBehavior>;
   setCloseBehavior: (behavior: CloseBehavior) => Promise<CloseBehavior>;
   getConfirmBeforeRemove: () => Promise<boolean>;

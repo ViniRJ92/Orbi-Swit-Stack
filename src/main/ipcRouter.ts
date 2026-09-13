@@ -395,6 +395,12 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
 
   ipcMain.handle('mw:read-recent-logs', (_evt, maxLines: number) => logger.readTail(maxLines ?? 100));
 
+  // Fase 70 — botão "Limpar log" em Backup & Diagnóstico.
+  ipcMain.handle('mw:clear-logs', () => {
+    logger.clear();
+    return true;
+  });
+
   ipcMain.handle('mw:get-close-behavior', () => settingsStore.getCloseBehavior());
 
   ipcMain.handle('mw:set-close-behavior', (_evt, behavior: CloseBehavior) => {
