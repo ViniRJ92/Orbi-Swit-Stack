@@ -125,11 +125,157 @@ const TABS: { key: TabKey; label: string; icon: ReactNode }[] = [
   { key: 'about', label: 'Sobre o Sistema', icon: <Info size={14} /> },
 ];
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * Fase 65 — cabeçalho de cada aba: ícone, título e uma linha dizendo o que a
+ * aba reúne. Antes a aba começava direto no primeiro controle.
+ */
+function TabHeader({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
-    <div className="border-t border-border pt-4 first:mt-0 first:border-t-0 first:pt-0">
-      <div className="mb-2.5 text-[11px] font-bold uppercase tracking-wider text-text-faint">{title}</div>
-      {children}
+    <div className="flex items-start gap-3 pb-1">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">{icon}</span>
+      <div className="min-w-0">
+        <h3 className="text-[15px] font-semibold text-text">{title}</h3>
+        <p className="mt-0.5 text-[12px] leading-snug text-text-dim">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fase 65 — bloco de configuração. Substitui a antiga `Section` (título em
+ * caixa alta e fio separador): cada grupo de ajustes vira um cartão com
+ * título, descrição e, quando faz sentido, a ação principal à direita.
+ *
+ * Sem `overflow-hidden` de propósito. A tabela de instâncias fica dentro de
+ * um destes cartões, e o cabeçalho fixo dela precisa se prender ao painel
+ * rolável das Configurações; um ancestral recortando o conteúdo quebraria o
+ * `sticky`.
+ */
+function Card({
+  title,
+  description,
+  icon,
+  action,
+  children,
+}: {
+  title: string;
+  description?: ReactNode;
+  icon?: ReactNode;
+  action?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-app/40 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="flex items-center gap-2 text-[13.5px] font-semibold text-text">
+            {icon && <span className="shrink-0 text-text-dim">{icon}</span>}
+            {title}
+          </h4>
+          {description && <p className="mt-1 text-[12px] leading-snug text-text-dim">{description}</p>}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      {children && <div className="mt-3">{children}</div>}
+    </section>
+  );
+}
+
+/**
+ * Fase 65 — linha de liga/desliga: texto à esquerda, caixa de seleção à
+ * direita. A linha inteira continua clicável, como era antes.
+ */
+function ToggleRow({
+  icon,
+  title,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  icon?: ReactNode;
+  title: string;
+  description?: string;
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4">
+      <span className="flex min-w-0 items-start gap-3">
+        {icon && <span className="mt-0.5 shrink-0 text-text-dim">{icon}</span>}
+        <span className="min-w-0">
+          <span className="block text-[13.5px] font-medium text-text">{title}</span>
+          {description && <span className="mt-0.5 block text-[12px] leading-snug text-text-dim">{description}</span>}
+        </span>
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        className="h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+      />
+    </label>
+  );
+}
+
+/**
+ * Fase 65 — opção de escolha única. Mesmo destaque de seleção de antes
+ * (borda e fundo no acento); só ganhou a variação em linha para caber em
+ * cartões mais estreitos.
+ */
+function OptionTile({
+  active,
+  onClick,
+  icon,
+  label,
+  title,
+  layout = 'column',
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  title?: string;
+  layout?: 'column' | 'row';
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className={
+        'flex items-center justify-center gap-1.5 rounded-lg border px-2 text-xs transition-colors ' +
+        (layout === 'column' ? 'flex-col py-3 ' : 'py-2.5 ') +
+        (active
+          ? 'border-accent bg-accent/10 text-accent'
+          : 'border-border text-text-dim hover:border-border-strong hover:text-text')
+      }
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function Kbd({ children }: { children: ReactNode }) {
+  return <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[11px]">{children}</kbd>;
+}
+
+/**
+ * Fase 41: o número é o dado, então ganha o destaque (20px, peso 700, cor
+ * principal) e o rótulo recua para o cinza secundário. Fase 65: rótulo em
+ * cima e uma dica curta embaixo, dentro de cada quadro.
+ */
+function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-lg border border-border px-3 py-2.5">
+      <div className="text-[12px] text-text-dim">{label}</div>
+      <div className="mt-1 text-[20px] font-bold leading-tight text-text">{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-text-faint" title={hint}>
+        {hint}
+      </div>
     </div>
   );
 }
@@ -344,132 +490,144 @@ function GeneralAppearanceTab({
   toggleConfirmBeforeRemove: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <Section title="Geral">
-        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-          <span className="flex items-center gap-2 text-sm text-text">
-            <Power size={15} className="text-text-dim" />
-            Iniciar com o Windows
-          </span>
-          <input type="checkbox" checked={startup} onChange={toggleStartup} className="h-4 w-4 accent-[var(--color-accent)]" />
-        </label>
-      </Section>
+    <div className="flex flex-col gap-3">
+      <TabHeader
+        icon={<SlidersHorizontal size={17} />}
+        title="Geral & Aparência"
+        description="Inicialização, tema, barra de contas e o que acontece ao fechar a janela."
+      />
 
-      <Section title="Aparência">
+      <div className="rounded-xl border border-border bg-app/40 px-4 py-3.5">
+        <ToggleRow
+          icon={<Power size={15} />}
+          title="Iniciar com o Windows"
+          description="Abre o Orbi automaticamente quando o computador liga."
+          checked={startup}
+          onChange={toggleStartup}
+        />
+      </div>
+
+      <Card title="Aparência" icon={<Sun size={15} />} description="Tema de cores da interface.">
         <div className="grid grid-cols-3 gap-2">
           {THEME_OPTIONS.map((opt) => (
-            <button
+            <OptionTile
               key={opt.value}
+              active={theme === opt.value}
               onClick={() => setTheme(opt.value)}
-              className={
-                'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-xs transition-colors ' +
-                (theme === opt.value
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border text-text-dim hover:border-border-strong hover:text-text')
-              }
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
+              icon={opt.icon}
+              label={opt.label}
+            />
           ))}
         </div>
-      </Section>
+      </Card>
 
-      <Section title="Posição da barra de contas">
-        <div className="grid grid-cols-2 gap-2">
-          {SIDEBAR_POSITION_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => applySidebarPosition(opt.value)}
-              className={
-                'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-xs transition-colors ' +
-                (sidebarPosition === opt.value
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border text-text-dim hover:border-border-strong hover:text-text')
-              }
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </Section>
+      {/* Fase 65: posição e tamanho lado a lado, porque os dois ajustam a
+          mesma coisa: a barra de contas. */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card
+          title="Posição da barra de contas"
+          icon={<PanelLeft size={15} />}
+          description="Em qual lado da janela a lista de contas fica."
+        >
+          <div className="grid grid-cols-2 gap-1.5">
+            {SIDEBAR_POSITION_OPTIONS.map((opt) => (
+              <OptionTile
+                key={opt.value}
+                layout="row"
+                active={sidebarPosition === opt.value}
+                onClick={() => applySidebarPosition(opt.value)}
+                icon={opt.icon}
+                label={opt.label}
+              />
+            ))}
+          </div>
+        </Card>
 
-      <Section title="Tamanho dos ícones/cards">
-        <div className="grid grid-cols-3 gap-2">
-          {ICON_SIZE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => applyIconSize(opt.value)}
-              className={
-                'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-xs transition-colors ' +
-                (iconSize === opt.value
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border text-text-dim hover:border-border-strong hover:text-text')
-              }
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-2 text-[11px] text-text-faint">
-          Ajusta o tamanho dos ícones, texto e espaçamento dos cards de conta na barra lateral, tanto no modo "Esquerda" quanto no modo "Topo".
-        </p>
-      </Section>
+        <Card
+          title="Tamanho dos ícones/cards"
+          icon={<Square size={15} />}
+          description="Ícones, texto e espaçamento das contas na barra, em qualquer posição."
+        >
+          <div className="grid grid-cols-3 gap-1.5">
+            {ICON_SIZE_OPTIONS.map((opt) => (
+              <OptionTile
+                key={opt.value}
+                active={iconSize === opt.value}
+                onClick={() => applyIconSize(opt.value)}
+                icon={opt.icon}
+                label={opt.label}
+              />
+            ))}
+          </div>
+        </Card>
+      </div>
 
-      <Section title="Ao fechar a janela">
-        <div className="grid grid-cols-3 gap-2">
-          {CLOSE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => applyCloseBehavior(opt.value)}
-              className={
-                'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-center text-xs transition-colors ' +
-                (closeBehavior === opt.value
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border text-text-dim hover:border-border-strong hover:text-text')
-              }
-              title={opt.description}
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="Segurança">
-        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-          <span className="flex items-center gap-2 text-sm text-text">
-            <ShieldAlert size={15} className="text-text-dim" />
-            Confirmar antes de remover uma instância
-          </span>
-          <input
-            type="checkbox"
+      {/* Fase 65: a descrição da opção escolhida, que antes só aparecia ao
+          passar o mouse, fica visível no próprio cartão. A confirmação antes
+          de remover mora aqui também, junto do outro ajuste de comportamento. */}
+      <Card
+        title="Ao fechar a janela"
+        icon={<Minimize2 size={15} />}
+        description={CLOSE_OPTIONS.find((o) => o.value === closeBehavior)?.description}
+        action={
+          <div className="flex rounded-lg border border-border bg-input p-1">
+            {CLOSE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => applyCloseBehavior(opt.value)}
+                title={opt.description}
+                aria-pressed={closeBehavior === opt.value}
+                className={
+                  'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition-colors ' +
+                  (closeBehavior === opt.value
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-transparent text-text-dim hover:text-text')
+                }
+              >
+                {opt.icon}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        <div className="border-t border-border pt-3">
+          <ToggleRow
+            icon={<ShieldAlert size={15} />}
+            title="Confirmar antes de remover uma instância"
+            description="Mostra uma confirmação antes de excluir uma instância."
             checked={confirmBeforeRemove}
             onChange={toggleConfirmBeforeRemove}
-            className="h-4 w-4 accent-[var(--color-accent)]"
           />
-        </label>
-      </Section>
+        </div>
+      </Card>
 
-      <Section title="Atalhos">
-        <ul className="space-y-1.5 text-xs text-text-dim">
-          <li className="flex items-center gap-1">
-            <Keyboard size={13} className="mr-0.5 shrink-0 text-text-faint" />
-            <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[11px]">Ctrl</kbd>+
-            <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[11px]">1</kbd>…
-            <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[11px]">9</kbd> troca direto de instância.
-          </li>
-          <li className="flex items-center gap-1">
-            <span className="mr-0.5 inline-block w-[13px]" />
-            <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[11px]">Ctrl</kbd>+
-            <kbd className="rounded border border-border bg-input px-1.5 py-0.5 text-[11px]">Tab</kbd> avança para a próxima
-            instância.
-          </li>
-        </ul>
-      </Section>
+      <Card title="Atalhos de teclado" icon={<Keyboard size={15} />}>
+        <div className="rounded-lg border border-border">
+          <table className="w-full text-left text-[12.5px]">
+            <thead>
+              <tr className="text-[11px] uppercase tracking-wider text-text-faint">
+                <th className="px-3 py-2 font-medium">Ação</th>
+                <th className="px-3 py-2 font-medium">Teclas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-border">
+                <td className="px-3 py-2 text-text">Trocar direto de instância</td>
+                <td className="px-3 py-2 text-text-dim">
+                  <Kbd>Ctrl</Kbd> + <Kbd>1</Kbd> … <Kbd>9</Kbd>
+                </td>
+              </tr>
+              <tr className="border-t border-border">
+                <td className="px-3 py-2 text-text">Avançar para a próxima instância</td>
+                <td className="px-3 py-2 text-text-dim">
+                  <Kbd>Ctrl</Kbd> + <Kbd>Tab</Kbd>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }
@@ -576,14 +734,25 @@ function InstancesTab() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <Section title="Agrupamentos">
-        {/* Fase 60: texto encurtado e margem reduzida — a seção ocupava
-            altura demais no topo, empurrando a tabela para baixo. */}
-        <p className="mb-2 text-[11px] leading-snug text-text-dim">
-          Pastas para organizar as instâncias na barra de contas. A bolinha define a cor de cada uma.
-        </p>
+    <div className="flex flex-col gap-3">
+      <TabHeader
+        icon={<Layers size={17} />}
+        title="Instâncias & Agrupamentos"
+        description="Cada instância roda em uma sessão isolada, guardada apenas neste computador."
+      />
 
+      {/* Fase 65: agrupamentos num cartão próprio. As pílulas continuam
+          iguais; a criação de agrupamento ganhou uma linha inteira embaixo. */}
+      <Card
+        title="Agrupamentos"
+        icon={<FolderPlus size={15} />}
+        description="Pastas para organizar as instâncias na barra de contas. A bolinha define a cor de cada uma."
+        action={
+          <span className="text-[12px] tabular-nums text-text-faint">
+            {groups.length} {groups.length === 1 ? 'agrupamento' : 'agrupamentos'}
+          </span>
+        }
+      >
         <div className="flex flex-wrap items-center gap-1.5">
           {groups.map((g) =>
             editingGroupId === g.id ? (
@@ -639,55 +808,55 @@ function InstancesTab() {
               </span>
             )
           )}
-          <div className="flex items-center gap-1">
-            <input
-              type="text"
-              value={newGroupName}
-              onChange={(e) => {
-                setNewGroupName(e.target.value);
-                setGroupError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddGroup();
-              }}
-              placeholder="Novo agrupamento..."
-              className={
-                'w-32 rounded-lg border bg-input px-2 py-1 text-[11px] text-text placeholder:text-text-faint focus:border-accent ' +
-                (groupError ? 'border-danger' : 'border-border')
-              }
-            />
-            <button
-              className="flex items-center gap-1 rounded-lg border border-dashed border-border-strong px-2 py-1 text-[11px] text-text-dim hover:border-accent hover:text-accent"
-              onClick={handleAddGroup}
-            >
-              <FolderPlus size={12} />
-              Criar
-            </button>
-          </div>
+        </div>
+        <div className={'flex items-center gap-2 ' + (groups.length > 0 ? 'mt-3' : '')}>
+          <input
+            type="text"
+            value={newGroupName}
+            onChange={(e) => {
+              setNewGroupName(e.target.value);
+              setGroupError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAddGroup();
+            }}
+            placeholder="Novo agrupamento..."
+            className={
+              'min-w-0 flex-1 rounded-lg border bg-input px-2.5 py-1.5 text-[12.5px] text-text placeholder:text-text-faint focus:border-accent ' +
+              (groupError ? 'border-danger' : 'border-border')
+            }
+          />
+          <button
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-border-strong px-3 py-1.5 text-[12.5px] text-text-dim hover:border-accent hover:text-accent"
+            onClick={handleAddGroup}
+          >
+            <FolderPlus size={13} />
+            Criar
+          </button>
         </div>
         {groupError && <p className="mt-1.5 text-[11px] text-danger">{groupError}</p>}
-      </Section>
+      </Card>
 
-      <Section title="Instâncias">
-        <p className="mb-2 text-[11px] leading-snug text-text-dim">
-          Renomeie, troque o ícone e a cor, mude o agrupamento ou exclua. Marque as caixas para agir sobre várias de uma vez.
-        </p>
-
-        {/* Fase 60: busca dentro da tabela. */}
-        <div className="mb-2 flex items-center gap-2">
-          <div className="relative min-w-0 flex-1">
-            <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar instância por nome..."
-              className="w-full rounded-lg border border-border bg-input py-1.5 pl-7 pr-2 text-[12px] text-text placeholder:text-text-faint focus:border-accent"
-            />
-          </div>
-          <span className="shrink-0 text-[11px] tabular-nums text-text-faint">
+      <Card
+        title="Instâncias"
+        icon={<Layers size={15} />}
+        description="Renomeie, troque o ícone e a cor, mude o agrupamento ou exclua. Marque as caixas para agir sobre várias de uma vez."
+        action={
+          <span className="text-[12px] tabular-nums text-text-faint">
             {query.trim() ? `${visiveis.length} de ${accounts.length}` : `${accounts.length} instância(s)`}
           </span>
+        }
+      >
+        {/* Fase 60: busca dentro da tabela. */}
+        <div className="relative mb-2">
+          <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar instância por nome..."
+            className="w-full rounded-lg border border-border bg-input py-1.5 pl-7 pr-2 text-[12px] text-text placeholder:text-text-faint focus:border-accent"
+          />
         </div>
 
         {selectedIds.size > 0 && (
@@ -732,7 +901,10 @@ function InstancesTab() {
           // rolável mais próximo, que era esta caixa, e ela nunca rola na
           // vertical). Com larguras fixas por coluna a tabela cabe na largura
           // do modal e a caixa não precisa mais rolar.
-          <div className="rounded-lg border border-border">
+          // Fase 65: `-mx-4 -mb-4` levam a tabela até a borda do cartão. Assim
+          // ela mantém exatamente a largura de antes, e a coluna de nome, que
+          // já é apertada, não perde espaço para o preenchimento do cartão.
+          <div className="-mx-4 -mb-4 border-t border-border">
             <table className="w-full table-fixed border-collapse text-left">
               <colgroup>
                 <col style={{ width: 34 }} />
@@ -787,7 +959,7 @@ function InstancesTab() {
             </table>
           </div>
         )}
-      </Section>
+      </Card>
     </div>
   );
 }
@@ -818,34 +990,48 @@ function PerformanceNotificationsTab({
   toggleToastNotifications: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <Section title="Desempenho">
-        <p className="mb-2.5 text-xs leading-relaxed text-text-dim">
-          Controla quantas instâncias ficam prontas ao mesmo tempo — as demais são suspensas automaticamente em segundo
-          plano assim que o limite escolhido é ultrapassado.
-        </p>
+    <div className="flex flex-col gap-3">
+      <TabHeader
+        icon={<GaugeIcon size={17} />}
+        title="Desempenho & Notificações"
+        description="Quantas instâncias ficam carregadas ao mesmo tempo e por onde os avisos de mensagem aparecem."
+      />
+
+      <Card
+        title="Desempenho"
+        icon={<Zap size={15} />}
+        description="Controla quantas instâncias ficam prontas ao mesmo tempo. As demais são suspensas automaticamente em segundo plano assim que o limite escolhido é ultrapassado."
+      >
+        {/* Fase 65: a descrição de cada perfil, que só aparecia ao passar o
+            mouse, agora fica visível dentro da própria opção. */}
         <div className="grid grid-cols-4 gap-2">
-          {PERFORMANCE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => applyPerformanceMode(opt.value)}
-              className={
-                'flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-center text-xs transition-colors ' +
-                (performanceMode === opt.value
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border text-text-dim hover:border-border-strong hover:text-text')
-              }
-              title={opt.description}
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          ))}
+          {PERFORMANCE_OPTIONS.map((opt) => {
+            const ativo = performanceMode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => applyPerformanceMode(opt.value)}
+                title={opt.description}
+                aria-pressed={ativo}
+                className={
+                  'flex flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-colors ' +
+                  (ativo ? 'border-accent bg-accent/10' : 'border-border hover:border-border-strong')
+                }
+              >
+                <span className={ativo ? 'text-accent' : 'text-text-dim'}>{opt.icon}</span>
+                <span className={'text-[12.5px] font-semibold ' + (ativo ? 'text-accent' : 'text-text')}>{opt.label}</span>
+                <span className="text-[11px] leading-snug text-text-dim">{opt.description}</span>
+              </button>
+            );
+          })}
         </div>
         {performanceMode === 'custom' && (
-          <div className="mt-3 flex items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-            <label htmlFor="custom-max-loaded" className="text-sm text-text">
-              Instâncias simultâneas
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border px-3.5 py-2.5">
+            <label htmlFor="custom-max-loaded" className="min-w-0">
+              <span className="block text-[13px] font-medium text-text">Instâncias simultâneas</span>
+              <span className="block text-[11.5px] text-text-dim">
+                Entre {customMaxLoadedRange.min} e {customMaxLoadedRange.max} no perfil Personalizado.
+              </span>
             </label>
             <input
               id="custom-max-loaded"
@@ -861,69 +1047,51 @@ function PerformanceNotificationsTab({
             />
           </div>
         )}
-      </Section>
+      </Card>
 
-      <Section title="Notificações">
-        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-          <span className="flex items-center gap-2 text-sm text-text">
-            {notificationsEnabled ? <Bell size={15} className="text-text-dim" /> : <BellOff size={15} className="text-text-dim" />}
-            Notificações de novas mensagens
-          </span>
-          <input
-            type="checkbox"
-            checked={notificationsEnabled}
-            onChange={toggleNotifications}
-            className="h-4 w-4 accent-[var(--color-accent)]"
-          />
-        </label>
-
-        {/*
-          Fase 48 — por onde o aviso aparece. As duas cobrem situações
-          diferentes e não se sobrepõem: a caixa do Windows é a única visível
-          com o app minimizado; o aviso interno só existe com a janela aberta.
-          Ficam desabilitadas quando a chave geral acima está desligada, para
-          deixar claro que ela manda nas duas.
-        */}
-        <div className={'mt-2 flex flex-col gap-2 ' + (notificationsEnabled ? '' : 'pointer-events-none opacity-50')}>
-          <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-border px-3.5 py-2.5">
-            <span className="flex flex-col gap-0.5">
-              <span className="flex items-center gap-2 text-sm text-text">
-                <Monitor size={15} className="text-text-dim" />
-                Notificações do Windows
-              </span>
-              <span className="text-[12px] text-text-dim">
-                Caixa do sistema, aparece com o app minimizado ou em segundo plano.
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={windowsNotificationsEnabled}
-              onChange={toggleWindowsNotifications}
-              disabled={!notificationsEnabled}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+      <Card title="Notificações" icon={<Bell size={15} />} description="Se os avisos de mensagem nova aparecem, e por onde.">
+        <div className="rounded-lg border border-border">
+          <div className="px-3.5 py-3">
+            <ToggleRow
+              icon={notificationsEnabled ? <Bell size={15} /> : <BellOff size={15} />}
+              title="Notificações de novas mensagens"
+              description="Chave geral. Desligada, nenhum dos dois avisos abaixo aparece."
+              checked={notificationsEnabled}
+              onChange={toggleNotifications}
             />
-          </label>
+          </div>
 
-          <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-border px-3.5 py-2.5">
-            <span className="flex flex-col gap-0.5">
-              <span className="flex items-center gap-2 text-sm text-text">
-                <Bell size={15} className="text-text-dim" />
-                Notificações internas
-              </span>
-              <span className="text-[12px] text-text-dim">
-                Aviso flutuante no canto do app, aparece com a janela aberta.
-              </span>
-            </span>
-            <input
-              type="checkbox"
-              checked={toastNotificationsEnabled}
-              onChange={toggleToastNotifications}
-              disabled={!notificationsEnabled}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
-            />
-          </label>
+          {/*
+            Fase 48 — por onde o aviso aparece. As duas cobrem situações
+            diferentes e não se sobrepõem: a caixa do Windows é a única visível
+            com o app minimizado; o aviso interno só existe com a janela aberta.
+            Ficam desabilitadas quando a chave geral acima está desligada, para
+            deixar claro que ela manda nas duas.
+          */}
+          <div className={'border-t border-border ' + (notificationsEnabled ? '' : 'pointer-events-none opacity-50')}>
+            <div className="px-3.5 py-3">
+              <ToggleRow
+                icon={<Monitor size={15} />}
+                title="Notificações do Windows"
+                description="Caixa do sistema, aparece com o app minimizado ou em segundo plano."
+                checked={windowsNotificationsEnabled}
+                onChange={toggleWindowsNotifications}
+                disabled={!notificationsEnabled}
+              />
+            </div>
+            <div className="border-t border-border px-3.5 py-3">
+              <ToggleRow
+                icon={<Bell size={15} />}
+                title="Notificações internas"
+                description="Aviso flutuante no canto do app, aparece com a janela aberta."
+                checked={toastNotificationsEnabled}
+                onChange={toggleToastNotifications}
+                disabled={!notificationsEnabled}
+              />
+            </div>
+          </div>
         </div>
-      </Section>
+      </Card>
     </div>
   );
 }
@@ -934,50 +1102,51 @@ function PerformanceNotificationsTab({
  */
 function AboutSystemTab({ appInfo }: { appInfo: { appName: string; creator: string; version: string } | null }) {
   return (
-    <div className="flex flex-col gap-4">
-      <Section title="Aplicativo">
-        <div className="flex flex-col items-center rounded-xl border border-border px-5 py-6 text-center">
-          <div className="mb-3 h-14 w-14 overflow-hidden rounded-2xl shadow-lg">
-            <OrbiLogo size={56} />
-          </div>
-          <h3 className="text-lg font-semibold text-text">{appInfo?.appName ?? 'Orbi'}</h3>
-          <p className="mt-0.5 text-xs text-text-faint">Versão {appInfo?.version ?? ''}</p>
-          <p className="mt-3.5 max-w-md text-sm leading-7 text-text-dim">
-            O <strong className="font-semibold text-text">Orbi</strong> foi criado para centralizar e acelerar a gestão
-            das suas instâncias em um só lugar, oferecendo controle total e produtividade para o seu fluxo de trabalho.
-          </p>
-          <div className="mt-4 rounded-full border border-border px-4 py-1.5 text-sm text-text">
-            Criado por <strong className="font-semibold text-accent">{appInfo?.creator ?? 'Vinicius Braga'}</strong>
-          </div>
-        </div>
-      </Section>
+    <div className="flex flex-col gap-3">
+      <TabHeader
+        icon={<Info size={17} />}
+        title="Sobre o Sistema"
+        description="Informações do aplicativo, licença de uso e privacidade."
+      />
 
-      <Section title="Licença e uso">
-        <div className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3.5 text-[13px] leading-6 text-text-dim">
+      <section className="flex flex-col items-center rounded-xl border border-border bg-app/40 px-5 py-6 text-center">
+        <div className="mb-3 h-14 w-14 overflow-hidden rounded-2xl shadow-lg">
+          <OrbiLogo size={56} />
+        </div>
+        <h3 className="text-lg font-semibold text-text">{appInfo?.appName ?? 'Orbi'}</h3>
+        <p className="mt-0.5 text-xs text-text-faint">Versão {appInfo?.version ?? ''}</p>
+        <p className="mt-3.5 max-w-md text-sm leading-7 text-text-dim">
+          O <strong className="font-semibold text-text">Orbi</strong> foi criado para centralizar e acelerar a gestão
+          das suas instâncias em um só lugar, oferecendo controle total e produtividade para o seu fluxo de trabalho.
+        </p>
+        <div className="mt-4 rounded-full border border-border px-4 py-1.5 text-sm text-text">
+          Criado por <strong className="font-semibold text-accent">{appInfo?.creator ?? 'Vinicius Braga'}</strong>
+        </div>
+      </section>
+
+      <Card title="Licença e uso" icon={<FileText size={15} />}>
+        <div className="flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
           <p>
             Software proprietário, de uso restrito. Todos os direitos reservados ao autor. A redistribuição, a revenda e
             a modificação não são autorizadas.
           </p>
           <p>Copyright © 2026 Vinicius Braga.</p>
         </div>
-      </Section>
+      </Card>
 
-      <Section title="Privacidade">
-        <div className="flex gap-2.5 rounded-xl border border-border px-4 py-3.5">
-          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-accent" />
-          <div className="flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
-            <p>
-              Cada conta roda em uma sessão isolada, guardada apenas neste computador. Uma conta nunca enxerga os dados
-              da outra.
-            </p>
-            <p>
-              O Orbi não lê, guarda nem envia o conteúdo das suas conversas. Os números do Analytics são apenas
-              quantidades, calculadas e mantidas localmente.
-            </p>
-            <p>Nenhum dado de conversa sai da sua máquina.</p>
-          </div>
+      <Card title="Privacidade" icon={<ShieldCheck size={15} />}>
+        <div className="flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
+          <p>
+            Cada conta roda em uma sessão isolada, guardada apenas neste computador. Uma conta nunca enxerga os dados
+            da outra.
+          </p>
+          <p>
+            O Orbi não lê, guarda nem envia o conteúdo das suas conversas. Os números do Analytics são apenas
+            quantidades, calculadas e mantidas localmente.
+          </p>
+          <p>Nenhum dado de conversa sai da sua máquina.</p>
         </div>
-      </Section>
+      </Card>
     </div>
   );
 }
@@ -1019,80 +1188,70 @@ function BackupDiagnosticsTab({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <Section title="Backup das instâncias">
-        <p className="mb-3 text-xs leading-relaxed text-text-dim">
-          Salva só os nomes/cores/ordem/agrupamentos das instâncias, nunca o login ou os dados da sessão. Útil para não perder
-          a organização da lista; não substitui autenticar de novo se os dados da sessão forem apagados.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <SecondaryButton onClick={exportBackup} icon={<DownloadCloud size={14} />}>
-            Exportar backup
-          </SecondaryButton>
-          <SecondaryButton onClick={importBackup} icon={<UploadCloud size={14} />}>
-            Restaurar backup
-          </SecondaryButton>
-        </div>
-      </Section>
+    <div className="flex flex-col gap-3">
+      <TabHeader
+        icon={<DatabaseBackup size={17} />}
+        title="Backup & Diagnóstico"
+        description="Cópia da organização das instâncias, consumo do aplicativo, logs e limpeza de dados locais."
+      />
 
-      <Section title="Diagnóstico">
-        {/*
-          Fase 41: hierarquia visual — o número é o dado, então ganha destaque
-          (20px, peso 700, cor principal) e o rótulo recua para 12px em cinza
-          secundário. Antes os dois tinham peso parecido e o olho não sabia
-          onde pousar.
-        */}
-        {diagnostics && (
-          <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl border border-border px-2 py-3">
-              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.totalAccounts}</div>
-              <div className="mt-0.5 text-[12px] text-text-dim">instâncias</div>
-            </div>
-            <div className="rounded-xl border border-border px-2 py-3">
-              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.loadedAccounts}</div>
-              <div className="mt-0.5 text-[12px] text-text-dim">carregadas</div>
-            </div>
-            <div className="rounded-xl border border-border px-2 py-3">
-              <div className="text-[20px] font-bold leading-tight text-text">{formatBytes(diagnostics.logSizeBytes)}</div>
-              <div className="mt-0.5 text-[12px] text-text-dim">log</div>
-            </div>
+      <Card
+        title="Backup das instâncias"
+        icon={<DownloadCloud size={15} />}
+        description="Salva só os nomes, cores, ordem e agrupamentos das instâncias, nunca o login ou os dados da sessão. Útil para não perder a organização da lista; não substitui autenticar de novo se os dados da sessão forem apagados."
+        action={
+          <div className="flex flex-col gap-2">
+            <SecondaryButton onClick={exportBackup} icon={<DownloadCloud size={14} />}>
+              Exportar backup
+            </SecondaryButton>
+            <SecondaryButton onClick={importBackup} icon={<UploadCloud size={14} />}>
+              Restaurar backup
+            </SecondaryButton>
           </div>
-        )}
+        }
+      />
+
+      <Card
+        title="Diagnóstico"
+        icon={<FileText size={15} />}
+        description="Medido ao abrir as Configurações."
+        action={
+          <div className="flex flex-wrap justify-end gap-2">
+            <SecondaryButton onClick={() => window.multiwhats.openLogsFolder()} icon={<FileText size={14} />}>
+              Abrir pasta de logs
+            </SecondaryButton>
+            <SecondaryButton onClick={toggleLogViewer} icon={<FileText size={14} />}>
+              {logLines ? 'Ocultar log' : 'Ver últimas linhas'}
+            </SecondaryButton>
+          </div>
+        }
+      >
         {/*
           Fase 43 — consumo real de memória e CPU, medido pelo próprio
           Electron somando todos os processos do app. A CPU pode passar de
           100% porque cada núcleo ocupado conta separado.
         */}
         {diagnostics && (
-          <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl border border-border px-2 py-3">
-              <div className="text-[20px] font-bold leading-tight text-text">{formatBytes(diagnostics.memoryBytes)}</div>
-              <div className="mt-0.5 text-[12px] text-text-dim">memória</div>
-            </div>
-            <div className="rounded-xl border border-border px-2 py-3">
-              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.cpuPercent}%</div>
-              <div className="mt-0.5 text-[12px] text-text-dim">CPU</div>
-            </div>
-            <div className="rounded-xl border border-border px-2 py-3">
-              <div className="text-[20px] font-bold leading-tight text-text">{diagnostics.processCount}</div>
-              <div className="mt-0.5 text-[12px] text-text-dim">processos</div>
-            </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Metric label="Instâncias" value={String(diagnostics.totalAccounts)} hint="configuradas" />
+            <Metric label="Carregadas" value={String(diagnostics.loadedAccounts)} hint="em memória" />
+            <Metric label="Log" value={formatBytes(diagnostics.logSizeBytes)} hint="tamanho do arquivo" />
+            <Metric label="Memória" value={formatBytes(diagnostics.memoryBytes)} hint="soma dos processos" />
+            <Metric label="CPU" value={`${diagnostics.cpuPercent}%`} hint="cada núcleo conta separado" />
+            <Metric label="Processos" value={String(diagnostics.processCount)} hint="do Orbi" />
           </div>
         )}
-        <div className="flex flex-wrap gap-2">
-          <SecondaryButton onClick={() => window.multiwhats.openLogsFolder()} icon={<FileText size={14} />}>
-            Abrir pasta de logs
-          </SecondaryButton>
-          <SecondaryButton onClick={toggleLogViewer} icon={<FileText size={14} />}>
-            {logLines ? 'Ocultar log' : 'Ver últimas linhas'}
-          </SecondaryButton>
-        </div>
         {logLines && (
-          <pre className="mw-scroll mt-2.5 max-h-40 overflow-y-auto rounded-xl border border-border bg-input p-2.5 pr-3 text-[10px] leading-relaxed text-text-dim">
+          <pre
+            className={
+              'mw-scroll max-h-40 overflow-y-auto rounded-xl border border-border bg-input p-2.5 pr-3 text-[10px] leading-relaxed text-text-dim ' +
+              (diagnostics ? 'mt-2.5' : '')
+            }
+          >
             {logLines.length > 0 ? logLines.join('\n') : 'Sem entradas no log ainda.'}
           </pre>
         )}
-      </Section>
+      </Card>
 
       {/*
         Fase 52 — o cache de rede de cada instância cresce sozinho com o uso
@@ -1100,32 +1259,29 @@ function BackupDiagnosticsTab({
         disco do app. Limpar não mexe na sessão: ver o comentário do handler
         mw:clear-cache para o que é e o que não é apagado.
       */}
-      <Section title="Espaço em disco">
-        <p className="mb-2.5 text-xs leading-relaxed text-text-dim">
-          Apaga o cache de imagens e arquivos temporários de todas as instâncias. Não desconecta nenhuma conta, não pede
-          QR Code e não apaga conversas, configurações ou o histórico do Analytics. Depois de limpar, cada instância
-          demora um pouco mais para abrir na primeira vez.
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
+      <Card
+        title="Espaço em disco"
+        icon={<Trash2 size={15} />}
+        description="Apaga o cache de imagens e arquivos temporários de todas as instâncias. Não desconecta nenhuma conta, não pede QR Code e não apaga conversas, configurações ou o histórico do Analytics. Depois de limpar, cada instância demora um pouco mais para abrir na primeira vez."
+        action={
           <SecondaryButton onClick={clearCache} icon={<Trash2 size={14} />}>
             {clearingCache ? 'Limpando…' : 'Limpar cache'}
           </SecondaryButton>
-          {cacheResult && <span className="text-[12.5px] text-text-dim">{cacheResult}</span>}
-        </div>
-      </Section>
+        }
+      >
+        {cacheResult && <p className="text-[12.5px] text-text-dim">{cacheResult}</p>}
+      </Card>
 
-      <Section title="Analytics">
-        <p className="mb-3 text-xs leading-relaxed text-text-dim">
-          Apaga todo o histórico de mensagens contabilizado na aba Analytics (eventos e a última contagem salva de cada
-          instância). Não afeta as instâncias, conversas ou dados de login — é só o histórico de métricas local. Essa ação
-          não pode ser desfeita.
-        </p>
-        <div className="flex flex-wrap gap-2">
+      <Card
+        title="Histórico do Analytics"
+        icon={<Trash2 size={15} />}
+        description="Apaga todo o histórico de mensagens contabilizado na aba Analytics (eventos e a última contagem salva de cada instância). Não afeta as instâncias, conversas ou dados de login: é só o histórico de métricas local. Essa ação não pode ser desfeita."
+        action={
           <SecondaryButton onClick={clearAnalytics} icon={<Trash2 size={14} />}>
             Apagar histórico do Analytics
           </SecondaryButton>
-        </div>
-      </Section>
+        }
+      />
     </div>
   );
 }
@@ -1150,15 +1306,25 @@ function UpdatesTab({
   onInstall: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <Section title="Versão instalada">
-        <div className="flex items-center justify-between rounded-lg border border-border px-3.5 py-2.5">
-          <span className="text-sm text-text">Orbi</span>
-          <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12px] font-medium text-text-dim">v{version}</span>
-        </div>
-      </Section>
+    <div className="flex flex-col gap-3">
+      <TabHeader
+        icon={<RefreshCw size={17} />}
+        title="Atualizações"
+        description="O Orbi verifica sozinho ao abrir e a cada 4 horas. Baixar e instalar só acontece com o seu clique."
+      />
 
-      <Section title="Atualização">
+      <Card
+        title="Versão instalada"
+        icon={<Info size={15} />}
+        description="Orbi"
+        action={
+          <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12px] font-medium text-text-dim">v{version}</span>
+        }
+      />
+
+      {/* Fase 65: os estados abaixo são exatamente os mesmos de antes; só
+          passaram a morar dentro de um cartão. */}
+      <Card title="Atualização" icon={<DownloadCloudIcon size={15} />}>
         {updateState.phase === 'idle' && (
           <p className="text-xs text-text-dim">Ainda não verificado nesta sessão.</p>
         )}
@@ -1234,7 +1400,7 @@ function UpdatesTab({
             </SecondaryButton>
           </div>
         )}
-      </Section>
+      </Card>
     </div>
   );
 }
