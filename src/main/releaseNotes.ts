@@ -498,6 +498,11 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Atividade das instâncias: um card só, com os botões Hoje e Ontem, duas colunas e a linha de total embaixo.',
     '• Os números e a forma de contar não mudaram.',
   ].join('\n'),
+  '0.48.4': [
+    'Analytics: espaço entre os dois quadros de Atividade das instâncias',
+    '',
+    '• As duas colunas agora são quadros separados, com um espaçamento leve entre eles.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

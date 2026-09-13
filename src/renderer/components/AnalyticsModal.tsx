@@ -519,9 +519,9 @@ function AtividadeCard({
           Sem novas interações.
         </div>
       ) : (
-        <div className="grid grid-cols-2 rounded-lg border border-border">
-          <div className="min-w-0 p-3">{tabela(colunas[0])}</div>
-          <div className="min-w-0 border-l border-border p-3">{tabela(colunas[1])}</div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="min-w-0 rounded-lg border border-border p-3">{tabela(colunas[0])}</div>
+          <div className="min-w-0 rounded-lg border border-border p-3">{tabela(colunas[1])}</div>
         </div>
       )}
 
