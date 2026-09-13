@@ -476,8 +476,7 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Diagnóstico: quadros com ícone e barra, incluindo quanto da memória do computador o Orbi usa. Os números se atualizam a cada 2 segundos.',
     '• Agenda: barra única no topo, coluna lateral com calendário, próximos compromissos e contagem por categoria, e marcação de hoje e feriados no mês.',
     '• Nenhuma função foi removida. Contagem de mensagens e navegação não foram alteradas.',
-  ].join('
-'),
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
