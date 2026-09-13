@@ -55,7 +55,7 @@ export const ICON_SIZE_SPECS: Record<
   small: {
     rowAvatar: 20,
     rowGlyph: 13,
-    rowStatusDot: 9,
+    rowStatusDot: 6,
     rowNameText: 'text-[14px]',
     rowStatusText: 'text-[12px]',
     rowPadX: 'px-1.5',
@@ -72,7 +72,7 @@ export const ICON_SIZE_SPECS: Record<
   medium: {
     rowAvatar: 22,
     rowGlyph: 14,
-    rowStatusDot: 9,
+    rowStatusDot: 7,
     rowNameText: 'text-[15px]',
     rowStatusText: 'text-[12px]',
     rowPadX: 'px-1.5',
@@ -89,7 +89,7 @@ export const ICON_SIZE_SPECS: Record<
   large: {
     rowAvatar: 24,
     rowGlyph: 15,
-    rowStatusDot: 10,
+    rowStatusDot: 8,
     rowNameText: 'text-[15.5px]',
     rowStatusText: 'text-[12.5px]',
     rowPadX: 'px-1.5',
@@ -308,7 +308,7 @@ export function AccountItem({
             </div>
             {/* Bolinha de status no canto inferior direito do ícone. */}
             <span
-              className={'absolute -bottom-1 -right-1 rounded-full border-[1.5px] border-sidebar ' + statusDotClass(account, status)}
+              className={'absolute -bottom-0.5 -right-0.5 rounded-full border border-sidebar ' + statusDotClass(account, status)}
               style={{ width: spec.rowStatusDot, height: spec.rowStatusDot, boxShadow: 'none' }}
             />
           </div>

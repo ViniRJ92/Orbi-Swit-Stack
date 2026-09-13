@@ -526,6 +526,11 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• A bolinha de status voltou para o canto inferior direito do ícone de cada instância.',
     '• O status embaixo do nome agora começa alinhado com o ícone.',
   ].join('\n'),
+  '0.48.8': [
+    'Barra de contas: bolinha de status menor',
+    '',
+    '• A bolinha no canto do ícone ficou menor e acompanha o tamanho escolhido: pequeno, médio ou grande.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
