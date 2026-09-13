@@ -512,6 +512,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Instâncias conectadas mostram só o nome. Aguardando QR Code e outros estados aparecem embaixo.',
     '• Nomes e status aparecem inteiros, e a estrela de favorito não empurra mais o nome.',
   ].join('\n'),
+  '0.48.6': [
+    'Barra de contas: filtro recolhível e novo encaixe das instâncias',
+    '',
+    '• Botão de filtros ao lado de Contas. Ele abre a busca e os filtros Todas, Conectadas, Suspensas e Erro, com a contagem de cada um.',
+    '• Cada instância mostra bolinha de status, ícone pequeno, nome e contador na mesma linha. O status fica embaixo, começando sob o ícone.',
+    '• O encaixe vale para os tamanhos de ícone pequeno, médio e grande.',
+    '• Instâncias aguardando QR Code aparecem com a bolinha azul.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

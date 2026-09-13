@@ -53,14 +53,14 @@ export const ICON_SIZE_SPECS: Record<
   }
 > = {
   small: {
-    rowAvatar: 30,
-    rowGlyph: 14,
-    rowStatusDot: 9,
-    rowNameText: 'text-[12px]',
-    rowStatusText: 'text-[10px]',
-    rowPadX: 'px-2',
-    rowPadY: 'py-0.5',
-    rowGap: 'gap-2',
+    rowAvatar: 20,
+    rowGlyph: 13,
+    rowStatusDot: 8,
+    rowNameText: 'text-[14px]',
+    rowStatusText: 'text-[12px]',
+    rowPadX: 'px-1.5',
+    rowPadY: 'py-1',
+    rowGap: 'gap-1.5',
     tileAvatar: 22,
     tileGlyph: 10,
     tileStatusDot: 7,
@@ -73,8 +73,8 @@ export const ICON_SIZE_SPECS: Record<
     rowAvatar: 22,
     rowGlyph: 14,
     rowStatusDot: 8,
-    rowNameText: 'text-[14px]',
-    rowStatusText: 'text-[10.5px]',
+    rowNameText: 'text-[15px]',
+    rowStatusText: 'text-[12px]',
     rowPadX: 'px-1.5',
     rowPadY: 'py-1',
     rowGap: 'gap-1.5',
@@ -90,11 +90,11 @@ export const ICON_SIZE_SPECS: Record<
     rowAvatar: 24,
     rowGlyph: 15,
     rowStatusDot: 8,
-    rowNameText: 'text-[14px]',
-    rowStatusText: 'text-[10.5px]',
+    rowNameText: 'text-[15.5px]',
+    rowStatusText: 'text-[12.5px]',
     rowPadX: 'px-1.5',
     rowPadY: 'py-1.5',
-    rowGap: 'gap-1',
+    rowGap: 'gap-1.5',
     tileAvatar: 38,
     tileGlyph: 18,
     tileStatusDot: 12,
@@ -112,10 +112,12 @@ export const ICON_SIZE_SPECS: Record<
 // — mesmo cuidado de sincronia manual já documentado nessas constantes.
 const TILE_BADGE_HEADROOM = 6;
 
-function statusDotClass(status: AccountStatus | undefined): string {
+function statusDotClass(account: AccountRecord, status: AccountStatus | undefined): string {
   if (status?.loadError) return 'bg-danger';
   if (status?.suspended) return 'bg-text-faint';
   if (status?.isOnline) return 'bg-accent accent-glow';
+  // Fase 74: mesmo caso em que o texto mostra "Aguardando QR Code" (ver accountStatusLabel.ts).
+  if (account.service === 'whatsapp' && !account.phone) return 'bg-cyan-400 shadow-[0_0_0_3px_rgb(34_211_238/0.18)]';
   return 'bg-text-faint';
 }
 
@@ -230,7 +232,7 @@ export function AccountItem({
               )}
             </div>
             <span
-              className={'absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-sidebar ' + statusDotClass(status)}
+              className={'absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-sidebar ' + statusDotClass(account, status)}
               style={{ width: spec.tileStatusDot, height: spec.tileStatusDot }}
             />
             {account.favorite && (
@@ -279,7 +281,7 @@ export function AccountItem({
         exit={{ opacity: 0, x: -12 }}
         transition={{ duration: 0.18 }}
         className={
-          `group relative flex cursor-pointer items-center rounded-xl transition-colors ${spec.rowGap} ${spec.rowPadX} ${spec.rowPadY} ` +
+          `group relative flex cursor-pointer flex-col rounded-xl transition-colors ${spec.rowPadX} ${spec.rowPadY} ` +
           (isActive ? 'bg-surface mw-selected' : status?.loadError ? 'bg-danger/5' : 'hover:bg-surface-hover') +
           (drag?.isOver ? ' ring-1 ring-accent' : '')
         }
@@ -288,17 +290,18 @@ export function AccountItem({
       >
         {isActive && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full accent-gradient" />}
 
-        <span
-          className={'shrink-0 rounded-full ' + statusDotClass(status)}
-          style={{ width: spec.rowStatusDot, height: spec.rowStatusDot }}
-        />
-        <div className="relative shrink-0">
+        {/* Fase 74 — encaixe da referência: linha de cima com bolinha, ícone
+            pequeno, nome e contador; o status (quando existe) vai na linha de
+            baixo começando embaixo do ícone, com a largura quase toda da
+            linha. Instância conectada fica só com a linha de cima. */}
+        <div className={'flex min-w-0 items-center ' + spec.rowGap}>
+          <span
+            className={'shrink-0 rounded-full ' + statusDotClass(account, status)}
+            style={{ width: spec.rowStatusDot, height: spec.rowStatusDot }}
+          />
           <div
-            className="flex items-center justify-center overflow-hidden rounded-md bg-surface-hover"
-            style={{
-              width: spec.rowAvatar,
-              height: spec.rowAvatar,
-            }}
+            className="flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-hover"
+            style={{ width: spec.rowAvatar, height: spec.rowAvatar }}
           >
             {account.iconDataUrl ? (
               <img src={account.iconDataUrl} alt="" className="h-full w-full object-cover" />
@@ -306,20 +309,26 @@ export function AccountItem({
               <ServiceGlyph service={account.service} size={spec.rowGlyph} color={account.color} />
             )}
           </div>
-        </div>
-
-        {/* Fase 72 — nome mais compacto: quando a instância está conectada
-            (ou aberta), a segunda linha some e o nome fica sozinho ao lado do
-            ícone. Estados que pedem atenção (Aguardando QR Code, Falha,
-            Suspensa, telefone) continuam na segunda linha, como antes. O atalho
-            Ctrl+N só ocupa espaço quando o mouse está em cima. */}
-        <div className="min-w-0 flex-1">
-          <div className={'flex items-center gap-1 font-semibold leading-tight text-text ' + spec.rowNameText}>
+          <div className={'flex min-w-0 flex-1 items-center gap-1 font-semibold leading-tight text-text ' + spec.rowNameText}>
             {account.favorite && <Star size={11} className="shrink-0 text-accent" fill="currentColor" />}
             <span className="truncate">{account.name}</span>
           </div>
-          {mostrarSegundaLinha && (
-          <div className={'mt-0.5 flex items-center gap-1.5 leading-tight ' + spec.rowStatusText + ' ' + (status?.loadError ? 'text-danger' : 'text-text-dim')}>
+          {!!status && status.unreadCount > 0 && (
+            <motion.span
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="shrink-0 rounded-full accent-gradient px-1.5 py-0.5 text-[11px] font-bold leading-none text-accent-contrast"
+            >
+              {status.unreadCount}
+            </motion.span>
+          )}
+        </div>
+
+        {mostrarSegundaLinha && (
+          <div
+            className={'mt-0.5 flex min-w-0 items-center gap-1.5 leading-tight ' + spec.rowStatusText + ' ' + (status?.loadError ? 'text-danger' : 'text-text-dim')}
+            style={{ paddingLeft: spec.rowStatusDot + 6 }}
+          >
             <span className="truncate">{statusLabel}</span>
             {status?.loadError && (
               <button
@@ -334,17 +343,6 @@ export function AccountItem({
               </button>
             )}
           </div>
-          )}
-        </div>
-
-        {!!status && status.unreadCount > 0 && (
-          <motion.span
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="rounded-full accent-gradient px-1.5 py-0.5 text-[11px] font-bold text-accent-contrast"
-          >
-            {status.unreadCount}
-          </motion.span>
         )}
 
         <button

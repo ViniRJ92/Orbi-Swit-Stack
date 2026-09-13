@@ -26,12 +26,11 @@
  * continua fora de escopo, ver decisão de escopo no rodapé.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Folder, Plus, Search } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Folder, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { AccountRecord, IconSize, SidebarPosition } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { AccountItem } from './AccountItem';
-import { AccountFilterSelect } from './AccountFilterSelect';
 import { FILTERS, FilterKey, useFilterCounts, useFilteredAccounts } from '../useFilteredAccounts';
 import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, clampSidebarWidth } from '../constants';
 
@@ -80,6 +79,8 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
   const reorderGroups = useAppStore((s) => s.reorderGroups);
   const iconSize = useAppStore((s) => s.iconSize);
   const [filter, setFilter] = useState<FilterKey>('all');
+  // Fase 73: painel de busca e filtros do modo vertical, aberto pelo botão ao lado de "Contas".
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);
@@ -592,35 +593,58 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
         }
         title="Redimensionar barra lateral"
       />
+      {/*
+        Fase 73: título "Contas" com o botão de filtros ao lado. Clicar abre
+        a busca e os quatro filtros (Todas, Conectadas, Suspensas, Erro) com
+        a contagem de cada um; clicar de novo recolhe. A busca e o filtro
+        usam o mesmo estado e a mesma lógica de antes (searchQuery, filter,
+        useFilterCounts), só a apresentação mudou.
+      */}
       <div className="flex items-center justify-between px-4 pb-2">
-        <span className="text-[11px] font-bold tracking-wider text-text-faint">CONTAS</span>
+        <span className="text-[15px] font-semibold text-text">Contas</span>
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          aria-pressed={filtersOpen}
+          title={filtersOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+          className={
+            'flex h-7 w-7 items-center justify-center rounded-md transition-colors ' +
+            (filtersOpen ? 'bg-accent/15 text-accent' : 'text-text-dim hover:bg-surface-hover hover:text-text')
+          }
+        >
+          <SlidersHorizontal size={15} />
+        </button>
       </div>
 
-      <div className="px-3 pb-2">
-        <div className="relative">
-          <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar conta..."
-            className="w-full rounded-lg border border-border bg-input py-1.5 pl-7 pr-2 text-xs text-text placeholder:text-text-faint focus:border-accent"
-          />
+      {filtersOpen && (
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar conta..."
+              className="w-full rounded-lg border border-border bg-input py-1.5 pl-7 pr-2 text-xs text-text placeholder:text-text-faint focus:border-accent"
+            />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-1">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                aria-pressed={filter === f.key}
+                className={
+                  'flex min-w-0 items-center justify-between gap-1 rounded-md px-1.5 py-1 text-[12px] transition-colors ' +
+                  (filter === f.key ? 'bg-accent/15 font-semibold text-accent' : 'text-text hover:bg-surface-hover')
+                }
+              >
+                <span className="whitespace-nowrap">{f.label}</span>
+                <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-text-faint">{filterCounts[f.key]}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        {/*
-          Fase 56: as quatro abas horizontais viraram um menu suspenso. Elas
-          não cabiam numa barra lateral estreita: na Fase 41 já tinham
-          deixado de quebrar linha para deslizar na horizontal, mas os
-          rótulos continuavam cortados. O seletor ocupa a largura inteira em
-          qualquer largura de sidebar e encurta o texto com reticências.
-        */}
-        <AccountFilterSelect
-          value={filter}
-          onChange={setFilter}
-          counts={filterCounts}
-          className="mt-2 w-full"
-        />
-      </div>
+      )}
 
       {accountsArea}
 
