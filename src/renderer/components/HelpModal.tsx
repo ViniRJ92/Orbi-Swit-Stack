@@ -171,7 +171,7 @@ const SECTIONS: HelpSection[] = [
           <ul className="flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
             <li>
               <strong className="font-semibold text-text">Interações</strong>: quantas pessoas diferentes mandaram pelo
-              menos uma mensagem para cada instância no período. Se a mesma pessoa mandar vinte mensagens, continua
+              menos uma mensagem para cada instância no período, em conversas abertas no Orbi. Se a mesma pessoa mandar vinte mensagens, continua
               sendo uma interação. A mesma pessoa falando com duas instâncias conta uma vez em cada uma.
             </li>
             <li>
@@ -257,19 +257,28 @@ const SECTIONS: HelpSection[] = [
             <Passo n={1}>Escolha o período no topo: hoje, últimos 7 ou 30 dias, ou um intervalo personalizado.</Passo>
             <Passo n={2}>Use o seletor de agrupamento para ver só um grupo de instâncias.</Passo>
             <Passo n={3}>Ligue "Comparar com período anterior" para ver se subiu ou caiu.</Passo>
-            <Passo n={4}>Clique em CSV para salvar o período num arquivo que abre no Excel.</Passo>
+            <Passo n={4}>
+              Clique em CSV para salvar o período num arquivo que abre no Excel. O arquivo traz as mensagens por instância
+              e, logo abaixo, a Classificação das interações do mesmo período.
+            </Passo>
           </ol>
         </Bloco>
 
-        <Bloco title="Por que abrir a conversa melhora a contagem">
+        <Bloco title="Como as mensagens são contadas">
           <p className="text-[13px] leading-6 text-text-dim">
-            Com a conversa fechada, o aplicativo só enxerga o aviso de não lidas da lista lateral, que é uma estimativa.
-            Ao abrir a conversa, ele lê cada mensagem individualmente e corrige o número daquele dia. Por isso o valor
-            pode subir depois que você abre uma conversa.
+            O Analytics conta só conversas abertas no Orbi. Ao abrir uma conversa, cada balão de mensagem de hoje e de
+            ontem é contado uma única vez: reabrir a conversa não soma de novo, e cada mensagem nova que chegar depois
+            soma mais uma. As mensagens do contato entram em Recebidas, e as suas respostas em Enviadas.
           </p>
+          <ul className="mt-2 flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
+            <li>Conversa que nunca foi aberta no Orbi não entra na contagem. O aviso de não lidas da lista não é usado.</li>
+            <li>Mensagem mais antiga que ontem, no momento em que a conversa é aberta, não é contada.</li>
+            <li>Chamada perdida, mensagem apagada e avisos do WhatsApp não contam como mensagem.</li>
+          </ul>
           <Aviso>
-            Mensagem enviada só é contada nas conversas que você abre. Em conversa fechada o WhatsApp não mostra nada
-            sobre envios, então a coluna "Enviadas" fica em zero até você abrir.
+            Quando alguma instância fica desconectada, suspensa ou com o Orbi fechado em parte do período, aparece no topo
+            do Analytics a faixa "Dados parciais", com o nome das instâncias. Nesse caso os números podem estar abaixo do
+            real.
           </Aviso>
         </Bloco>
 

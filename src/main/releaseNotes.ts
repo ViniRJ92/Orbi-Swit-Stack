@@ -555,6 +555,15 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Atividade das instâncias continua só com Hoje e Ontem.',
     '• Saiu o selo de soma do card de Classificação. O total segue no texto e na tabela.',
   ].join('\n'),
+  '0.49.2': [
+    'Analytics: só números confirmados',
+    '',
+    '• O Analytics conta só conversas abertas no Orbi, balão por balão. A estimativa pelas não lidas da lista saiu, porque gerava picos de mensagens que não existiam.',
+    '• Chamada perdida, mensagem apagada e avisos do WhatsApp não contam mais como mensagem recebida.',
+    '• Nova faixa Dados parciais avisa quando instâncias de WhatsApp ficaram sem registro em parte do período.',
+    '• O CSV traz também a Classificação das interações.',
+    '• A Ajuda explica como as mensagens são contadas.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

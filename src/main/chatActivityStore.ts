@@ -315,18 +315,11 @@ export class ChatActivityStore {
       // Fica marcado como 'b' (estimativa): abrir a conversa depois descarta
       // isto e regrava o número exato pelos balões.
       // Rótulo mais antigo que ontem nunca semeia — seriam mensagens velhas.
-      if (!hadBaseline && value > 0 && (dateTag === 'today' || dateTag === 'yesterday')) {
-        this.data.events.push({
-          t: Date.now(),
-          day: resolveDay(dateTag),
-          a: accountId,
-          k: chatKey,
-          c: value,
-          s: 'b',
-          d: 'in',
-        });
-        changed = true;
-      }
+      // Fase 80 — a estimativa pela lista ('b') deixou de ser gravada, a
+      // pedido do usuário: gerava picos de mensagens que não existiam em
+      // conversas nunca abertas. Só a leitura balão a balão da conversa
+      // aberta ('l') entra nas métricas. A baseline acima continua sendo
+      // mantida normalmente.
     } else {
       const previous = accountMap[chatKey] ?? value;
       if (value !== previous) {
@@ -334,13 +327,8 @@ export class ChatActivityStore {
         this.data.lastSeen[accountId] = accountMap;
         changed = true;
       }
-      const delta = value - previous;
-      if (delta > 0) {
-        // Fase 33: marcado como 'b' (estimativa por badge). Se a conversa for
-        // aberta depois, `recordChatMessages` descarta estes eventos e
-        // reescreve o dia pelo que os balões mostram.
-        this.data.events.push({ t: Date.now(), day: resolveDay(dateTag), a: accountId, k: chatKey, c: delta, s: 'b', d: 'in' });
-      }
+      // Fase 80 — aumento de não lidas na lista não grava mais estimativa
+      // ('b'); só atualiza a baseline acima. Ver comentário no ramo de grace.
     }
 
     if (changed) {
@@ -486,6 +474,9 @@ export class ChatActivityStore {
 
     for (const e of this.data.events) {
       if (e.day !== day) continue;
+      // Fase 80 — só balão confirmado em conversa aberta. Estimativas antigas
+      // pela lista ('b' ou sem origem) ficam no arquivo, mas fora da conta.
+      if (e.s !== 'l') continue;
       // Fase 40: evento sem direção veio de versão anterior à separação —
       // conta como recebida, que era a intenção original daquele código.
       if (e.d === 'out') {
@@ -576,6 +567,8 @@ export class ChatActivityStore {
 
     for (const e of this.data.events) {
       if (!allowed.has(e.a)) continue;
+      // Fase 80 — mesma regra de buildDayReport: só balão confirmado.
+      if (e.s !== 'l') continue;
       // Comparação de string funciona porque a chave é AAAA-MM-DD (ordem
       // lexicográfica = ordem cronológica).
       if (e.day < startDay || e.day > endDay) continue;
@@ -621,6 +614,6 @@ export class ChatActivityStore {
    * mensagem recebida (evento sem direção conta como recebida).
    */
   getInboundDays(): { a: string; k: string; day: string }[] {
-    return this.data.events.filter((e) => e.d !== 'out').map((e) => ({ a: e.a, k: e.k, day: e.day }));
+    return this.data.events.filter((e) => e.s === 'l' && e.d !== 'out').map((e) => ({ a: e.a, k: e.k, day: e.day }));
   }
 }

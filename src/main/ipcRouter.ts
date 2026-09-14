@@ -28,6 +28,7 @@ import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
 import { InteractionHistoryStore } from './interactionHistoryStore';
 import { buildInteractionClassification } from './interactionClassification';
+import { getCoverageStore } from './coverageStore';
 import { CalendarStore, CalendarEvent } from './calendarStore';
 import { holidaysBetween } from './holidays';
 import { UpdateManager } from './updateManager';
@@ -590,6 +591,13 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     return buildInteractionClassification(range, accounts, interactionHistory.getDays());
   });
 
+  // Fase 80 — cobertura: quais instâncias WhatsApp ficaram sem ser observadas
+  // em parte do período. Só leitura, não altera número nenhum.
+  ipcMain.handle('mw:get-coverage', (_evt, range: AnalyticsRange, groupId?: string | null) => {
+    const accounts = accountsForGroup(groupId).filter((a) => accountStore.get(a.id)?.service === 'whatsapp');
+    return getCoverageStore().summary(range, accounts);
+  });
+
   ipcMain.handle('mw:get-chat-activity-daily', (_evt, groupId?: string | null) => {
     const accounts = accountsForGroup(groupId);
     const empty = { totalConversations: 0, totalMessages: 0, totalReceived: 0, totalSent: 0, byAccount: [] };
@@ -616,6 +624,23 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
       ...summary.byAccount.map((a) => `${a.name.replace(/;/g, ',')};${a.received};${a.sent};${a.total}`),
       `TOTAL;${summary.totalReceived};${summary.totalSent};${summary.totalVolume}`,
     ];
+
+    // Fase 79 — bloco extra com a Classificação das Interações do mesmo
+    // período e agrupamento, vindo da mesma função do card. O bloco acima
+    // continua exatamente igual.
+    syncInteractionHistory();
+    const classificacao = buildInteractionClassification(range, accounts, interactionHistory.getDays());
+    if (classificacao.total > 0) {
+      const c = (x: { nova: number; recorrente: number; frequente: number; esporadica: number; reativada: number }) =>
+        `${x.nova};${x.recorrente};${x.frequente};${x.esporadica};${x.reativada}`;
+      linhas.push(
+        '',
+        'Classificacao das interacoes',
+        'Instancia;Novas;Recorrentes;Frequentes;Esporadicas;Reativadas;Interacoes',
+        ...classificacao.byAccount.map((a) => `${a.name.replace(/;/g, ',')};${c(a.counts)};${a.total}`),
+        `TOTAL;${c(classificacao.counts)};${classificacao.total}`
+      );
+    }
 
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: 'Exportar Analytics',

@@ -20,6 +20,7 @@ import { InteractionDays, dayKey } from './interactionClassification';
 
 const STORE_FILE = 'interactionHistory.json';
 const RETENTION_DAYS = 180;
+const HISTORY_VERSION = 2;
 
 export class InteractionHistoryStore {
   private readonly filePath: string;
@@ -34,7 +35,12 @@ export class InteractionHistoryStore {
     try {
       if (fs.existsSync(this.filePath)) {
         const parsed = JSON.parse(fs.readFileSync(this.filePath, 'utf-8'));
-        if (parsed && typeof parsed.days === 'object' && parsed.days) return parsed.days as InteractionDays;
+        // Fase 80 — versão 2 = só dias de conversa aberta. Arquivo antigo
+        // (com dias vindos da estimativa pela lista) recomeça vazio e é
+        // preenchido de novo pelo sync, a partir dos eventos confirmados.
+        if (parsed && parsed.version === HISTORY_VERSION && typeof parsed.days === 'object' && parsed.days) {
+          return parsed.days as InteractionDays;
+        }
       }
     } catch (err) {
       console.error('[InteractionHistoryStore] Falha ao ler interactionHistory.json, iniciando vazio:', err);
@@ -45,7 +51,7 @@ export class InteractionHistoryStore {
   private persist(): void {
     try {
       const tmpPath = `${this.filePath}.tmp`;
-      fs.writeFileSync(tmpPath, JSON.stringify({ days: this.days }), 'utf-8');
+      fs.writeFileSync(tmpPath, JSON.stringify({ version: HISTORY_VERSION, days: this.days }), 'utf-8');
       fs.renameSync(tmpPath, this.filePath);
     } catch (err) {
       console.error('[InteractionHistoryStore] Falha ao salvar interactionHistory.json:', err);

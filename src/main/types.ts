@@ -107,6 +107,15 @@ export interface AnalyticsAccountTotal {
  * para o renderer) — mantém o IPC leve e os gráficos rápidos de renderizar
  * independentemente de quantos eventos existam no histórico local.
  */
+/** Fase 80 — cobertura do Analytics (ver coverageStore.ts). */
+export interface CoverageSummary {
+  /** Leituras feitas pelo app no período (0 = app não rodou, sem aviso). */
+  totalTicks: number;
+  totalAccounts: number;
+  /** Instâncias observadas em menos de 90% das leituras, da menos para a mais coberta. */
+  partial: { accountId: string; name: string; fraction: number }[];
+}
+
 /** Fase 77 — Classificação das Interações (ver interactionClassification.ts). */
 export type InteractionCategory = 'nova' | 'recorrente' | 'frequente' | 'esporadica' | 'reativada';
 export type InteractionCategoryCounts = Record<InteractionCategory, number>;
