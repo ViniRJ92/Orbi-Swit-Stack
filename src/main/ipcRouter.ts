@@ -26,6 +26,8 @@ import {
 } from './settingsStore';
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
+import { InteractionHistoryStore } from './interactionHistoryStore';
+import { buildInteractionClassification } from './interactionClassification';
 import { CalendarStore, CalendarEvent } from './calendarStore';
 import { holidaysBetween } from './holidays';
 import { UpdateManager } from './updateManager';
@@ -111,6 +113,16 @@ function dateStampForFile(ts: number): string {
 export function registerIpcHandlers(deps: IpcRouterDeps): void {
   const { accountStore, accountManager, groupStore, settingsStore, analyticsStore, chatActivityStore, calendarStore } = deps;
 
+  // Fase 77 — histórico da Classificação das Interações. Copia os dias do
+  // chatActivityStore ao iniciar e a cada hora, para nada se perder quando o
+  // chatActivity.json podar eventos de mais de 30 dias.
+  const interactionHistory = new InteractionHistoryStore();
+  const syncInteractionHistory = () => {
+    if (chatActivityStore) interactionHistory.sync(chatActivityStore.getInboundDays());
+  };
+  syncInteractionHistory();
+  setInterval(syncInteractionHistory, 60 * 60 * 1000);
+
   ipcMain.handle('mw:get-app-info', () => ({
     appName: deps.appName,
     creator: deps.creatorName,
@@ -184,6 +196,7 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     deps.forgetNotificationState(id);
     analyticsStore.forget(id);
     chatActivityStore?.forget(id);
+    interactionHistory.forget(id);
     // Fase 54: compromissos vinculados a esta conta perdem só o vínculo. O
     // compromisso em si é do usuário e continua na agenda.
     calendarStore.forgetAccount(id);
@@ -568,6 +581,15 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
 
   // Fase 28: relatório fixo de Hoje x Ontem por instância — não depende do
   // seletor de período geral do Analytics (ver chatActivityStore.ts).
+  // Fase 77 — Classificação das Interações: camada nova e separada. Só lê os
+  // eventos do chatActivityStore para alimentar o próprio histórico; nenhum
+  // número das métricas acima é recalculado ou alterado.
+  ipcMain.handle('mw:get-interaction-classification', (_evt, range: AnalyticsRange, groupId?: string | null) => {
+    const accounts = accountsForGroup(groupId);
+    syncInteractionHistory();
+    return buildInteractionClassification(range, accounts, interactionHistory.getDays());
+  });
+
   ipcMain.handle('mw:get-chat-activity-daily', (_evt, groupId?: string | null) => {
     const accounts = accountsForGroup(groupId);
     const empty = { totalConversations: 0, totalMessages: 0, totalReceived: 0, totalSent: 0, byAccount: [] };
@@ -647,6 +669,7 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   ipcMain.handle('mw:clear-analytics', () => {
     analyticsStore.clear();
     chatActivityStore?.clear();
+    interactionHistory.clear();
     // Fase 33.2: zera também a memória DENTRO de cada instância (quais balões
     // já foram reportados). Sem isto o "limpar" seria parcial e a conversa
     // aberta no momento ficaria sem ser contada até trocar de conversa ou

@@ -14,7 +14,23 @@
  */
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BarChart3, Bell, HelpCircle, Keyboard, LayoutGrid, Mail, MessageCircle, Rocket, Settings, X } from 'lucide-react';
+import {
+  BarChart3,
+  Bell,
+  CircleDashed,
+  HelpCircle,
+  Keyboard,
+  LayoutGrid,
+  Mail,
+  MessageCircle,
+  RefreshCw,
+  Rocket,
+  RotateCcw,
+  Settings,
+  UserPlus,
+  X,
+  Zap,
+} from 'lucide-react';
 
 /** Fase 51 — contatos do suporte, exibidos como texto no card do rodapé. */
 const SUPORTE_WHATSAPP_EXIBICAO = '(21) 97161-2853';
@@ -154,19 +170,81 @@ const SECTIONS: HelpSection[] = [
         <Bloco title="Entendendo os números">
           <ul className="flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
             <li>
-              <strong className="font-semibold text-text">Interações</strong>: quantas pessoas diferentes falaram com
-              você no dia. Se a mesma pessoa mandar vinte mensagens, continua sendo uma interação.
+              <strong className="font-semibold text-text">Interações</strong>: quantas pessoas diferentes mandaram pelo
+              menos uma mensagem para cada instância no período. Se a mesma pessoa mandar vinte mensagens, continua
+              sendo uma interação. A mesma pessoa falando com duas instâncias conta uma vez em cada uma.
             </li>
             <li>
-              <strong className="font-semibold text-text">Recebidas</strong>: mensagens que chegaram até você.
+              <strong className="font-semibold text-text">Recebidas</strong>: cada mensagem que chegou do contato.
             </li>
             <li>
-              <strong className="font-semibold text-text">Enviadas</strong>: mensagens que saíram da sua operação.
+              <strong className="font-semibold text-text">Enviadas</strong>: cada mensagem que saiu da sua operação.
+              Mandar mensagem para alguém que não respondeu não cria interação.
             </li>
             <li>
               <strong className="font-semibold text-text">Volume total</strong>: recebidas mais enviadas.
             </li>
           </ul>
+          <Aviso>
+            Interação conta pessoas. Recebidas, Enviadas e Volume total contam mensagens. Por isso uma instância pode
+            ter 5 interações e 80 mensagens no mesmo dia.
+          </Aviso>
+        </Bloco>
+
+        <Bloco title="Classificação das interações">
+          <p className="text-[13px] leading-6 text-text-dim">
+            O card "Classificação das interações" pega as mesmas interações do período e mostra o tipo de cada uma, pelo
+            histórico do contato. É uma camada a mais: não muda o número de Interações, Recebidas ou Enviadas. Cada
+            contato entra em uma categoria só, então a soma das cinco é sempre o total de interações do período.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
+            <li className="flex gap-2">
+              <UserPlus size={14} className="mt-1 shrink-0" style={{ color: '#25D366' }} />
+              <span>
+                <strong className="font-semibold text-text">Novas</strong>: primeira interação registrada daquele contato
+                naquela instância. Não importa quantas mensagens ele mandou.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <RotateCcw size={14} className="mt-1 shrink-0" style={{ color: '#3AA0E8' }} />
+              <span>
+                <strong className="font-semibold text-text">Reativadas</strong>: o contato já tinha histórico, ficou 30
+                dias ou mais sem interagir e voltou.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <Zap size={14} className="mt-1 shrink-0" style={{ color: '#8B6FF5' }} />
+              <span>
+                <strong className="font-semibold text-text">Frequentes</strong>: interagiu em 4 dias diferentes ou mais nos
+                30 dias anteriores.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <CircleDashed size={14} className="mt-1 shrink-0" style={{ color: '#F29A38' }} />
+              <span>
+                <strong className="font-semibold text-text">Esporádicas</strong>: já interagiu pelo menos 2 vezes antes,
+                mas com intervalo médio de 10 dias ou mais entre um contato e outro.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <RefreshCw size={14} className="mt-1 shrink-0" style={{ color: '#1FB8A8' }} />
+              <span>
+                <strong className="font-semibold text-text">Recorrentes</strong>: já tinha falado antes e voltou, sem se
+                encaixar em Reativada, Frequente ou Esporádica. Por exemplo, quem falou ontem e hoje.
+              </span>
+            </li>
+          </ul>
+          <Aviso>
+            A verificação segue esta ordem: Nova, Reativada, Frequente, Esporádica e, por último, Recorrente. O dia usado
+            é o primeiro em que o contato interagiu dentro do período escolhido, e o histórico considerado é tudo antes
+            desse dia, mesmo fora do período. Assim, em "Hoje", quem falou ontem já aparece como Recorrente.
+          </Aviso>
+          <Aviso>
+            O histórico usado na classificação guarda só a instância, o nome do contato e os dias em que ele mandou
+            mensagem, por até 180 dias. O contato é reconhecido pelo nome que aparece na lista do WhatsApp: se o nome
+            mudar, ele passa a contar como Novo. Quem já conversava antes de o Orbi começar a registrar aparece como
+            Novo na primeira vez. Limpar os dados do Analytics apaga também esse histórico.
+          </Aviso>
         </Bloco>
 
         <Bloco title="Filtrar e exportar">

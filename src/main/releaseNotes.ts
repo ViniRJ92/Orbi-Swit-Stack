@@ -538,6 +538,15 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Instâncias não conectadas voltaram a usar a bolinha escura.',
     '• A bolinha ficou sem o brilho em volta.',
   ].join('\n'),
+  '0.49.0': [
+    'Analytics: Classificação das interações e tema claro renovado',
+    '',
+    '• Novo card Classificação das interações. Mostra as mesmas interações do período separadas em Novas, Recorrentes, Frequentes, Esporádicas e Reativadas, pelo histórico de cada contato.',
+    '• A soma das cinco categorias é sempre o total de interações. Interações, Recebidas e Enviadas não mudaram.',
+    '• Respeita o período, a comparação com o período anterior e o filtro de agrupamento.',
+    '• A Ajuda explica cada categoria e a diferença entre interações e mensagens.',
+    '• Tema claro com mais contraste entre fundo, barras e cards.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

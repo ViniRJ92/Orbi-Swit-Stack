@@ -613,4 +613,14 @@ export class ChatActivityStore {
       timeline: hourly.map((count, hour) => ({ hour, count })),
     };
   }
+
+  /**
+   * Fase 77 — somente leitura, para o histórico da Classificação das
+   * Interações (interactionHistoryStore.ts). Devolve os dias de interação a
+   * partir dos mesmos eventos e da mesma regra de buildDayReport: só
+   * mensagem recebida (evento sem direção conta como recebida).
+   */
+  getInboundDays(): { a: string; k: string; day: string }[] {
+    return this.data.events.filter((e) => e.d !== 'out').map((e) => ({ a: e.a, k: e.k, day: e.day }));
+  }
 }

@@ -107,6 +107,18 @@ export interface AnalyticsAccountTotal {
  * para o renderer) — mantém o IPC leve e os gráficos rápidos de renderizar
  * independentemente de quantos eventos existam no histórico local.
  */
+/** Fase 77 — Classificação das Interações (ver interactionClassification.ts). */
+export type InteractionCategory = 'nova' | 'recorrente' | 'frequente' | 'esporadica' | 'reativada';
+export type InteractionCategoryCounts = Record<InteractionCategory, number>;
+
+export interface InteractionClassificationSummary {
+  range: AnalyticsRange;
+  /** Interações classificadas no período — sempre igual à soma de `counts`. */
+  total: number;
+  counts: InteractionCategoryCounts;
+  byAccount: { accountId: string; name: string; color: string; counts: InteractionCategoryCounts; total: number }[];
+}
+
 export interface AnalyticsSummary {
   range: AnalyticsRange;
   /** Soma de mensagens novas de todas as contas no período (recebidas + enviadas). */

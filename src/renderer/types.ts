@@ -179,6 +179,17 @@ export interface AnalyticsAccountTotal {
   sent: number;
 }
 
+/** Fase 77 — ver main/types.ts e main/interactionClassification.ts. */
+export type InteractionCategory = 'nova' | 'recorrente' | 'frequente' | 'esporadica' | 'reativada';
+export type InteractionCategoryCounts = Record<InteractionCategory, number>;
+
+export interface InteractionClassificationSummary {
+  range: AnalyticsRange;
+  total: number;
+  counts: InteractionCategoryCounts;
+  byAccount: { accountId: string; name: string; color: string; counts: InteractionCategoryCounts; total: number }[];
+}
+
 export interface AnalyticsSummary {
   range: AnalyticsRange;
   totalVolume: number;
@@ -343,6 +354,7 @@ export interface OrbiSwitStackApi {
   getAnalyticsSummary: (range: AnalyticsRange, groupId?: string | null) => Promise<AnalyticsSummary>;
   /** Fase 28: relatório fixo de Hoje x Ontem por instância — independente do período geral do Analytics. */
   getChatActivityDaily: (groupId?: string | null) => Promise<ChatActivityDailySummary>;
+  getInteractionClassification: (range: AnalyticsRange, groupId?: string | null) => Promise<InteractionClassificationSummary>;
   /** Fase 43: salva o período selecionado em CSV, pela mesma agregação que a tela mostra. */
   exportAnalyticsCsv: (
     range: AnalyticsRange,

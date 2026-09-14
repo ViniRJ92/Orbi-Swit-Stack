@@ -70,6 +70,9 @@ const api = {
   getAnalyticsSummary: (range: AnalyticsRange, groupId?: string | null) =>
     ipcRenderer.invoke('mw:get-analytics-summary', range, groupId ?? null),
   getChatActivityDaily: (groupId?: string | null) => ipcRenderer.invoke('mw:get-chat-activity-daily', groupId ?? null),
+  // Fase 77 — Classificação das Interações.
+  getInteractionClassification: (range: AnalyticsRange, groupId?: string | null) =>
+    ipcRenderer.invoke('mw:get-interaction-classification', range, groupId ?? null),
   exportAnalyticsCsv: (range: AnalyticsRange, groupId?: string | null) =>
     ipcRenderer.invoke('mw:export-analytics-csv', range, groupId ?? null),
   clearAnalytics: () => ipcRenderer.invoke('mw:clear-analytics'),

@@ -26,24 +26,34 @@
   --color-overlay: rgba(4, 8, 10, 0.65);
 }
 
+/* Fase 76: tema claro com hierarquia em camadas, espelhando o escuro —
+   fundo geral mais fundo (cinza), barras levemente fora do branco, cards
+   brancos por cima, áreas internas (inputs, tabelas) um degrau abaixo do
+   card, e divisórias/textos com mais contraste. Só valores de tokens. */
 :root[data-theme='light'] {
-  --color-app: #f3f5f6;
-  --color-sidebar: #ffffff;
-  --color-header: #ffffff;
+  --color-app: #e6eaed;
+  --color-sidebar: #f6f8f9;
+  --color-header: #f6f8f9;
   --color-surface: #ffffff;
-  --color-surface-hover: #f2f4f5;
+  --color-surface-hover: #edf1f3;
   --color-accent: #0e9c86;
   --color-accent-2: #17b88f;
   --color-accent-contrast: #ffffff;
-  --color-text: #16191b;
-  --color-text-dim: #5c6870;
-  --color-text-faint: #8b969d;
-  --color-border: #e5e8ea;
-  --color-border-strong: #d3d8db;
+  --color-text: #111518;
+  --color-text-dim: #4f5b63;
+  --color-text-faint: #7d8890;
+  --color-border: #d8dee2;
+  --color-border-strong: #c3cbd0;
   --color-danger: #c9364a;
-  --color-input: #ffffff;
-  --color-content: #eef1f2;
-  --color-overlay: rgba(20, 26, 28, 0.4);
+  --color-input: #f1f4f6;
+  --color-content: #dde2e6;
+  --color-overlay: rgba(15, 22, 26, 0.45);
+}
+
+/* Fase 76: profundidade dos cards no tema claro (no escuro a separação vem
+   do próprio contraste de tons, então nada muda lá). */
+:root[data-theme='light'] .bg-surface.border {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 8px -4px rgba(15, 23, 42, 0.08);
 }
 
 @theme inline {
