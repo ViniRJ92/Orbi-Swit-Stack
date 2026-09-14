@@ -547,6 +547,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• A Ajuda explica cada categoria e a diferença entre interações e mensagens.',
     '• Tema claro com mais contraste entre fundo, barras e cards.',
   ].join('\n'),
+  '0.49.1': [
+    'Analytics: seletores de período padronizados',
+    '',
+    '• Classificação das interações ganhou o seletor de período no próprio card, com as datas do Personalizado ao lado.',
+    '• Fluxo de mensagens, Atividade das instâncias e Classificação usam o mesmo seletor do topo.',
+    '• Atividade das instâncias continua só com Hoje e Ontem.',
+    '• Saiu o selo de soma do card de Classificação. O total segue no texto e na tabela.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

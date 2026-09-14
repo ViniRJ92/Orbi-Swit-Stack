@@ -197,6 +197,11 @@ const SECTIONS: HelpSection[] = [
             histórico do contato. É uma camada a mais: não muda o número de Interações, Recebidas ou Enviadas. Cada
             contato entra em uma categoria só, então a soma das cinco é sempre o total de interações do período.
           </p>
+          <p className="mt-2 text-[13px] leading-6 text-text-dim">
+            O seletor no canto do card (Hoje, Últimos 7 dias, Últimos 30 dias ou Personalizado) é o mesmo período do topo
+            do Analytics: trocar ali muda a tela inteira. Em Personalizado, as datas de início e fim aparecem ao lado do
+            seletor, dentro do próprio card.
+          </p>
           <ul className="mt-3 flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
             <li className="flex gap-2">
               <UserPlus size={14} className="mt-1 shrink-0" style={{ color: '#25D366' }} />

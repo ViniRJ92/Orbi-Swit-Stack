@@ -355,17 +355,7 @@ function FluxoCard({
               <LegendItem kind="dashed" color="var(--color-text-faint)" label="Anterior" />
             </div>
           )}
-          <select
-            value={quick}
-            onChange={(e) => onQuick(e.target.value as AnalyticsPeriod)}
-            aria-label="Período do gráfico"
-            className="rounded-lg border border-border bg-input px-2 py-1 text-[12px] text-text outline-none focus:border-accent"
-          >
-            <option value="today">Hoje</option>
-            <option value="7d">Últimos 7 dias</option>
-            <option value="30d">Últimos 30 dias</option>
-            <option value="custom">Personalizado</option>
-          </select>
+          <SeletorPeriodo opcoes={OPCOES_PERIODO} valor={quick} onChange={onQuick} ariaLabel="Período do gráfico" />
         </div>
       </div>
 
@@ -504,19 +494,16 @@ function AtividadeCard({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {(['hoje', 'ontem'] as const).map((k) => (
-            <button
-              key={k}
-              onClick={() => setDia(k)}
-              aria-pressed={dia === k}
-              className={
-                'rounded-lg border px-4 py-1.5 text-[12.5px] font-semibold transition-colors ' +
-                (dia === k ? 'border-transparent accent-gradient text-accent-contrast' : 'border-border text-text-dim hover:text-text')
-              }
-            >
-              {k === 'hoje' ? 'Hoje' : 'Ontem'}
-            </button>
-          ))}
+          {/* Fase 78: mesmo seletor do topo. Aqui só Hoje e Ontem, que é a regra deste relatório (ver Fase 28). */}
+          <SeletorPeriodo
+            opcoes={[
+              { key: 'hoje', label: 'Hoje' },
+              { key: 'ontem', label: 'Ontem' },
+            ]}
+            valor={dia}
+            onChange={setDia}
+            ariaLabel="Dia do relatório"
+          />
         </div>
       </div>
 
@@ -569,9 +556,23 @@ const CLASSIFICACAO: { key: InteractionCategory; label: string; hint: string; co
 function ClassificacaoCard({
   dados,
   anterior,
+  quick,
+  onQuick,
+  customStart,
+  customEnd,
+  onCustomStart,
+  onCustomEnd,
 }: {
   dados: InteractionClassificationSummary | null;
   anterior: InteractionClassificationSummary | null;
+  /** Mesmo seletor de período do topo, como no card "Fluxo de mensagens". */
+  quick: AnalyticsPeriod;
+  onQuick: (p: AnalyticsPeriod) => void;
+  /** Datas do Personalizado — as mesmas do topo, editáveis também aqui. */
+  customStart: string;
+  customEnd: string;
+  onCustomStart: (v: string) => void;
+  onCustomEnd: (v: string) => void;
 }) {
   const total = dados?.total ?? 0;
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
@@ -588,10 +589,31 @@ function ClassificacaoCard({
             As mesmas {total} {total === 1 ? 'interação' : 'interações'} do período, separadas pelo histórico de cada contato. Não é contagem de mensagens.
           </p>
         </div>
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-input px-3 py-1 text-[11.5px] font-medium text-text-dim">
-          <Dot color="var(--color-accent)" />
-          Soma = <span className="font-semibold text-text">{total} {total === 1 ? 'interação' : 'interações'}</span>
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {quick === 'custom' && (
+            <div className="flex items-center gap-1.5 text-[12px] text-text-dim">
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd}
+                onChange={(e) => onCustomStart(e.target.value)}
+                aria-label="Data inicial da classificação"
+                className="rounded-md border border-border bg-input px-2 py-1 text-[12px] text-text outline-none focus:border-accent"
+              />
+              <span>até</span>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart}
+                max={dateInputValue(0)}
+                onChange={(e) => onCustomEnd(e.target.value)}
+                aria-label="Data final da classificação"
+                className="rounded-md border border-border bg-input px-2 py-1 text-[12px] text-text outline-none focus:border-accent"
+              />
+            </div>
+          )}
+          <SeletorPeriodo opcoes={OPCOES_PERIODO} valor={quick} onChange={onQuick} ariaLabel="Período da classificação" />
+        </div>
       </div>
 
       {total === 0 ? (
@@ -698,6 +720,48 @@ function ClassificacaoCard({
     </div>
   );
 }
+
+/**
+ * Fase 78 — o seletor de período do topo, extraído sem mudar o visual, para
+ * que todo lugar do Analytics que escolhe período use exatamente o mesmo
+ * componente (topo, Fluxo de mensagens, Atividade das instâncias e
+ * Classificação das interações). Cada seção continua com as próprias opções.
+ */
+function SeletorPeriodo<K extends string>({
+  opcoes,
+  valor,
+  onChange,
+  ariaLabel,
+}: {
+  opcoes: { key: K; label: string; icon?: React.ReactNode }[];
+  valor: K;
+  onChange: (k: K) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <div role="group" aria-label={ariaLabel} className="flex items-center gap-1 rounded-lg bg-input p-1">
+      {opcoes.map((o) => (
+        <button
+          key={o.key}
+          aria-pressed={valor === o.key}
+          className={
+            'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors ' +
+            (valor === o.key ? 'accent-gradient text-accent-contrast' : 'text-text-dim hover:text-text')
+          }
+          onClick={() => onChange(o.key)}
+        >
+          {o.icon}
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const OPCOES_PERIODO: { key: AnalyticsPeriod; label: string; icon?: React.ReactNode }[] = [
+  ...PERIODS,
+  { key: 'custom', label: 'Personalizado', icon: <CalendarRange size={13} /> },
+];
 
 const CHART_TOOLTIP_STYLE: React.CSSProperties = {
   background: 'var(--color-surface-hover)',
@@ -1009,30 +1073,7 @@ export function AnalyticsModal({
         "Comparar" virou caixa de seleção comum.
       */}
       <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-2">
-        <div className="flex items-center gap-1 rounded-lg bg-input p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.key}
-              className={
-                'rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors ' +
-                (quick === p.key ? 'accent-gradient text-accent-contrast' : 'text-text-dim hover:text-text')
-              }
-              onClick={() => setQuick(p.key)}
-            >
-              {p.label}
-            </button>
-          ))}
-          <button
-            className={
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors ' +
-              (quick === 'custom' ? 'accent-gradient text-accent-contrast' : 'text-text-dim hover:text-text')
-            }
-            onClick={() => setQuick('custom')}
-          >
-            <CalendarRange size={13} />
-            Personalizado
-          </button>
-        </div>
+        <SeletorPeriodo opcoes={OPCOES_PERIODO} valor={quick} onChange={setQuick} ariaLabel="Período" />
 
         {quick === 'custom' && (
           <div className="flex items-center gap-1.5 text-[12px] text-text-dim">
@@ -1245,7 +1286,16 @@ export function AnalyticsModal({
       <AtividadeCard hoje={chatDaily?.today} ontem={chatDaily?.yesterday} />
 
       {/* Fase 77 — Classificação das Interações, camada separada das métricas acima. */}
-      <ClassificacaoCard dados={classification} anterior={compare ? prevClassification : null} />
+      <ClassificacaoCard
+        dados={classification}
+        anterior={compare ? prevClassification : null}
+        quick={quick}
+        onQuick={setQuick}
+        customStart={customStart}
+        customEnd={customEnd}
+        onCustomStart={setCustomStart}
+        onCustomEnd={setCustomEnd}
+      />
 
       {/* Fase 64 — barra de status: quantas instâncias estão online e qual período está na tela. */}
       <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-[12px] text-text-dim">
