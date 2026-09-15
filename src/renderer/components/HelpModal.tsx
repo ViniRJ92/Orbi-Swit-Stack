@@ -273,7 +273,6 @@ const SECTIONS: HelpSection[] = [
           <ul className="mt-2 flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
             <li>Conversa que nunca foi aberta no Orbi não entra na contagem. O aviso de não lidas da lista não é usado.</li>
             <li>Mensagem mais antiga que ontem, no momento em que a conversa é aberta, não é contada.</li>
-            <li>Chamada perdida, mensagem apagada e avisos do WhatsApp não contam como mensagem.</li>
           </ul>
           <Aviso>
             Quando alguma instância fica desconectada, suspensa ou com o Orbi fechado em parte do período, aparece no topo

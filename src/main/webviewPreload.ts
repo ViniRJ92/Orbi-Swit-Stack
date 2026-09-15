@@ -198,16 +198,14 @@ function classifyByOwnDate(node: Element): 'today' | 'yesterday' | 'other' | nul
  * comportamento de antes) em vez de parar de contar — errar para mais é
  * corrigível olhando o relatório; parar de contar passa despercebido.
  */
-/**
- * Fase 80 — o balão é uma mensagem de um lado da conversa? Mesma marcação
- * visível usada por `isOutgoing` (classe de alinhamento), mais o prefixo do
- * formato antigo de `data-id`, que só existe em mensagem.
+/*
+ * Fase 81 — CORREÇÃO: a v0.49.2 passou a ignorar balões sem a classe
+ * `message-in`/`message-out`, para descartar avisos do sistema. O WhatsApp
+ * Web atual não usa mais essa classe nas mensagens, então TODAS passaram a
+ * ser ignoradas e nada foi contado. O filtro foi retirado e a leitura voltou
+ * a ser exatamente a da v0.49.1. Não reintroduzir filtro por classe sem
+ * conferir no HTML real do WhatsApp Web.
  */
-function hasMessageSide(node: Element, dataId: string): boolean {
-  if (/^(true|false)[_-]/i.test(dataId)) return true;
-  return !!(node.closest('.message-out, .message-in') || node.querySelector('.message-out, .message-in'));
-}
-
 function isOutgoing(node: Element, dataId: string): boolean {
   // Sinal 1 — formato antigo do identificador (`true_...`).
   if (/^true[_-]/i.test(dataId)) return true;
@@ -268,12 +266,6 @@ function scanChatMessages(panel: Element): ScannedMessage[] {
     if (node.hasAttribute && node.hasAttribute('data-id')) {
       const dataId = node.getAttribute('data-id') || '';
       if (!dataId || seenMessageIds.has(dataId)) continue;
-      // Fase 80 — só conta balão de mensagem de verdade. Chamada perdida,
-      // "mensagem apagada" e avisos do WhatsApp também têm `data-id`, mas não
-      // ficam de um lado da conversa (sem `message-in`/`message-out`). Não
-      // marca como visto: se o WhatsApp terminar de desenhar o balão depois,
-      // ele é reavaliado na próxima varredura.
-      if (!hasMessageSide(node, dataId)) continue;
       // Fase 40: a mensagem enviada deixou de ser descartada — agora é
       // reportada com direção 'out', para o relatório poder separar
       // "Recebidas" de "Enviadas". Continua fora da contagem de interações

@@ -564,6 +564,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• O CSV traz também a Classificação das interações.',
     '• A Ajuda explica como as mensagens são contadas.',
   ].join('\n'),
+  '0.49.3': [
+    'Correção: Analytics voltou a contar as mensagens',
+    '',
+    '• Na 0.49.2 nenhuma mensagem de conversa aberta estava sendo contada. Corrigido.',
+    '• A leitura das mensagens voltou a ser a mesma da 0.49.1. Continua contando só conversas abertas no Orbi.',
+    '• Mensagens de hoje e de ontem ainda visíveis nas conversas voltam a entrar ao abrir cada conversa.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
