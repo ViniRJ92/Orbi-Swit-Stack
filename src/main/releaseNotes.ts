@@ -571,6 +571,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• A leitura das mensagens voltou a ser a mesma da 0.49.1. Continua contando só conversas abertas no Orbi.',
     '• Mensagens de hoje e de ontem ainda visíveis nas conversas voltam a entrar ao abrir cada conversa.',
   ].join('\n'),
+  '0.49.4': [
+    'Analytics mais limpo',
+    '',
+    '• Saiu a faixa Dados parciais, que aparecia quase sempre por causa do horário de atendimento.',
+    '• Saiu o botão Apagar histórico do Analytics, em Backup e Diagnóstico.',
+    '• Saiu o texto explicativo do card Classificação das interações. A explicação continua na Ajuda.',
+    '• A contagem de mensagens e a classificação não mudaram.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

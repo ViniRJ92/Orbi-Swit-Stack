@@ -73,8 +73,6 @@ const api = {
   // Fase 77 — Classificação das Interações.
   getInteractionClassification: (range: AnalyticsRange, groupId?: string | null) =>
     ipcRenderer.invoke('mw:get-interaction-classification', range, groupId ?? null),
-  // Fase 80 — cobertura do Analytics.
-  getCoverage: (range: AnalyticsRange, groupId?: string | null) => ipcRenderer.invoke('mw:get-coverage', range, groupId ?? null),
   exportAnalyticsCsv: (range: AnalyticsRange, groupId?: string | null) =>
     ipcRenderer.invoke('mw:export-analytics-csv', range, groupId ?? null),
   clearAnalytics: () => ipcRenderer.invoke('mw:clear-analytics'),

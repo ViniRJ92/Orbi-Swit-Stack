@@ -179,13 +179,6 @@ export interface AnalyticsAccountTotal {
   sent: number;
 }
 
-/** Fase 80 — ver main/types.ts e main/coverageStore.ts. */
-export interface CoverageSummary {
-  totalTicks: number;
-  totalAccounts: number;
-  partial: { accountId: string; name: string; fraction: number }[];
-}
-
 /** Fase 77 — ver main/types.ts e main/interactionClassification.ts. */
 export type InteractionCategory = 'nova' | 'recorrente' | 'frequente' | 'esporadica' | 'reativada';
 export type InteractionCategoryCounts = Record<InteractionCategory, number>;
@@ -362,7 +355,6 @@ export interface OrbiSwitStackApi {
   /** Fase 28: relatório fixo de Hoje x Ontem por instância — independente do período geral do Analytics. */
   getChatActivityDaily: (groupId?: string | null) => Promise<ChatActivityDailySummary>;
   getInteractionClassification: (range: AnalyticsRange, groupId?: string | null) => Promise<InteractionClassificationSummary>;
-  getCoverage: (range: AnalyticsRange, groupId?: string | null) => Promise<CoverageSummary>;
   /** Fase 43: salva o período selecionado em CSV, pela mesma agregação que a tela mostra. */
   exportAnalyticsCsv: (
     range: AnalyticsRange,

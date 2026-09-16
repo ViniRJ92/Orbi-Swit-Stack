@@ -28,7 +28,6 @@ import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
 import { InteractionHistoryStore } from './interactionHistoryStore';
 import { buildInteractionClassification } from './interactionClassification';
-import { getCoverageStore } from './coverageStore';
 import { CalendarStore, CalendarEvent } from './calendarStore';
 import { holidaysBetween } from './holidays';
 import { UpdateManager } from './updateManager';
@@ -589,13 +588,6 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     const accounts = accountsForGroup(groupId);
     syncInteractionHistory();
     return buildInteractionClassification(range, accounts, interactionHistory.getDays());
-  });
-
-  // Fase 80 — cobertura: quais instâncias WhatsApp ficaram sem ser observadas
-  // em parte do período. Só leitura, não altera número nenhum.
-  ipcMain.handle('mw:get-coverage', (_evt, range: AnalyticsRange, groupId?: string | null) => {
-    const accounts = accountsForGroup(groupId).filter((a) => accountStore.get(a.id)?.service === 'whatsapp');
-    return getCoverageStore().summary(range, accounts);
   });
 
   ipcMain.handle('mw:get-chat-activity-daily', (_evt, groupId?: string | null) => {

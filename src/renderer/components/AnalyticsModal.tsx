@@ -51,7 +51,6 @@ import {
   AnalyticsSummary,
   ChatActivityDailySummary,
   ChatActivityDayReport,
-  CoverageSummary,
   InteractionCategory,
   InteractionClassificationSummary,
 } from '../types';
@@ -586,9 +585,6 @@ function ClassificacaoCard({
             <Dot color="var(--color-accent)" />
             Classificação das interações
           </p>
-          <p className="mt-1 text-[12px] text-text-dim">
-            As mesmas {total} {total === 1 ? 'interação' : 'interações'} do período, separadas pelo histórico de cada contato. Não é contagem de mensagens.
-          </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {quick === 'custom' && (
@@ -728,32 +724,6 @@ function ClassificacaoCard({
  * componente (topo, Fluxo de mensagens, Atividade das instâncias e
  * Classificação das interações). Cada seção continua com as próprias opções.
  */
-/**
- * Fase 80 — aviso de cobertura. Aparece só quando alguma instância ficou sem
- * ser observada (desconectada, suspensa ou com o Orbi fechado) em parte do
- * período. Não altera nenhum número da tela.
- */
-function AvisoCobertura({ dados }: { dados: CoverageSummary | null }) {
-  if (!dados || dados.totalTicks === 0 || dados.partial.length === 0) return null;
-  const nomes = dados.partial.map((p) => p.name);
-  const lista = nomes.length > 5 ? `${nomes.slice(0, 5).join(', ')} e mais ${nomes.length - 5}` : nomes.join(', ');
-  return (
-    <div className="flex shrink-0 items-start gap-3 rounded-xl border border-[#F29A38]/40 bg-[#F29A38]/10 px-4 py-3">
-      <AlertTriangle size={16} className="mt-0.5 shrink-0 text-[#F29A38]" />
-      <div className="min-w-0 text-[12.5px] leading-5">
-        <p className="font-semibold text-text">
-          Dados parciais: {dados.partial.length} de {dados.totalAccounts}{' '}
-          {dados.totalAccounts === 1 ? 'instância ficou' : 'instâncias ficaram'} sem registro em parte do período
-        </p>
-        <p className="text-text-dim">
-          {lista} {dados.partial.length === 1 ? 'esteve' : 'estiveram'} desconectada, suspensa ou com o Orbi fechado. Os
-          números podem estar abaixo do real.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function SeletorPeriodo<K extends string>({
   opcoes,
   valor,
@@ -838,9 +808,7 @@ export function AnalyticsModal({
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [chatDaily, setChatDaily] = useState<ChatActivityDailySummary | null>(null);
   const [classification, setClassification] = useState<InteractionClassificationSummary | null>(null);
-  const [prevClassification, setPrevClassification] = useState<InteractionClassificationSummary | null>(null);
-  const [coverage, setCoverage] = useState<CoverageSummary | null>(null);
-  // Fase 43 — `null` = todos os agrupamentos.
+  const [prevClassification, setPrevClassification] = useState<InteractionClassificationSummary | null>(null);  // Fase 43 — `null` = todos os agrupamentos.
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   // Fase 64 — instante da última atualização bem-sucedida, para o "Atualizado há".
@@ -924,28 +892,6 @@ export function AnalyticsModal({
       clearInterval(interval);
     };
   }, [open, groupFilter]);
-
-  // Fase 80 — cobertura: só avisa quando instâncias ficaram sem ser
-  // observadas no período. Busca própria, não interfere nas outras.
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    const loadCoverage = async () => {
-      try {
-        const result = await window.multiwhats.getCoverage(currentRange(), groupFilter);
-        if (!cancelled) setCoverage(result);
-      } catch {
-        // Silencioso — sem resposta, o aviso simplesmente não aparece.
-      }
-    };
-    loadCoverage();
-    const interval = setInterval(loadCoverage, REFRESH_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, quick, customStart, customEnd, groupFilter]);
 
   // Fase 77 — Classificação das Interações: busca própria, com o mesmo
   // período, comparação e agrupamento dos cards acima. Não mexe no `load`
@@ -1216,9 +1162,6 @@ export function AnalyticsModal({
           ))}
         </div>
       )}
-
-      {/* Fase 80 — só aparece quando faltam dados de alguma instância no período. */}
-      <AvisoCobertura dados={coverage} />
 
       {/*
         Fase 64 — quatro indicadores. Os antigos cards separados de Online,

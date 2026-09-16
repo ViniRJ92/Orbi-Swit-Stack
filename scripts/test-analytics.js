@@ -25,8 +25,6 @@ Module._load = function (request, ...rest) {
 const dist = path.resolve(__dirname, '..', 'dist', 'main');
 const { ChatActivityStore } = require(path.join(dist, 'chatActivityStore.js'));
 const { classifyContact, buildInteractionClassification, dayKey } = require(path.join(dist, 'interactionClassification.js'));
-const { CoverageStore } = require(path.join(dist, 'coverageStore.js'));
-
 let falhas = 0;
 let total = 0;
 function check(nome, obtido, esperado) {
@@ -92,18 +90,6 @@ const cls = buildInteractionClassification(
   { A: { joao: [d(-1), d(0)], maria: [d(0)], velho: [d(-3)] }, B: { lia: [d(0)] } }
 );
 check('Soma das categorias = total de interações', Object.values(cls.counts).reduce((s, n) => s + n, 0), cls.total);
-
-console.log('\nCobertura');
-const cov = new CoverageStore(path.join(tmp, 'coverage.json'));
-for (let i = 0; i < 10; i++) {
-  cov.record([
-    { id: 'A', loaded: true, isOnline: true, loadError: false },
-    { id: 'B', loaded: i < 5, isOnline: i < 5, loadError: false },
-  ]);
-}
-const c = cov.summary({ startTs: inicio.getTime(), endTs: fim.getTime() }, contas);
-check('Instância conectada o tempo todo não aparece no aviso', c.partial.map((p) => p.accountId), ['B']);
-check('Instância conectada metade do tempo = 50%', c.partial[0].fraction, 0.5);
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${total - falhas} de ${total} testes passaram.`);

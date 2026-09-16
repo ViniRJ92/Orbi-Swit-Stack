@@ -22,7 +22,6 @@ import { AccountStore } from './accountStore';
 import { GroupStore } from './groupStore';
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
-import { getCoverageStore } from './coverageStore';
 import { CalendarStore } from './calendarStore';
 import { ViewManager } from './viewManager';
 import { AccountManager } from './accountManager';
@@ -344,8 +343,6 @@ app.whenReady().then(() => {
   setInterval(() => {
     if (!accountManager || !viewManager || !chatActivityStore || !analyticsStore) return;
     const statuses = accountManager.buildStatuses();
-    // Fase 80 — só registra quem estava observável; não interfere na leitura abaixo.
-    getCoverageStore().record(statuses);
     for (const status of statuses) {
       if (!status.loaded) {
         chatActivityStore.onAccountUnloaded(status.id);

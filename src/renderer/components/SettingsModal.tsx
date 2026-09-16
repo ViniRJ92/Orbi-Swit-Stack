@@ -1474,7 +1474,6 @@ function BackupDiagnosticsTab({
   diagnostics,
   logLines,
   toggleLogViewer,
-  clearAnalytics,
   clearLogs,
 }: {
   exportBackup: () => void;
@@ -1482,7 +1481,6 @@ function BackupDiagnosticsTab({
   diagnostics: DiagnosticsInfo | null;
   logLines: string[] | null;
   toggleLogViewer: () => void;
-  clearAnalytics: () => void;
   /** Fase 70 — apaga o log de diagnóstico. */
   clearLogs: () => void;
 }) {
@@ -1661,17 +1659,6 @@ function BackupDiagnosticsTab({
       >
         {cacheResult && <p className="text-[12.5px] text-text-dim">{cacheResult}</p>}
       </Card>
-
-      <Card
-        title="Histórico do Analytics"
-        icon={<Trash2 size={15} />}
-        description="Apaga todo o histórico de mensagens contabilizado na aba Analytics (eventos e a última contagem salva de cada instância). Não afeta as instâncias, conversas ou dados de login: é só o histórico de métricas local. Essa ação não pode ser desfeita."
-        action={
-          <SecondaryButton onClick={clearAnalytics} icon={<Trash2 size={14} />}>
-            Apagar histórico do Analytics
-          </SecondaryButton>
-        }
-      />
     </div>
   );
 }
@@ -1966,15 +1953,6 @@ export function SettingsModal({
     setDiagnostics(await window.multiwhats.getDiagnostics());
   };
 
-  const clearAnalytics = async () => {
-    const confirmed = window.confirm(
-      'Apagar todo o histórico do Analytics? Isso remove todas as métricas de mensagens já registradas e não pode ser desfeito.'
-    );
-    if (!confirmed) return;
-    await window.multiwhats.clearAnalytics();
-    window.alert('Histórico do Analytics apagado.');
-  };
-
   return (
     <Modal
       open={open}
@@ -2055,7 +2033,6 @@ export function SettingsModal({
             diagnostics={diagnostics}
             logLines={logLines}
             toggleLogViewer={toggleLogViewer}
-            clearAnalytics={clearAnalytics}
             clearLogs={clearLogs}
           />
         )}

@@ -248,8 +248,7 @@ const SECTIONS: HelpSection[] = [
             O histórico usado na classificação guarda só a instância, o nome do contato e os dias em que ele mandou
             mensagem, por até 180 dias. O contato é reconhecido pelo nome que aparece na lista do WhatsApp: se o nome
             mudar, ele passa a contar como Novo. Quem já conversava antes de o Orbi começar a registrar aparece como
-            Novo na primeira vez. Limpar os dados do Analytics apaga também esse histórico.
-          </Aviso>
+            Novo na primeira vez.          </Aviso>
         </Bloco>
 
         <Bloco title="Filtrar e exportar">
@@ -273,21 +272,7 @@ const SECTIONS: HelpSection[] = [
           <ul className="mt-2 flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
             <li>Conversa que nunca foi aberta no Orbi não entra na contagem. O aviso de não lidas da lista não é usado.</li>
             <li>Mensagem mais antiga que ontem, no momento em que a conversa é aberta, não é contada.</li>
-          </ul>
-          <Aviso>
-            Quando alguma instância fica desconectada, suspensa ou com o Orbi fechado em parte do período, aparece no topo
-            do Analytics a faixa "Dados parciais", com o nome das instâncias. Nesse caso os números podem estar abaixo do
-            real.
-          </Aviso>
-        </Bloco>
-
-        <Bloco title="Recomeçar do zero">
-          <p className="text-[13px] leading-6 text-text-dim">
-            Em Configurações, na aba "Backup e Diagnóstico", existe a opção de limpar os dados do Analytics. Ela apaga
-            só o histórico de métricas. Contas, conversas e logins não são afetados.
-          </p>
-        </Bloco>
-      </>
+          </ul>        </Bloco>      </>
     ),
   },
   {
