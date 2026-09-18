@@ -26,7 +26,7 @@
  * continua fora de escopo, ver decisão de escopo no rodapé.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Folder, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Folder, Plus, Search, SlidersHorizontal, Users } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { AccountRecord, IconSize, SidebarPosition } from '../types';
 import { useAppStore } from '../store/useAppStore';
@@ -47,6 +47,14 @@ const TOP_BAR_HEIGHT_BY_ICON_SIZE: Record<IconSize, number> = {
   small: 60,
   medium: 72,
   large: 88,
+};
+
+// Fase 82: bolinha de cor de cada filtro na barra horizontal.
+const FILTER_DOT: Record<FilterKey, string> = {
+  all: '',
+  online: 'bg-accent',
+  suspended: 'bg-amber-400',
+  error: 'bg-danger',
 };
 
 // Fase 22: distância (px) percorrida por clique nos botões de seta da barra
@@ -454,7 +462,18 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             borda esquerda da barra. Fase 26: agora pode ser minimizado — só
             o quadradinho de busca fica visível, liberando largura para a
             lista de contas. */}
-        <div className="flex shrink-0 items-center gap-1">
+        {/* Fase 82 — barra horizontal no novo visual: título "Contas" com
+            ícone, busca, filtros em grupo com bolinha de cor e, na ponta
+            direita, contador de conectadas e o botão de adicionar. A altura
+            continua a de TOP_BAR_HEIGHT_BY_ICON_SIZE (windowManager depende
+            dela). Mesma lógica de busca, filtros e recolher de antes. */}
+        <div className="flex shrink-0 items-center gap-2.5">
+          <div className="flex shrink-0 items-center gap-2 pr-0.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/15 text-accent">
+              <Users size={14} />
+            </span>
+            <span className="text-[12.5px] font-semibold text-text">Contas</span>
+          </div>
           {filtersCollapsed ? (
             <button
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-input text-text-dim transition-colors hover:border-border-strong hover:text-text"
@@ -465,17 +484,15 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             </button>
           ) : (
             <>
-              <span className="shrink-0 text-[10px] font-bold tracking-wider text-text-faint">CONTAS</span>
-
               <div className="relative shrink-0">
-                <Search size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-faint" />
+                <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-accent" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar..."
-                  className="w-24 rounded-lg border border-border bg-input py-1 pl-6 pr-1.5 text-[11px] text-text placeholder:text-text-faint focus:w-32 focus:border-accent"
+                  className="w-36 rounded-lg border border-border bg-input py-1.5 pl-8 pr-2 text-[12px] text-text placeholder:text-text-faint focus:border-accent"
                 />
               </div>
 
@@ -488,18 +505,20 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
                   sem receber cliques. Na barra lateral esquerda, que ocupa
                   a altura toda, o menu tem para onde abrir — por isso lá a
                   troca foi feita (ver AccountFilterSelect.tsx). */}
-              <div className="flex shrink-0 items-center gap-0.5">
+              <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-input p-0.5">
                 {FILTERS.map((f) => (
                   <button
                     key={f.key}
                     onClick={() => setFilter(f.key)}
+                    aria-pressed={filter === f.key}
                     className={
                       // Fase 41: `whitespace-nowrap` para o rótulo nunca
                       // quebrar dentro do próprio botão nesta barra baixa.
-                      'shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] transition-colors ' +
-                      (filter === f.key ? 'bg-accent/15 text-accent' : 'text-text-dim hover:bg-surface-hover')
+                      'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-[11.5px] font-medium transition-colors ' +
+                      (filter === f.key ? 'bg-surface text-text shadow-sm' : 'text-text-dim hover:text-text')
                     }
                   >
+                    {f.key !== 'all' && <span className={'h-1.5 w-1.5 rounded-full ' + FILTER_DOT[f.key]} />}
                     {f.label}
                   </button>
                 ))}
@@ -560,13 +579,24 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             explícito do usuário para otimizar o espaço útil da barra para a
             lista de contas. A versão do app continua visível em Configurações,
             na aba "Sobre o Sistema" (Fase 50), não precisa duplicar aqui. */}
-        <button
-          className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dashed border-border-strong text-text-dim transition-colors hover:border-accent hover:text-accent"
-          onClick={onAdd}
-          title="Adicionar conta"
-        >
-          <Plus size={16} />
-        </button>
+        <div className="ml-auto flex shrink-0 items-center gap-2.5">
+          <span
+            className="whitespace-nowrap rounded-lg border border-border bg-input px-2.5 py-1.5 text-[11.5px] text-text-dim"
+            title="Instâncias conectadas"
+          >
+            <span className="font-semibold tabular-nums text-accent">
+              {filterCounts.online}/{filterCounts.all}
+            </span>{' '}
+            conectadas
+          </span>
+          <button
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg accent-gradient px-3 py-1.5 text-[12px] font-semibold text-accent-contrast shadow-sm transition-opacity hover:opacity-90"
+            onClick={onAdd}
+          >
+            <Plus size={14} />
+            Adicionar conta
+          </button>
+        </div>
       </aside>
     );
   }

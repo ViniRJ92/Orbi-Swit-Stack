@@ -206,8 +206,15 @@ export function AccountItem({
             gap: spec.tileGap,
           }}
           className={
-            'group relative flex shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl transition-colors ' +
-            (isActive ? 'bg-surface mw-selected' : status?.loadError ? 'bg-danger/5' : 'hover:bg-surface-hover') +
+            // Fase 82: cada instância vira um cartão (fundo leve + contorno
+            // interno). `ring-inset` não soma altura, então o tile continua
+            // cabendo em TOP_BAR_HEIGHT_BY_ICON_SIZE.
+            'group relative flex shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl ring-1 ring-inset transition-colors ' +
+            (isActive
+              ? 'bg-surface ring-accent/40 mw-selected'
+              : status?.loadError
+                ? 'bg-danger/5 ring-danger/30'
+                : 'bg-surface/50 ring-border/60 hover:bg-surface-hover') +
             (drag?.isOver ? ' ring-1 ring-accent' : '')
           }
           onClick={() => switchAccount(account.id)}

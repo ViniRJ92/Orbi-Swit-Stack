@@ -90,7 +90,10 @@ const SECTIONS: HelpSection[] = [
         <Bloco title="Adicionar sua primeira conta">
           <ol className="flex flex-col gap-2">
             <Passo n={1}>Clique em "Adicionar conta", no fim da barra de contas.</Passo>
-            <Passo n={2}>Escolha o serviço, por exemplo WhatsApp.</Passo>
+            <Passo n={2}>
+              Escolha o serviço, por exemplo WhatsApp, e clique em Continuar. Dá para filtrar por categoria ou buscar pelo
+              nome.
+            </Passo>
             <Passo n={3}>Dê um nome que faça sentido para você, como "Atendimento 1", e escolha uma cor.</Passo>
             <Passo n={4}>A instância abre com o QR Code. Leia pelo celular, igual ao WhatsApp Web normal.</Passo>
           </ol>

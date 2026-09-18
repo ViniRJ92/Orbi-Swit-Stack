@@ -579,6 +579,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Saiu o texto explicativo do card Classificação das interações. A explicação continua na Ajuda.',
     '• A contagem de mensagens e a classificação não mudaram.',
   ].join('\n'),
+  '0.49.5': [
+    'Novo visual da barra de contas e da tela Adicionar conta',
+    '',
+    '• Barra de contas no Topo e no Inferior: filtros com bolinha de cor, instâncias em cartões, contador de conectadas e botão Adicionar conta em destaque.',
+    '• Adicionar conta: categorias, busca e cartões com uma descrição curta de cada serviço. Clique no serviço e depois em Continuar.',
+    '• Nomes, ícones e funcionamento continuam os mesmos.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
