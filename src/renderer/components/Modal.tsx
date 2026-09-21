@@ -5,7 +5,7 @@
  * Centralizar isso aqui evita que cada modal reimplemente o mesmo chrome
  * com pequenas inconsistências visuais.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { ReactNode, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

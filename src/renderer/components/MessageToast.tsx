@@ -17,7 +17,7 @@
  * Clicar no aviso abre a instância correspondente. Nunca mostra conteúdo de
  * mensagem — só o nome da instância e quantas chegaram.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';

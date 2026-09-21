@@ -4,7 +4,7 @@
  * "fechar minimiza para a bandeja" (a saída de verdade só acontece pelo menu
  * da bandeja — ver trayManager.ts).
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { BrowserWindow, Menu, dialog } from 'electron';
 import * as path from 'path';

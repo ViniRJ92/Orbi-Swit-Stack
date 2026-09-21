@@ -1,5 +1,5 @@
 /**
- * Componente raiz do renderer. Orbi Swit Stack — Criado por Vinicius Braga
+ * Componente raiz do renderer. Orbi — Criado por Vinicius Braga
  */
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { MessageCircle, Plus } from 'lucide-react';
@@ -21,7 +21,7 @@ import { WhatsNewModal } from './components/WhatsNewModal';
 // bundle quando a aba Analytics é aberta pela primeira vez, em vez de pesar
 // no carregamento inicial do app — mantém a troca entre telas leve, como
 // pedido no requisito de desempenho da Fase 9.
-const AnalyticsModal = lazy(() => import('./components/AnalyticsModal').then((m) => ({ default: m.AnalyticsModal })));
+const AnalyticsModal = lazy(() => import('./components/analytics/AnalyticsModal').then((m) => ({ default: m.AnalyticsModal })));
 
 export function App() {
   const init = useAppStore((s) => s.init);

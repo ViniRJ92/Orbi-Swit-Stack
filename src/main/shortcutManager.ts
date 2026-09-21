@@ -4,7 +4,7 @@
  * Precisa ser registrado tanto na WebContents da janela principal quanto na
  * de cada view — ver ViewManager.setShortcutHandler.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { AccountStore } from './accountStore';
 

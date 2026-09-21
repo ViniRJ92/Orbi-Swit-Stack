@@ -4,7 +4,7 @@
  * exclusiva da sessão isolada do Electron (partition), que já persiste cookies,
  * localStorage e IndexedDB automaticamente em disco.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app } from 'electron';
 import * as fs from 'fs';

@@ -1,7 +1,7 @@
 /**
- * Preload da janela principal (UI do Orbi Swit Stack). Expõe uma API mínima e segura
+ * Preload da janela principal (UI do Orbi). Expõe uma API mínima e segura
  * para o renderer, sem habilitar Node.js diretamente na página.
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { contextBridge, ipcRenderer } from 'electron';
 import { AccountsChangedPayload, AnalyticsRange } from './types';

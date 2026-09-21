@@ -103,6 +103,19 @@ const SECTIONS: HelpSection[] = [
           </Aviso>
         </Bloco>
 
+        <Bloco title="Abrir um site ou arquivo do computador">
+          <p className="text-[13px] leading-6 text-text-dim">
+            Em "Adicionar conta", escolha Web Explorer e, no campo do endereço, cole um link (https://...) ou o caminho
+            de um arquivo do computador, como C:\Users\Você\Desktop\projeto.html. O arquivo precisa continuar nesse
+            lugar para a instância abrir.
+          </p>
+          <Aviso>
+            Login com conta Google ("Continuar com Google", Gmail): nas instâncias que não são WhatsApp, o Orbi tenta
+            liberar esse login. O Google pode recusar mesmo assim, pedir uma verificação a mais ou avisar de um acesso
+            novo. Se recusar, entre pelo e-mail com o código enviado pelo próprio site.
+          </Aviso>
+        </Bloco>
+
         <Bloco title="Trocar de conta">
           <p className="text-[13px] leading-6 text-text-dim">
             Clique na conta desejada na barra lateral. Também dá para usar Ctrl+1 até Ctrl+9 para as nove primeiras, e
@@ -258,7 +271,7 @@ const SECTIONS: HelpSection[] = [
           <ol className="flex flex-col gap-2">
             <Passo n={1}>Escolha o período no topo: hoje, últimos 7 ou 30 dias, ou um intervalo personalizado.</Passo>
             <Passo n={2}>Use o seletor de agrupamento para ver só um grupo de instâncias.</Passo>
-            <Passo n={3}>Ligue "Comparar com período anterior" para ver se subiu ou caiu.</Passo>
+            <Passo n={3}>Ligue "Comparar com período anterior" para ver se subiu ou caiu. A escolha fica guardada.</Passo>
             <Passo n={4}>
               Clique em CSV para salvar o período num arquivo que abre no Excel. O arquivo traz as mensagens por instância
               e, logo abaixo, a Classificação das interações do mesmo período.
@@ -334,8 +347,10 @@ const SECTIONS: HelpSection[] = [
 
         <Bloco title="Backup e Diagnóstico">
           <p className="text-[13px] leading-6 text-text-dim">
-            Exporta e restaura nomes, cores, ordem e agrupamentos das instâncias. O backup não inclui login nem
-            conversas, então restaurar num computador novo não dispensa a leitura do QR Code.
+            Exporta e restaura nomes, cores, ordem e agrupamentos das instâncias, e também o histórico do Analytics.
+            Ao restaurar, o Orbi pergunta se deve trazer o histórico, que é somado ao que já existe, sem apagar nada.
+            O backup não inclui login nem conversas, então restaurar num computador novo não dispensa a leitura do QR
+            Code. O arquivo guarda o nome dos contatos do histórico, então guarde-o com cuidado.
           </p>
           <Aviso>
             Nesta aba também ficam o uso de memória e CPU do aplicativo e o acesso aos logs, úteis quando algo não está

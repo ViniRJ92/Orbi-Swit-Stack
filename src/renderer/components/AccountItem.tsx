@@ -13,7 +13,7 @@
  * do corte visual reportados pelo usuário. O modo "Esquerda" continua com a
  * linha original, só com os tamanhos escaláveis por `ICON_SIZE_SPECS`.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { motion } from 'framer-motion';
 import { RotateCw, Star } from 'lucide-react';

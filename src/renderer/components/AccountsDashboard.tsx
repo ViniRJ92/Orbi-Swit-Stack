@@ -4,7 +4,7 @@
  * modais pequenos (Modal.tsx), ocupa a tela quase inteira porque lista até
  * MAX_ACCOUNTS contas (ver main/accountManager.ts) com mais detalhes do que
  * cabe na barra lateral.
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';

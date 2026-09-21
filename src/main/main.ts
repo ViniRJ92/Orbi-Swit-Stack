@@ -1,5 +1,5 @@
 /**
- * Processo principal do Orbi Swit Stack (antigo "MultiWhats", depois
+ * Processo principal do Orbi (antigo "MultiWhats", depois
  * "Whats Control" — renomeado na Fase 7; a arquitetura de isolamento e
  * suspensão de sessões não mudou).
  *
@@ -14,10 +14,11 @@
  *  - ipcRouter: todos os comandos expostos à UI (window.multiwhats);
  *  - accountStore / settingsStore / logger: persistência e diagnóstico.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { AccountStore } from './accountStore';
 import { GroupStore } from './groupStore';
 import { AnalyticsStore } from './analyticsStore';
@@ -49,8 +50,37 @@ import { logger } from './logger';
  * mexer em onde os dados moram. Precisa rodar antes de qualquer coisa que
  * leia disco, por isso está no topo do módulo.
  */
-const USER_DATA_DIR_NAME = 'orbi-swit-stack';
-app.setPath('userData', path.join(app.getPath('appData'), USER_DATA_DIR_NAME));
+/*
+ * Fase 85 — a pasta de dados passa a se chamar `orbi`. Na primeira execução
+ * desta versão, a pasta antiga `orbi-swit-stack` é RENOMEADA (não copiada nem
+ * apagada): as sessões do WhatsApp, as contas e todo o histórico vão junto,
+ * exatamente como estavam. Isso roda antes de qualquer leitura de disco, com
+ * o app ainda sem nenhuma sessão aberta.
+ *
+ * Segurança: se a renomeação falhar (arquivo em uso, por exemplo outro Orbi
+ * aberto ao mesmo tempo), nada é alterado e o app continua usando a pasta
+ * antiga normalmente; a troca é tentada de novo na próxima abertura.
+ */
+const USER_DATA_DIR_NAME = 'orbi';
+const LEGACY_USER_DATA_DIR_NAME = 'orbi-swit-stack';
+function resolveUserDataDir(): string {
+  const appData = app.getPath('appData');
+  const novo = path.join(appData, USER_DATA_DIR_NAME);
+  const antigo = path.join(appData, LEGACY_USER_DATA_DIR_NAME);
+  if (fs.existsSync(novo) || !fs.existsSync(antigo)) return novo;
+  try {
+    fs.renameSync(antigo, novo);
+    return novo;
+  } catch {
+    return antigo;
+  }
+}
+const userDataDir = resolveUserDataDir();
+app.setPath('userData', userDataDir);
+// Fase 83 — nome exibido pelo sistema (título das caixas de confirmação e
+// aviso, por exemplo) passa a ser "Orbi". Vem DEPOIS do setPath acima de
+// propósito: a pasta de dados é decidida por resolveUserDataDir() acima.
+app.setName('Orbi');
 
 const APP_NAME = 'Orbi';
 const CREATOR_NAME = 'Vinicius Braga';
@@ -257,7 +287,7 @@ app.whenReady().then(() => {
 
   // Fase 29: além da checagem única ao abrir (acima), repete a verificação
   // periodicamente enquanto o app fica aberto — cobre quem deixa o Orbi
-  // Swit Stack minimizado na bandeja por muito tempo sem reabrir. Continua
+  // Orbi minimizado na bandeja por muito tempo sem reabrir. Continua
   // sendo só uma checagem silenciosa (nunca baixa/instala sozinha); o
   // resultado passa pelo mesmo `onStateChange` de sempre, que já empurra
   // pro renderer e aciona tanto o indicador em Configurações quanto o

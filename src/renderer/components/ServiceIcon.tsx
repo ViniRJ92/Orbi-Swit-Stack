@@ -36,7 +36,7 @@
  * dia essas marcas voltarem a ter um traçado oficial disponível, o ideal é
  * substituir essas três aproximações pelo mesmo processo das demais.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import type { ReactElement, ReactNode } from 'react';
 import { AccountService } from '../types';

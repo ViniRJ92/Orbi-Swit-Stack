@@ -4,7 +4,7 @@
  * ver main/releaseNotes.ts e store/useAppStore.ts). Puramente informativa:
  * um botão só, "Entendi", que fecha e marca a versão como vista.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { Sparkles } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';

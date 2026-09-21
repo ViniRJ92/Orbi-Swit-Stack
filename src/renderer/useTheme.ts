@@ -2,7 +2,7 @@
  * Resolve a preferência de tema ("dark" | "light" | "system") para o valor
  * efetivo aplicado via atributo data-theme no <html>, reagindo em tempo real
  * a mudanças do tema do sistema operacional quando a preferência é "system".
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { useEffect } from 'react';
 import { ThemePreference } from './types';

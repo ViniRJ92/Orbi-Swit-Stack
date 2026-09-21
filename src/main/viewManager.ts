@@ -24,7 +24,7 @@
  * pedir QR Code novamente. Só a remoção definitiva de uma conta
  * (`wipeAndDestroy`) apaga os dados da partition.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { BrowserWindow, WebContentsView, ipcMain, session } from 'electron';
 import * as path from 'path';
@@ -61,6 +61,48 @@ function isNavigationAllowed(allowedHosts: string[] | null, targetUrl: string): 
  */
 const CHROME_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+/**
+ * Fase 87 — login com conta Google nas instâncias que NÃO são WhatsApp.
+ *
+ * O Google recusa login em navegador embutido ("este navegador ou app pode
+ * não ser seguro"). A pedido do usuário (regra 1 retirada em 2026-09-19),
+ * só enquanto a instância está em accounts.google.com ela se identifica como
+ * Firefox, e os cabeçalhos de identificação do Chromium (`Sec-CH-UA*`) não
+ * são enviados para esse domínio. Fora dele, volta ao user agent de sempre.
+ * Riscos informados ao usuário: o Google pode continuar bloqueando, pedir
+ * verificação extra ou alertar sobre login suspeito.
+ */
+const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
+const GOOGLE_LOGIN_HOST = 'accounts.google.com';
+
+function isGoogleLogin(url: string): boolean {
+  try {
+    return new URL(url).hostname === GOOGLE_LOGIN_HOST;
+  } catch {
+    return false;
+  }
+}
+
+/** Troca o user agent da página conforme ela entra ou sai do login do Google. */
+function followGoogleLoginUserAgent(wc: Electron.WebContents): void {
+  wc.on('did-start-navigation', (details) => {
+    if (!details.isMainFrame) return;
+    wc.setUserAgent(isGoogleLogin(details.url) ? FIREFOX_USER_AGENT : CHROME_USER_AGENT);
+  });
+}
+
+/** Cabeçalhos das requisições para o login do Google, na sessão da instância. */
+function applyGoogleLoginHeaders(ses: Electron.Session): void {
+  ses.webRequest.onBeforeSendHeaders({ urls: [`https://${GOOGLE_LOGIN_HOST}/*`] }, (details, callback) => {
+    const headers = { ...details.requestHeaders };
+    headers['User-Agent'] = FIREFOX_USER_AGENT;
+    for (const nome of Object.keys(headers)) {
+      if (/^sec-ch-ua/i.test(nome)) delete headers[nome];
+    }
+    callback({ requestHeaders: headers });
+  });
+}
 
 /** Permissões que o próprio WhatsApp Web pode pedir para chamadas de voz/vídeo oficiais. */
 const ALLOWED_PERMISSIONS = new Set(['media', 'display-capture', 'notifications']);
@@ -292,6 +334,15 @@ export class ViewManager {
     });
 
     view.webContents.setUserAgent(CHROME_USER_AGENT);
+    // Fase 87 — login com conta Google, só fora do WhatsApp (ver topo do arquivo).
+    if (service.id !== 'whatsapp') {
+      applyGoogleLoginHeaders(ses);
+      followGoogleLoginUserAgent(view.webContents);
+      view.webContents.on('did-create-window', (popup) => {
+        popup.webContents.setUserAgent(CHROME_USER_AGENT);
+        followGoogleLoginUserAgent(popup.webContents);
+      });
+    }
     view.webContents.loadURL(startUrl).catch((err) => {
       logger.error(`Falha ao carregar "${service.label}" para a conta ${accountId}: ${String(err)}`);
     });

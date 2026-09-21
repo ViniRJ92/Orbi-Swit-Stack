@@ -5,7 +5,7 @@
  * pode aparecer para instâncias WhatsApp, que são as únicas que realmente
  * usam QR Code para conectar).
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { AccountRecord, AccountStatus } from './types';
 

@@ -8,7 +8,7 @@
  * Uso: npx tsc -p tsconfig.json && node scripts/test-analytics.js
  * Qualquer falha encerra com código 1, o que interrompe a publicação.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 const Module = require('module');
 const fs = require('fs');
@@ -90,6 +90,25 @@ const cls = buildInteractionClassification(
   { A: { joao: [d(-1), d(0)], maria: [d(0)], velho: [d(-3)] }, B: { lia: [d(0)] } }
 );
 check('Soma das categorias = total de interações', Object.values(cls.counts).reduce((s, n) => s + n, 0), cls.total);
+
+console.log('\nBackup do histórico');
+const { InteractionHistoryStore } = require(path.join(dist, 'interactionHistoryStore.js'));
+const origem = novoStore();
+origem.recordChatMessages('A', 'joao', baloes('bk', 3, 'in'));
+const copia = origem.exportForBackup();
+const destino = novoStore();
+destino.recordChatMessages('B', 'lia', baloes('outro', 2, 'in'));
+const antesDestino = destino.buildDailyReport(contas).today.totalReceived;
+check('Restaurar soma ao que já existe', destino.mergeFromBackup(copia), 3);
+check('Nada do destino foi apagado', destino.buildDailyReport(contas).today.totalReceived, antesDestino + 3);
+check('Restaurar o mesmo backup de novo não conta em dobro', destino.mergeFromBackup(copia), 0);
+destino.recordChatMessages('A', 'joao', baloes('bk', 3, 'in'));
+check('Balões do backup não são recontados ao abrir a conversa', destino.buildDailyReport(contas).today.totalReceived, antesDestino + 3);
+fs.rmSync(path.join(tmp, 'interactionHistory.json'), { force: true });
+const hist = new InteractionHistoryStore();
+hist.sync([{ a: 'A', k: 'maria', day: d(0) }]);
+hist.merge({ A: { maria: [d(-3), d(0)], joao: [d(-1)] } });
+check('Histórico da classificação é somado sem repetir dias', hist.getDays().A.maria, [d(-3), d(0)]);
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${total - falhas} de ${total} testes passaram.`);

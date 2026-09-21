@@ -2,7 +2,7 @@
  * Bandeja do Windows: ícone, menu de contexto e o atalho de clique para
  * mostrar/esconder a janela principal.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app, Menu, Tray, nativeImage } from 'electron';
 

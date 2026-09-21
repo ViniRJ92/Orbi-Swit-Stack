@@ -11,7 +11,7 @@
  * registrou (leitura, nunca escrita naquele store). Só acrescenta dias, então
  * a poda de 30 dias do chatActivity.json não apaga o que já foi copiado.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app } from 'electron';
 import * as fs from 'fs';
@@ -95,6 +95,24 @@ export class InteractionHistoryStore {
   forget(accountId: string): void {
     if (!this.days[accountId]) return;
     delete this.days[accountId];
+    this.persist();
+  }
+
+  /**
+   * Fase 85 — restauração de backup: junta os dias do backup aos que já
+   * existem, sem apagar nada. Dia repetido fica uma vez só.
+   */
+  merge(days: unknown): void {
+    if (!days || typeof days !== 'object') return;
+    for (const [a, porContato] of Object.entries(days as Record<string, unknown>)) {
+      if (!porContato || typeof porContato !== 'object') continue;
+      const destino = (this.days[a] ??= {});
+      for (const [k, lista] of Object.entries(porContato as Record<string, unknown>)) {
+        if (!Array.isArray(lista)) continue;
+        const validos = lista.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d));
+        destino[k] = [...new Set([...(destino[k] ?? []), ...validos])].sort();
+      }
+    }
     this.persist();
   }
 

@@ -9,7 +9,7 @@
  * sidebar principal do app não tem mais nenhuma dessas ações — só a estrela
  * de favorito, que afeta a própria ordenação da sidebar.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import {
@@ -1516,7 +1516,7 @@ function BackupDiagnosticsTab({
       <Card
         title="Backup das instâncias"
         icon={<DownloadCloud size={15} />}
-        description="Salva só os nomes, cores, ordem e agrupamentos das instâncias, nunca o login ou os dados da sessão. Útil para não perder a organização da lista; não substitui autenticar de novo se os dados da sessão forem apagados."
+        description="Salva os nomes, cores, ordem e agrupamentos das instâncias e o histórico do Analytics, nunca o login ou as conversas. Ao restaurar, o histórico é somado ao que já existe, sem apagar nada. Não substitui ler o QR Code de novo se os dados da sessão forem apagados."
         action={
           <div className="flex flex-col gap-2">
             <SecondaryButton onClick={exportBackup} icon={<DownloadCloud size={14} />}>

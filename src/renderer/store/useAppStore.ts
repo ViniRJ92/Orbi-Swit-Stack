@@ -2,7 +2,7 @@
  * Estado global do renderer (Zustand). Concentra os dados vindos do processo
  * principal (contas, status, tema) e as ações que chamam a API exposta em
  * window.multiwhats — evita passar callbacks manualmente entre componentes.
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { create } from 'zustand';
 import {

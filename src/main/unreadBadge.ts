@@ -5,7 +5,7 @@
  * canvas/imagem) — um círculo vermelho com o número em branco, usando uma
  * fonte de pixels minúscula própria.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { nativeImage, NativeImage } from 'electron';
 

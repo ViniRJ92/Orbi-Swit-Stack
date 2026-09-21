@@ -3,7 +3,7 @@
  * desempenho, notificações). Mesmo padrão do AccountStore: JSON simples em
  * userData, sem dados sensíveis.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app } from 'electron';
 import * as fs from 'fs';

@@ -18,7 +18,7 @@
  * elimina essa classe inteira de bug: não importa mais o que está ou não
  * dentro de node_modules no momento de gerar o instalador.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { build } from 'esbuild';
 import { fileURLToPath } from 'url';

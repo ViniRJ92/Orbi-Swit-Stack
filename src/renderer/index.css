@@ -5,7 +5,7 @@
    Fase 2: paleta refinada (tons mais profundos, superfícies elevadas,
    acento em gradiente) — mesma estrutura de tokens de antes, só os valores
    mudaram, então nada na lógica de tema precisou ser tocado.
-   Orbi Swit Stack — Criado por Vinicius Braga */
+   Orbi — Criado por Vinicius Braga */
 :root {
   --color-app: #0d1418;
   --color-sidebar: #151e24;

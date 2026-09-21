@@ -3,7 +3,7 @@
  * renderer. Mantido separado do ciclo de vida do app (main.ts) para que a
  * lista de comandos expostos à UI fique em um único lugar fácil de auditar.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import * as os from 'os';
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
@@ -222,16 +222,22 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   ipcMain.handle('mw:export-backup', async () => {
     const win = deps.getMainWindow();
     if (!win) return { error: 'Janela indisponível.' };
+    // Fase 85: o backup leva também o histórico do Analytics (mensagens dos
+    // últimos 30 dias e histórico da Classificação), só leitura.
+    syncInteractionHistory();
     const backup: BackupFile = {
-      app: 'orbi-swit-stack',
-      backupVersion: 1,
+      app: 'orbi',
+      backupVersion: 2,
       exportedAt: new Date().toISOString(),
       accounts: accountStore.exportBackup(),
+      analytics: chatActivityStore
+        ? { chatActivity: chatActivityStore.exportForBackup(), interactionHistory: interactionHistory.getDays() }
+        : undefined,
     };
     const { canceled, filePath } = await dialog.showSaveDialog(win, {
       title: 'Salvar backup das contas',
-      defaultPath: `orbi-swit-stack-backup-${new Date().toISOString().slice(0, 10)}.json`,
-      filters: [{ name: 'Backup do Orbi Swit Stack', extensions: ['json'] }],
+      defaultPath: `orbi-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'Backup do Orbi', extensions: ['json'] }],
     });
     if (canceled || !filePath) return { canceled: true };
     try {
@@ -250,7 +256,7 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
       title: 'Selecionar backup para restaurar',
       properties: ['openFile'],
-      filters: [{ name: 'Backup do Orbi Swit Stack', extensions: ['json'] }],
+      filters: [{ name: 'Backup do Orbi', extensions: ['json'] }],
     });
     if (canceled || filePaths.length === 0) return { canceled: true };
     try {
@@ -258,15 +264,35 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
       // Aceita também o identificador antigo ('whats-control') para não
       // quebrar a restauração de backups feitos antes do rebranding.
       if (
-        (parsed?.app !== 'orbi-swit-stack' && (parsed?.app as string) !== 'whats-control') ||
+        !['orbi', 'orbi-swit-stack', 'whats-control'].includes(parsed?.app as string) ||
         !Array.isArray(parsed.accounts)
       ) {
-        return { error: 'Este arquivo não parece ser um backup válido do Orbi Swit Stack.' };
+        return { error: 'Este arquivo não parece ser um backup válido do Orbi.' };
       }
       const result = accountStore.restore(parsed.accounts);
       logger.info(
         `Backup importado de ${filePaths[0]}: ${result.restored} conta(s) recriada(s), ${result.updated} atualizada(s).`
       );
+      // Fase 85 — histórico do Analytics: só com confirmação, e sempre
+      // somando ao que já existe (nada é apagado ou substituído).
+      if (parsed.analytics && chatActivityStore) {
+        const { response } = await dialog.showMessageBox(win, {
+          type: 'question',
+          title: 'Orbi',
+          message: 'Restaurar também o histórico do Analytics?',
+          detail:
+            'O histórico do backup é somado ao que já existe neste computador. Nada é apagado, e o que já estiver aqui não é contado duas vezes.',
+          buttons: ['Restaurar histórico', 'Agora não'],
+          defaultId: 0,
+          cancelId: 1,
+        });
+        if (response === 0) {
+          const adicionados = chatActivityStore.mergeFromBackup(parsed.analytics.chatActivity ?? {});
+          interactionHistory.merge(parsed.analytics.interactionHistory);
+          syncInteractionHistory();
+          logger.info(`Histórico do Analytics restaurado do backup: ${adicionados} registro(s) novo(s).`);
+        }
+      }
       deps.pushAccountsUpdate();
       return result;
     } catch (err) {

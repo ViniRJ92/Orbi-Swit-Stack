@@ -6,7 +6,7 @@ as duas para manter contraste nítido em tamanhos minúsculos (bandeja do
 Windows / favicon). Desenhado em alta resolução com supersampling e depois
 reduzido, para bordas bem suaves em qualquer tamanho de exportação.
 
-Orbi Swit Stack — Criado por Vinicius Braga
+Orbi — Criado por Vinicius Braga
 """
 from PIL import Image, ImageDraw, ImageFilter
 

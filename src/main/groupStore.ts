@@ -4,7 +4,7 @@
  * associação de cada conta a um grupo mora no próprio AccountRecord
  * (`groupId`), gerenciado por AccountStore.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app } from 'electron';
 import * as fs from 'fs';

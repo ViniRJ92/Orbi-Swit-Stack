@@ -1,7 +1,7 @@
 /**
  * Lógica de busca/filtro/ordenação de contas, compartilhada entre a barra
  * lateral (Sidebar) e a tela de gerenciamento de contas (AccountsDashboard).
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { useMemo } from 'react';
 import { AccountRecord, AccountStatus } from './types';

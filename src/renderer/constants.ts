@@ -1,7 +1,7 @@
 /**
  * Constantes compartilhadas do renderer. Espelha os limites de
  * src/main/settingsStore.ts para a barra de redimensionamento da sidebar.
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 export const SIDEBAR_WIDTH_MIN = 200;
 export const SIDEBAR_WIDTH_MAX = 450;

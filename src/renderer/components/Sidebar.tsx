@@ -1,6 +1,6 @@
 /**
  * Barra lateral com busca, filtros e a lista de contas (favoritas fixadas
- * no topo). Orbi Swit Stack — Criado por Vinicius Braga
+ * no topo). Orbi — Criado por Vinicius Braga
  *
  * Fase 10 (organização em agrupamentos "de verdade"):
  * - Os agrupamentos (pastas) são reordenáveis por arrastar e soltar, como
@@ -504,7 +504,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
                   aqui cairia justamente nessa faixa e ficaria invisível e
                   sem receber cliques. Na barra lateral esquerda, que ocupa
                   a altura toda, o menu tem para onde abrir — por isso lá a
-                  troca foi feita (ver AccountFilterSelect.tsx). */}
+                  troca foi feita (hoje é o botão de filtros ao lado de "Contas"). */}
               <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-input p-0.5">
                 {FILTERS.map((f) => (
                   <button

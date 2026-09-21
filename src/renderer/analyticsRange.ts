@@ -10,7 +10,7 @@
  * função de carregamento a cada tick, nunca guardada num `useMemo` que só
  * depende do que o usuário selecionou.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { AnalyticsRange } from './types';
 

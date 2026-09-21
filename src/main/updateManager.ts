@@ -13,7 +13,7 @@
  * instalações que já tiverem esta função (a partir desta versão) passam a
  * enxergar atualizações futuras automaticamente.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app, Notification } from 'electron';
 import { autoUpdater, UpdateInfo, ProgressInfo } from 'electron-updater';
@@ -120,7 +120,7 @@ export class UpdateManager {
     if (!Notification.isSupported()) return;
     const notification = new Notification({
       title: 'Atualização disponível',
-      body: `A versão ${version} do Orbi Swit Stack já pode ser baixada.`,
+      body: `A versão ${version} do Orbi já pode ser baixada.`,
     });
     notification.on('click', () => this.onAvailableClick?.(version));
     notification.show();

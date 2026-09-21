@@ -10,7 +10,7 @@
  * clique duplo no cartão) avança. Nomes, ícones e a lista de serviços são
  * os mesmos de antes.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { useMemo, useState } from 'react';
 import { ArrowLeft, Check, Search, UserPlus } from 'lucide-react';
@@ -299,11 +299,11 @@ export function AddAccountWizard({ open, onClose }: { open: boolean; onClose: ()
 
           {service === 'custom' && (
             <>
-              <label className="mb-1.5 mt-4 block text-xs font-medium text-text-dim">Endereço do site</label>
+              <label className="mb-1.5 mt-4 block text-xs font-medium text-text-dim">Endereço do site ou arquivo</label>
               <input
                 type="text"
                 value={customUrl}
-                placeholder="https://exemplo.com"
+                placeholder="https://exemplo.com ou C:\pasta\arquivo.html"
                 onChange={(e) => setCustomUrl(e.target.value)}
                 className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm text-text transition-colors focus:border-accent"
               />

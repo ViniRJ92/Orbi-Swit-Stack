@@ -5,8 +5,9 @@
  * ou automação. "URL customizada" e "Navegador livre" simplesmente abrem a
  * página que o usuário pedir, como uma aba isolada de qualquer navegador.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
+import { pathToFileURL } from 'url';
 
 export type AccountService =
   | 'whatsapp'
@@ -204,8 +205,13 @@ export function resolveAccountUrl(service: AccountService, customUrl?: string): 
 }
 
 export function normalizeUrl(raw: string): string {
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return `https://${raw}`;
+  // Fase 84 — o Web Explorer também abre arquivo do computador (ex.: um
+  // projeto em HTML): aceita `file://...` ou um caminho do Windows como
+  // `C:\pasta\index.html`, com ou sem aspas, do jeito que o Windows copia.
+  const valor = raw.replace(/^"(.*)"$/, '$1');
+  if (/^(https?|file):\/\//i.test(valor)) return valor;
+  if (/^[a-zA-Z]:[\\/]/.test(valor) || valor.startsWith('\\\\')) return pathToFileURL(valor).href;
+  return `https://${valor}`;
 }
 
 export function isHostAllowed(allowedHosts: string[] | null, hostname: string): boolean {

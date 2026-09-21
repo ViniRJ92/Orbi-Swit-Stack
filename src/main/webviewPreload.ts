@@ -20,7 +20,7 @@
  * "pronta" assim que a página termina de carregar, e não fica reobservando
  * nada depois disso.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { ipcRenderer } from 'electron';
 

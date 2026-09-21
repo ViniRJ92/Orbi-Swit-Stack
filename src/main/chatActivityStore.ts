@@ -75,7 +75,7 @@
  * mesma conta continuam sendo seguidas normalmente pela lista lateral, já
  * que só a conversa aberta tem o problema de nunca marcar não lida.
  *
- * Orbi Swit Stack -- Criado por Vinicius Braga
+ * Orbi -- Criado por Vinicius Braga
  */
 import { app } from 'electron';
 import * as fs from 'fs';
@@ -615,5 +615,60 @@ export class ChatActivityStore {
    */
   getInboundDays(): { a: string; k: string; day: string }[] {
     return this.data.events.filter((e) => e.s === 'l' && e.d !== 'out').map((e) => ({ a: e.a, k: e.k, day: e.day }));
+  }
+
+  /**
+   * Fase 85 — cópia do histórico para o arquivo de backup. Somente leitura:
+   * não altera nada do que está gravado.
+   */
+  exportForBackup(): { events: ChatEvent[]; processedLiveMessageIds: Record<string, string[]> } {
+    return {
+      events: this.data.events.map((e) => ({ ...e })),
+      processedLiveMessageIds: Object.fromEntries(
+        Object.entries(this.data.processedLiveMessageIds).map(([a, ids]) => [a, [...ids]])
+      ),
+    };
+  }
+
+  /**
+   * Fase 85 — restauração de backup: SOMA ao que já existe, nunca apaga nem
+   * substitui. Evento idêntico a um já gravado é ignorado, então restaurar o
+   * mesmo backup duas vezes não conta nada em dobro. Os códigos de balão já
+   * contados também são somados, para a conversa não ser recontada.
+   */
+  mergeFromBackup(data: { events?: unknown; processedLiveMessageIds?: unknown }): number {
+    // Vários balões lidos na mesma varredura geram eventos idênticos (mesmo
+    // instante, mesma conversa, valor 1). Por isso a comparação é por
+    // QUANTIDADE: de cada evento igual, só entra o que o backup tem a mais do
+    // que já existe aqui.
+    const chave = (e: ChatEvent) => `${e.t}|${e.day}|${e.a}|${e.k}|${e.c}|${e.s ?? ''}|${e.d ?? ''}`;
+    const jaTem = new Map<string, number>();
+    for (const e of this.data.events) jaTem.set(chave(e), (jaTem.get(chave(e)) ?? 0) + 1);
+    let adicionados = 0;
+    if (Array.isArray(data.events)) {
+      const doBackup = new Map<string, number>();
+      for (const bruto of data.events as ChatEvent[]) {
+        if (!bruto || typeof bruto.t !== 'number' || typeof bruto.day !== 'string' || typeof bruto.a !== 'string') continue;
+        if (typeof bruto.k !== 'string' || typeof bruto.c !== 'number') continue;
+        const k = chave(bruto);
+        const vistosNoBackup = (doBackup.get(k) ?? 0) + 1;
+        doBackup.set(k, vistosNoBackup);
+        if (vistosNoBackup <= (jaTem.get(k) ?? 0)) continue;
+        this.data.events.push({ ...bruto });
+        adicionados++;
+      }
+      this.data.events.sort((x, y) => x.t - y.t);
+    }
+    if (data.processedLiveMessageIds && typeof data.processedLiveMessageIds === 'object') {
+      for (const [a, ids] of Object.entries(data.processedLiveMessageIds as Record<string, unknown>)) {
+        if (!Array.isArray(ids)) continue;
+        const atual = this.data.processedLiveMessageIds[a] ?? [];
+        const junto = [...new Set([...(ids.filter((x) => typeof x === 'string') as string[]), ...atual])];
+        this.data.processedLiveMessageIds[a] = junto.slice(-MAX_PROCESSED_LIVE_IDS_PER_ACCOUNT);
+      }
+    }
+    this.prune();
+    this.persist();
+    return adicionados;
   }
 }

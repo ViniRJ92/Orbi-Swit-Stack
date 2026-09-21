@@ -17,7 +17,7 @@
  * período. O histórico usado é tudo o que existe ANTES desse dia, sem ficar
  * limitado ao período (ver interactionHistoryStore.ts, que guarda 180 dias).
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import {
   AnalyticsRange,

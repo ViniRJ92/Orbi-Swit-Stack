@@ -7,7 +7,7 @@
  * app (ver MessageToast.tsx). A detecção continua exatamente a mesma; mudou
  * só por onde o aviso aparece.
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { BrowserWindow, Notification, nativeImage } from 'electron';
 import { AccountStatus } from './types';

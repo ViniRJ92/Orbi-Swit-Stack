@@ -4,7 +4,7 @@
  * status de cada conta para a UI. Isola essa lógica de negócio do ciclo de
  * vida da janela/bandeja/IPC (ver windowManager.ts, trayManager.ts, ipcRouter.ts).
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { AccountStore } from './accountStore';
 import { ViewManager } from './viewManager';

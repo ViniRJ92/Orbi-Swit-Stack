@@ -2,7 +2,7 @@
  * Tipos compartilhados do lado do renderer. Espelham src/main/types.ts —
  * mantidos separados porque main e renderer têm bases TypeScript/bundlers
  * diferentes (tsc puro vs. Vite), então não compartilham um tsconfig.
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 
 export type AccountService =

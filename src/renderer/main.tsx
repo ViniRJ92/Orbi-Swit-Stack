@@ -1,5 +1,5 @@
 /**
- * Ponto de entrada do renderer. Orbi Swit Stack — Criado por Vinicius Braga
+ * Ponto de entrada do renderer. Orbi — Criado por Vinicius Braga
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

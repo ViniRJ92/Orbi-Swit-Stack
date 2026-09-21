@@ -3,7 +3,7 @@
  * e troca direto para ela, sem precisar do mouse. Não lê nem busca dentro
  * do conteúdo do WhatsApp Web — só nos metadados da conta (nome/telefone
  * que o próprio usuário cadastrou), os mesmos já usados na busca da sidebar.
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';

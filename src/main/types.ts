@@ -1,6 +1,6 @@
 /**
  * Tipos compartilhados entre o processo principal e o preload/renderer.
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { AccountService } from './services';
 
@@ -63,12 +63,18 @@ export interface AccountBackupEntry {
 
 export interface BackupFile {
   // Aceita o identificador antigo ('whats-control', de antes do rebranding
-  // para Orbi Swit Stack) para que backups feitos com versões anteriores
+  // para Orbi) para que backups feitos com versões anteriores
   // do app continuem podendo ser restaurados.
-  app: 'orbi-swit-stack' | 'whats-control';
-  backupVersion: 1;
+  // Fase 85: backups novos saem com 'orbi'; os dois antigos continuam aceitos.
+  app: 'orbi' | 'orbi-swit-stack' | 'whats-control';
+  backupVersion: 1 | 2;
   exportedAt: string;
   accounts: AccountBackupEntry[];
+  /** Fase 85 (versão 2) — histórico do Analytics. Opcional: backups antigos não têm. */
+  analytics?: {
+    chatActivity: { events: unknown[]; processedLiveMessageIds: Record<string, string[]> };
+    interactionHistory: Record<string, Record<string, string[]>>;
+  };
 }
 
 export type AccountsChangedPayload = {

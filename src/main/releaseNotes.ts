@@ -586,6 +586,15 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Adicionar conta: categorias, busca e cartões com uma descrição curta de cada serviço. Clique no serviço e depois em Continuar.',
     '• Nomes, ícones e funcionamento continuam os mesmos.',
   ].join('\n'),
+  '0.49.6': [
+    'Tudo com o nome Orbi, backup com histórico e mais',
+    '',
+    '• Caixas de aviso, backup, notificações, log e a pasta de dados passam a usar o nome Orbi. Contas, logins e histórico continuam iguais.',
+    '• O backup leva também o histórico do Analytics. Ao restaurar, o histórico é somado ao que já existe, sem apagar nada.',
+    '• Comparar com período anterior fica marcado entre aberturas do Analytics.',
+    '• Web Explorer abre também arquivo do computador, como um projeto em HTML.',
+    '• Instâncias que não são WhatsApp tentam liberar o login com conta Google.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

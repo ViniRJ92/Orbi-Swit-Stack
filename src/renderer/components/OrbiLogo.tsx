@@ -1,11 +1,11 @@
 /**
- * Marca "Orbi Swit Stack": um squircle neutro (grafite, sem associação a
+ * Marca "Orbi": um squircle neutro (grafite, sem associação a
  * nenhum serviço específico) com duas esferas em órbita — a maior
  * representa o "hub" central, a menor (com um leve halo da cor de fundo
  * separando as duas formas) representa uma conta orbitando. O halo garante
  * contraste em tamanhos minúsculos (bandeja do sistema, favicon).
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 export function OrbiLogo({ size = 32, rounded = true }: { size?: number; rounded?: boolean }) {
   return (

@@ -93,7 +93,7 @@
  * quanto a comparação normal de delta (só reage a uma mudança que realmente
  * se sustentou, não a um flicker momentâneo do título).
  *
- * Orbi Swit Stack — Criado por Vinicius Braga
+ * Orbi — Criado por Vinicius Braga
  */
 import { app } from 'electron';
 import * as fs from 'fs';
