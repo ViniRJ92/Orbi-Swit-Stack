@@ -602,6 +602,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Novos serviços: YouTube, Deezer, Claude e Canva.',
     '• Novas categorias Google, Música e vídeo e Criação.',
   ].join('\n'),
+  '0.49.8': [
+    'Correção do login com conta Google',
+    '',
+    '• Gmail, YouTube e demais serviços do Google: o login não é mais recusado com "Esse navegador ou app pode não ser seguro" quando o próprio Google redireciona para a tela de login.',
+    '• Janelas de login abertas dentro de outras janelas também passam a usar o mesmo login.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

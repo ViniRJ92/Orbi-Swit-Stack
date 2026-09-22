@@ -86,10 +86,15 @@ function isGoogleLogin(url: string): boolean {
 
 /** Troca o user agent da página conforme ela entra ou sai do login do Google. */
 function followGoogleLoginUserAgent(wc: Electron.WebContents): void {
-  wc.on('did-start-navigation', (details) => {
+  const seguir = (details: Electron.Event<Electron.WebContentsDidStartNavigationEventParams>) => {
     if (!details.isMainFrame) return;
     wc.setUserAgent(isGoogleLogin(details.url) ? FIREFOX_USER_AGENT : CHROME_USER_AGENT);
-  });
+  };
+  wc.on('did-start-navigation', seguir);
+  // Gmail, YouTube etc. chegam ao login por redirecionamento do servidor
+  // (mail.google.com → accounts.google.com): sem isto a página de login abria
+  // ainda com o user agent do Chrome e o Google recusava.
+  wc.on('did-redirect-navigation', seguir);
 }
 
 /** Cabeçalhos das requisições para o login do Google, na sessão da instância. */
@@ -335,13 +340,19 @@ export class ViewManager {
 
     view.webContents.setUserAgent(CHROME_USER_AGENT);
     // Fase 87 — login com conta Google, só fora do WhatsApp (ver topo do arquivo).
+    // REGRA ABSOLUTA do projeto: todo serviço novo ou existente que tenha
+    // login do Google passa por aqui (janela principal, popups e popups
+    // abertos por popups) — nunca criar uma view fora do createView.
     if (service.id !== 'whatsapp') {
       applyGoogleLoginHeaders(ses);
-      followGoogleLoginUserAgent(view.webContents);
-      view.webContents.on('did-create-window', (popup) => {
-        popup.webContents.setUserAgent(CHROME_USER_AGENT);
-        followGoogleLoginUserAgent(popup.webContents);
-      });
+      const acompanhar = (wc: Electron.WebContents) => {
+        followGoogleLoginUserAgent(wc);
+        wc.on('did-create-window', (popup) => {
+          popup.webContents.setUserAgent(CHROME_USER_AGENT);
+          acompanhar(popup.webContents);
+        });
+      };
+      acompanhar(view.webContents);
     }
     view.webContents.loadURL(startUrl).catch((err) => {
       logger.error(`Falha ao carregar "${service.label}" para a conta ${accountId}: ${String(err)}`);
