@@ -114,6 +114,7 @@ const SECTIONS: HelpSection[] = [
             liberar esse login. O Google pode recusar mesmo assim, pedir uma verificação a mais ou avisar de um acesso
             novo. Se recusar, entre pelo e-mail com o código enviado pelo próprio site.
           </Aviso>
+
         </Bloco>
 
         <Bloco title="Trocar de conta">

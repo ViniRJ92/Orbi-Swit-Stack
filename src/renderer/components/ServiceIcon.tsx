@@ -101,6 +101,46 @@ function BrowserGlyphPath({ size, color }: { size: number; color: string }) {
 }
 
 /** Um único path SVG, preenchido com `color` — usado pelos dois modos (glifo plano e ícone de app). */
+/** Fase 88 — logotipo do Spotify (três ondas dentro do círculo). */
+const SPOTIFY_PATH =
+  'M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z';
+
+/** Fase 88 — logotipo do YouTube (botão de play arredondado). */
+const YOUTUBE_PATH =
+  'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z';
+
+/**
+ * Fase 88 — Deezer: aproximação do logotipo (colunas de equalizador), no
+ * mesmo espírito do Grok, sem traçado oficial copiado.
+ */
+function DeezerGlyph({ size, color }: { size: number; color: string }) {
+  const colunas = [
+    { x: 2, h: 5 },
+    { x: 6.8, h: 9 },
+    { x: 11.6, h: 13 },
+    { x: 16.4, h: 17 },
+  ];
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      {colunas.map((c) => (
+        <rect key={c.x} x={c.x} y={20 - c.h} width={3.6} height={c.h} rx={1} fill={color} />
+      ))}
+    </svg>
+  );
+}
+
+/**
+ * Fase 88 — Canva: aproximação (letra "C" em traço), sem copiar o
+ * logotipo oficial, no mesmo espírito do Grok e do Deezer.
+ */
+function CanvaGlyph({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.2 7.6A6.6 6.6 0 1 0 17.2 16.4" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function PathGlyph({ path, size, color }: { path: string; size: number; color: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -227,6 +267,10 @@ const FLAT_GLYPH_BY_SERVICE: Record<AccountService, (props: { size: number; colo
   copilot: ({ size }) => <CopilotWingsGlyph size={size} />,
   perplexity: ({ size, color }) => <PathGlyph path={PERPLEXITY_PATH} size={size} color={color} />,
   grok: ({ size, color }) => <GrokAsteriskGlyph size={size} color={color} />,
+  spotify: ({ size, color }) => <PathGlyph path={SPOTIFY_PATH} size={size} color={color} />,
+  deezer: ({ size, color }) => <DeezerGlyph size={size} color={color} />,
+  youtube: ({ size, color }) => <PathGlyph path={YOUTUBE_PATH} size={size} color={color} />,
+  canva: ({ size, color }) => <CanvaGlyph size={size} color={color} />,
 };
 
 /** Só o glifo (sem fundo próprio, cor controlada por quem chama) — composto sobre o círculo colorido da conta. */
@@ -388,6 +432,22 @@ const APP_ICON_SPECS: Record<AccountService, AppIconSpec> = {
     // pontas) em branco sobre preto, no mesmo espírito do ícone real do app.
     background: '#000000',
     render: (s) => <GrokAsteriskGlyph size={s} color="#FFFFFF" />,
+  },
+  spotify: {
+    background: '#191414',
+    render: (s) => <PathGlyph path={SPOTIFY_PATH} size={s} color="#1DB954" />,
+  },
+  deezer: {
+    background: '#121216',
+    render: (s) => <DeezerGlyph size={s} color="#A238FF" />,
+  },
+  youtube: {
+    background: '#FFFFFF',
+    render: (s) => <PathGlyph path={YOUTUBE_PATH} size={s} color="#FF0000" />,
+  },
+  canva: {
+    background: 'linear-gradient(135deg, #00C4CC 0%, #7D2AE8 100%)',
+    render: (s) => <CanvaGlyph size={s} color="#FFFFFF" />,
   },
 };
 

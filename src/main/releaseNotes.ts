@@ -595,6 +595,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Web Explorer abre também arquivo do computador, como um projeto em HTML.',
     '• Instâncias que não são WhatsApp tentam liberar o login com conta Google.',
   ].join('\n'),
+  '0.49.7': [
+    'Novos serviços em Adicionar conta',
+    '',
+    '• Gmail, Google Calendar, Google Earth e Gemini voltaram para a lista, agora que o login com conta Google funciona.',
+    '• Novos serviços: YouTube, Deezer, Claude e Canva.',
+    '• Novas categorias Google, Música e vídeo e Criação.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

@@ -24,7 +24,11 @@ export type AccountService =
   | 'claude'
   | 'copilot'
   | 'perplexity'
-  | 'grok';
+  | 'grok'
+  | 'spotify'
+  | 'deezer'
+  | 'youtube'
+  | 'canva';
 
 export interface ServiceDefinition {
   id: AccountService;
@@ -60,6 +64,10 @@ export const SERVICES: Record<AccountService, ServiceDefinition> = {
   copilot: { id: 'copilot', label: 'Microsoft Copilot', defaultUrl: 'https://copilot.microsoft.com/', color: '#0FAFFF' },
   perplexity: { id: 'perplexity', label: 'Perplexity', defaultUrl: 'https://www.perplexity.ai/', color: '#1FB8CD' },
   grok: { id: 'grok', label: 'Grok', defaultUrl: 'https://grok.com/', color: '#000000' },
+  spotify: { id: 'spotify', label: 'Spotify', defaultUrl: 'https://open.spotify.com/', color: '#1DB954' },
+  deezer: { id: 'deezer', label: 'Deezer', defaultUrl: 'https://www.deezer.com/', color: '#A238FF' },
+  youtube: { id: 'youtube', label: 'YouTube', defaultUrl: 'https://www.youtube.com/', color: '#FF0000' },
+  canva: { id: 'canva', label: 'Canva', defaultUrl: 'https://www.canva.com/', color: '#7D2AE8' },
 };
 
 export interface GroupRecord {

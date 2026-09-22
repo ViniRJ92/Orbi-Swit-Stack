@@ -28,7 +28,16 @@ export type AccountService =
   | 'claude'
   | 'copilot'
   | 'perplexity'
-  | 'grok';
+  | 'grok'
+  // Fase 88: Spotify Web. A música não toca dentro do Orbi (o Electron não
+  // traz a proteção Widevine); serve para entrar na conta, navegar e
+  // controlar a reprodução em outro aparelho.
+  | 'spotify'
+  // Fase 88: Deezer e YouTube, que tocam normalmente dentro do Orbi.
+  | 'deezer'
+  | 'youtube'
+  // Fase 88: Canva (criação de artes e posts).
+  | 'canva';
 
 export interface ServiceDefinition {
   id: AccountService;
@@ -190,6 +199,34 @@ export const SERVICES: Record<AccountService, ServiceDefinition> = {
     defaultUrl: 'https://grok.com/',
     allowedHosts: ['grok.com', 'x.ai', 'twitter.com', 'x.com'],
     color: '#000000',
+  },
+  spotify: {
+    id: 'spotify',
+    label: 'Spotify',
+    defaultUrl: 'https://open.spotify.com/',
+    allowedHosts: ['open.spotify.com', 'accounts.spotify.com', 'spotify.com', 'scdn.co', 'spotifycdn.com'],
+    color: '#1DB954',
+  },
+  deezer: {
+    id: 'deezer',
+    label: 'Deezer',
+    defaultUrl: 'https://www.deezer.com/',
+    allowedHosts: ['deezer.com', 'dzcdn.net'],
+    color: '#A238FF',
+  },
+  youtube: {
+    id: 'youtube',
+    label: 'YouTube',
+    defaultUrl: 'https://www.youtube.com/',
+    allowedHosts: ['youtube.com', 'youtu.be', 'ytimg.com', 'googlevideo.com', 'ggpht.com', 'accounts.google.com', 'www.google.com', 'google.com', 'gstatic.com', 'googleusercontent.com'],
+    color: '#FF0000',
+  },
+  canva: {
+    id: 'canva',
+    label: 'Canva',
+    defaultUrl: 'https://www.canva.com/',
+    allowedHosts: ['canva.com', 'canva-apps.com', 'canva.site'],
+    color: '#7D2AE8',
   },
 };
 

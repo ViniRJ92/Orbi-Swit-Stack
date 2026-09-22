@@ -46,14 +46,26 @@ const SERVICE_GRID: AccountService[] = [
   'custom',
   'threads',
   'x',
+  // Fase 88: de volta à lista, agora que o login com conta Google funciona
+  // nas instâncias que não são WhatsApp (ver viewManager.ts, Fase 87).
+  'gmail',
+  'googlecalendar',
+  'earth',
   'openai',
+  'gemini',
   'deepseek',
   'copilot',
   'perplexity',
   'grok',
+  'claude',
+  'canva',
+  // Fase 88: Spotify fica fora da lista por enquanto (a música não toca sem
+  // a proteção Widevine); a definição continua em services.ts.
+  'youtube',
+  'deezer',
 ];
 
-type Categoria = 'todos' | 'redes' | 'navegacao' | 'ia';
+type Categoria = 'todos' | 'redes' | 'google' | 'navegacao' | 'ia' | 'musica' | 'criacao';
 
 /** Fase 82 — categoria e descrição curta de cada serviço do cartão. */
 const SERVICE_INFO: Partial<Record<AccountService, { categoria: Exclude<Categoria, 'todos'>; descricao: string }>> = {
@@ -64,6 +76,10 @@ const SERVICE_INFO: Partial<Record<AccountService, { categoria: Exclude<Categori
   messenger: { categoria: 'redes', descricao: 'Mensagens do Facebook' },
   threads: { categoria: 'redes', descricao: 'Publicações e conversas' },
   x: { categoria: 'redes', descricao: 'Publicações e mensagens' },
+  gmail: { categoria: 'google', descricao: 'E-mail do Google' },
+  googlecalendar: { categoria: 'google', descricao: 'Agenda e compromissos' },
+  earth: { categoria: 'google', descricao: 'Mapas e imagens de satélite' },
+  gemini: { categoria: 'ia', descricao: 'Assistente de IA do Google' },
   chrome: { categoria: 'navegacao', descricao: 'Buscas sem login' },
   custom: { categoria: 'navegacao', descricao: 'Qualquer site pelo endereço' },
   openai: { categoria: 'ia', descricao: 'Assistente de IA' },
@@ -71,13 +87,20 @@ const SERVICE_INFO: Partial<Record<AccountService, { categoria: Exclude<Categori
   copilot: { categoria: 'ia', descricao: 'Assistente da Microsoft' },
   perplexity: { categoria: 'ia', descricao: 'Pesquisa com IA' },
   grok: { categoria: 'ia', descricao: 'Assistente de IA do X' },
+  claude: { categoria: 'ia', descricao: 'Assistente de IA da Anthropic' },
+  canva: { categoria: 'criacao', descricao: 'Artes, posts e apresentações' },
+  youtube: { categoria: 'musica', descricao: 'Vídeos e músicas' },
+  deezer: { categoria: 'musica', descricao: 'Música e podcasts' },
 };
 
 const CATEGORIAS: { key: Categoria; label: string }[] = [
   { key: 'todos', label: 'Todos' },
   { key: 'redes', label: 'Mensagens e redes' },
+  { key: 'google', label: 'Google' },
   { key: 'navegacao', label: 'Navegação' },
   { key: 'ia', label: 'IA' },
+  { key: 'musica', label: 'Música e vídeo' },
+  { key: 'criacao', label: 'Criação' },
 ];
 
 /** Rodapé comum às três etapas: indicador de etapa, resumo e botões. */
@@ -162,7 +185,7 @@ export function AddAccountWizard({ open, onClose }: { open: boolean; onClose: ()
   const suggestedName = SERVICES[service].label;
 
   const contagem = useMemo(() => {
-    const c: Record<Categoria, number> = { todos: SERVICE_GRID.length, redes: 0, navegacao: 0, ia: 0 };
+    const c: Record<Categoria, number> = { todos: SERVICE_GRID.length, redes: 0, google: 0, navegacao: 0, ia: 0, musica: 0, criacao: 0 };
     for (const key of SERVICE_GRID) {
       const cat = SERVICE_INFO[key]?.categoria;
       if (cat) c[cat] += 1;
