@@ -608,6 +608,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Gmail, YouTube e demais serviços do Google: o login não é mais recusado com "Esse navegador ou app pode não ser seguro" quando o próprio Google redireciona para a tela de login.',
     '• Janelas de login abertas dentro de outras janelas também passam a usar o mesmo login.',
   ].join('\n'),
+  '0.49.9': [
+    'Correção do login com conta Google',
+    '',
+    '• Corrigido o fechamento do Orbi ao abrir Gmail, Google Calendar e outros serviços do Google (problema da versão 0.49.8).',
+    '• Login com conta Google: a tela de login do Google deixa de mostrar sinais de navegador embutido. Testado com Gmail e YouTube.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
