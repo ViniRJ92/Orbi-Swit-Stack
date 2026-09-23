@@ -28,7 +28,8 @@ export type AccountService =
   | 'spotify'
   | 'deezer'
   | 'youtube'
-  | 'canva';
+  | 'canva'
+  | 'telegram';
 
 export interface ServiceDefinition {
   id: AccountService;
@@ -67,6 +68,7 @@ export const SERVICES: Record<AccountService, ServiceDefinition> = {
   spotify: { id: 'spotify', label: 'Spotify', defaultUrl: 'https://open.spotify.com/', color: '#1DB954' },
   deezer: { id: 'deezer', label: 'Deezer', defaultUrl: 'https://www.deezer.com/', color: '#A238FF' },
   youtube: { id: 'youtube', label: 'YouTube', defaultUrl: 'https://www.youtube.com/', color: '#FF0000' },
+  telegram: { id: 'telegram', label: 'Telegram', defaultUrl: 'https://web.telegram.org/k/', color: '#2AABEE' },
   canva: { id: 'canva', label: 'Canva', defaultUrl: 'https://www.canva.com/', color: '#7D2AE8' },
 };
 

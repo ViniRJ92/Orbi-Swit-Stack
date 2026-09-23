@@ -22,6 +22,8 @@ import {
   ArrowDownAZ,
   Clock,
   Activity,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import { AccountRecord } from '../types';
 import { useAppStore } from '../store/useAppStore';
@@ -49,6 +51,10 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
   const removeAccountWithConfirm = useAppStore((s) => s.removeAccountWithConfirm);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
   const setAccountColor = useAppStore((s) => s.setAccountColor);
+  // Fase 90: renomear a instância aqui mesmo, sem abrir Configurações.
+  const renameAccount = useAppStore((s) => s.renameAccount);
+  const [renomeandoId, setRenomeandoId] = useState<string | null>(null);
+  const [nomeEditado, setNomeEditado] = useState('');
 
   const reorderAccounts = useAppStore((s) => s.reorderAccounts);
   const groups = useAppStore((s) => s.groups);
@@ -75,6 +81,17 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
   }, [open, onClose]);
 
   const filteredByQuery = useFilteredAccounts(accounts, statuses, query, filter);
+  const iniciarRenomear = (acc: AccountRecord) => {
+    setRenomeandoId(acc.id);
+    setNomeEditado(acc.name);
+  };
+
+  const confirmarNome = (acc: AccountRecord) => {
+    const novo = nomeEditado.trim();
+    if (novo && novo !== acc.name) renameAccount(acc.id, novo);
+    setRenomeandoId(null);
+  };
+
   const knownGroupIds = new Set(groups.map((g) => g.id));
   const filtered = filteredByQuery.filter((a) => {
     if (groupFilter === 'all') return true;
@@ -386,7 +403,30 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
                         <div className="min-w-0">
                           <div className="flex items-center gap-1 truncate text-sm font-medium text-text">
                             {acc.favorite && <Star size={11} className="shrink-0 text-accent" fill="currentColor" />}
-                            <span className="truncate">{acc.name}</span>
+                            {renomeandoId === acc.id ? (
+                              <input
+                                autoFocus
+                                type="text"
+                                value={nomeEditado}
+                                maxLength={40}
+                                onChange={(e) => setNomeEditado(e.target.value)}
+                                onBlur={() => confirmarNome(acc)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                  if (e.key === 'Escape') setRenomeandoId(null);
+                                }}
+                                className="min-w-0 flex-1 rounded-md border border-accent bg-input px-1.5 py-0.5 text-[13px] text-text"
+                                aria-label="Novo nome da instância"
+                              />
+                            ) : (
+                              <span
+                                className="truncate"
+                                onDoubleClick={() => iniciarRenomear(acc)}
+                                title="Clique duas vezes para renomear"
+                              >
+                                {acc.name}
+                              </span>
+                            )}
                           </div>
                           <div className={'truncate text-[11px] ' + (status?.loadError ? 'text-danger' : 'text-text-dim')}>
                             {accountStatusLabel(acc, status)}
@@ -405,6 +445,13 @@ export function AccountsDashboard({ open, onClose }: { open: boolean; onClose: (
                           >
                             <ExternalLink size={11} />
                             Abrir
+                          </button>
+                          <button
+                            className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[10px] text-text-dim transition-colors hover:border-border-strong hover:text-text"
+                            onClick={() => (renomeandoId === acc.id ? confirmarNome(acc) : iniciarRenomear(acc))}
+                            title={renomeandoId === acc.id ? 'Salvar nome' : 'Renomear'}
+                          >
+                            {renomeandoId === acc.id ? <Check size={11} /> : <Pencil size={11} />}
                           </button>
                           <button
                             className={

@@ -37,7 +37,9 @@ export type AccountService =
   | 'deezer'
   | 'youtube'
   // Fase 88: Canva (criação de artes e posts).
-  | 'canva';
+  | 'canva'
+  // Fase 90: Telegram Web, a pedido do usuário.
+  | 'telegram';
 
 export interface ServiceDefinition {
   id: AccountService;
@@ -220,6 +222,13 @@ export const SERVICES: Record<AccountService, ServiceDefinition> = {
     defaultUrl: 'https://www.youtube.com/',
     allowedHosts: ['youtube.com', 'youtu.be', 'ytimg.com', 'googlevideo.com', 'ggpht.com', 'accounts.google.com', 'www.google.com', 'google.com', 'gstatic.com', 'googleusercontent.com'],
     color: '#FF0000',
+  },
+  telegram: {
+    id: 'telegram',
+    label: 'Telegram',
+    defaultUrl: 'https://web.telegram.org/k/',
+    allowedHosts: ['telegram.org', 'web.telegram.org', 't.me', 'telegram.me'],
+    color: '#2AABEE',
   },
   canva: {
     id: 'canva',

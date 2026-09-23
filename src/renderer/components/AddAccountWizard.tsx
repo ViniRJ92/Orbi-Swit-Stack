@@ -63,6 +63,7 @@ const SERVICE_GRID: AccountService[] = [
   // a proteção Widevine); a definição continua em services.ts.
   'youtube',
   'deezer',
+  'telegram',
 ];
 
 type Categoria = 'todos' | 'redes' | 'google' | 'navegacao' | 'ia' | 'musica' | 'criacao';
@@ -91,6 +92,7 @@ const SERVICE_INFO: Partial<Record<AccountService, { categoria: Exclude<Categori
   canva: { categoria: 'criacao', descricao: 'Artes, posts e apresentações' },
   youtube: { categoria: 'musica', descricao: 'Vídeos e músicas' },
   deezer: { categoria: 'musica', descricao: 'Música e podcasts' },
+  telegram: { categoria: 'redes', descricao: 'Mensagens e grupos' },
 };
 
 const CATEGORIAS: { key: Categoria; label: string }[] = [

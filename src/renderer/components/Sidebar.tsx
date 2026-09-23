@@ -679,9 +679,15 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
       {accountsArea}
 
       <button
-        className="mx-3 mb-1 mt-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong px-2 py-2.5 text-[13px] font-medium text-text-dim transition-colors hover:border-accent hover:text-accent"
+        className="add-account-btn relative mx-3 mb-1 mt-2.5 flex h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-medium leading-5 text-text-dim transition-colors hover:text-accent"
         onClick={onAdd}
       >
+        {/* Fase 90: a borda pontilhada é desenhada aqui (e não com
+            `border-dashed`) para poder girar quando o mouse está em cima.
+            Ver .add-account-dash em index.css. */}
+        <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-hidden rounded-lg" aria-hidden="true">
+          <rect className="add-account-dash" x="0" y="0" width="100%" height="100%" rx="8" ry="8" />
+        </svg>
         <Plus size={15} />
         Adicionar conta
       </button>

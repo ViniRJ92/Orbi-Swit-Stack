@@ -614,6 +614,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Corrigido o fechamento do Orbi ao abrir Gmail, Google Calendar e outros serviços do Google (problema da versão 0.49.8).',
     '• Login com conta Google: a tela de login do Google deixa de mostrar sinais de navegador embutido. Testado com Gmail e YouTube.',
   ].join('\n'),
+  '0.49.10': [
+    'Telegram, ícones oficiais e renomear pelo Gerenciar contas',
+    '',
+    '• Telegram disponível em "Adicionar conta", na categoria Mensagens e redes.',
+    '• Ícones dos serviços agora são os oficiais e atuais de cada aplicativo.',
+    '• Renomear instância direto em "Gerenciar contas", pelo lápis ou clicando duas vezes no nome.',
+    '• Botão "Adicionar conta" com o contorno pontilhado animado ao passar o mouse.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

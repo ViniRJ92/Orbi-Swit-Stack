@@ -194,3 +194,28 @@ input:focus-visible,
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* Fase 90: botão "Adicionar conta" da barra vertical. Parado, é a mesma
+   borda pontilhada de sempre; com o mouse em cima, o pontilhado gira
+   ("formiguinhas"), 4 segundos por volta. A borda é desenhada como SVG
+   porque `border-dashed` do CSS não anima. Nada além deste botão muda. */
+.add-account-dash {
+  fill: none;
+  stroke: var(--color-border-strong);
+  /* 2px com a metade de fora cortada pelo `overflow-hidden` do svg: fica 1px
+     nítido, e o contorno acompanha qualquer largura da barra. */
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+  transition: stroke 0.15s;
+}
+
+.add-account-btn:hover .add-account-dash {
+  stroke: currentColor;
+  animation: add-account-ants 4s linear infinite;
+}
+
+@keyframes add-account-ants {
+  to {
+    stroke-dashoffset: -90;
+  }
+}

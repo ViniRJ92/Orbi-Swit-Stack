@@ -139,6 +139,13 @@ const SECTIONS: HelpSection[] = [
           </p>
         </Bloco>
 
+        <Bloco title="Renomear uma instância">
+          <p className="text-[13px] leading-6 text-text-dim">
+            No cartão da instância, clique no lápis ou clique duas vezes no nome. Enter salva, Esc cancela. O nome
+            também pode ser alterado em Configurações, na aba "Instâncias e Agrupamentos".
+          </p>
+        </Bloco>
+
         <Bloco title="Organizar em agrupamentos">
           <ol className="flex flex-col gap-2">
             <Passo n={1}>Abra Configurações e vá na aba "Instâncias e Agrupamentos".</Passo>
