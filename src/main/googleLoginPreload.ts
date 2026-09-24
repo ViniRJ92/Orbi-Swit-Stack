@@ -29,7 +29,7 @@
 import { contextBridge, webFrame } from 'electron';
 
 // Mesmo texto de FIREFOX_USER_AGENT (viewManager.ts).
-const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:156.0) Gecko/20100101 Firefox/156.0';
+const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
 
 /** Roda dentro da página (mundo principal). Precisa ser autossuficiente. */
 function protecao(noLoginDoGoogle: boolean, firefoxUserAgent: string): void {
@@ -37,8 +37,15 @@ function protecao(noLoginDoGoogle: boolean, firefoxUserAgent: string): void {
   if (w.__orbiProtegido) return;
   w.__orbiProtegido = true;
 
+  // O recurso continua EXISTINDO (um Firefox moderno tem), mas nenhum pedido
+  // chega ao Windows: remover por completo deixava o navegador com cara de
+  // "estranho" para o Google. Pedidos com chave são recusados em silêncio.
   try {
-    delete w.PublicKeyCredential;
+    const pkc = w.PublicKeyCredential as { isConditionalMediationAvailable?: unknown; isUserVerifyingPlatformAuthenticatorAvailable?: unknown } | undefined;
+    if (pkc) {
+      pkc.isConditionalMediationAvailable = () => Promise.resolve(false);
+      pkc.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(false);
+    }
   } catch (e) {
     /* ignora */
   }
@@ -84,7 +91,8 @@ if (typeof location !== 'undefined') {
   // accounts.google.com — o site e o login precisam se apresentar igual.
   const dominios = ['youtube.com', 'youtu.be', 'youtube-nocookie.com', 'ytimg.com', 'googlevideo.com', 'gstatic.com', 'googleapis.com', 'googleusercontent.com', 'ggpht.com', 'gmail.com', 'withgoogle.com'];
   const host = location.hostname.toLowerCase();
-  const noLogin = /(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host) || dominios.some((d) => host === d || host.endsWith(`.${d}`));
+  // Teste 43: igual ao Orbi atual, Firefox só na tela de login.
+  const noLogin = host === 'accounts.google.com' && dominios.length > 0;
   let aplicado = false;
   try {
     const executar = (contextBridge as unknown as { executeInMainWorld?: (s: { func: (...a: never[]) => void; args?: unknown[] }) => unknown }).executeInMainWorld;

@@ -80,7 +80,7 @@ export const CHROME_USER_AGENT =
  *
  * Fora do Google nada muda. O WhatsApp não passa por aqui.
  */
-const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:156.0) Gecko/20100101 Firefox/156.0';
+const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
 
 const GOOGLE_DOMAINS = ['youtube.com', 'youtu.be', 'youtube-nocookie.com', 'ytimg.com', 'googlevideo.com', 'gstatic.com', 'googleapis.com', 'googleusercontent.com', 'ggpht.com', 'gmail.com', 'withgoogle.com'];
 
@@ -92,7 +92,8 @@ function isGoogleHost(hostname: string): boolean {
 
 function isGoogleUrl(url: string): boolean {
   try {
-    return isGoogleHost(new URL(url).hostname);
+    // Teste 43: igual ao Orbi atual, Firefox só na tela de login.
+    return new URL(url).hostname === 'accounts.google.com' || (false && isGoogleHost(''));
   } catch {
     return false;
   }
