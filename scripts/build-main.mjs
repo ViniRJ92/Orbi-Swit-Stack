@@ -26,7 +26,10 @@ import path from 'path';
 
 const rootDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-const ENTRY_POINTS = ['main.ts', 'preload.ts', 'webviewPreload.ts'];
+// Fase 91: googleLoginPreload.ts também precisa entrar aqui. Ele é carregado
+// por caminho (session preload); fora desta lista, o instalador levava uma
+// cópia antiga que sobrava de compilações anteriores.
+const ENTRY_POINTS = ['main.ts', 'preload.ts', 'webviewPreload.ts', 'googleLoginPreload.ts', 'servicePreload.ts'];
 
 await build({
   entryPoints: ENTRY_POINTS.map((f) => path.join(rootDir, 'src', 'main', f)),

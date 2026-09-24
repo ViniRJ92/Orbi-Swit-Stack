@@ -24,7 +24,7 @@ import { GroupStore } from './groupStore';
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
 import { CalendarStore } from './calendarStore';
-import { ViewManager } from './viewManager';
+import { ViewManager, CHROME_USER_AGENT } from './viewManager';
 import { AccountManager } from './accountManager';
 import { NotificationManager } from './notificationManager';
 import { TrayManager } from './trayManager';
@@ -78,6 +78,10 @@ function resolveUserDataDir(): string {
     return antigo;
   }
 }
+// Fase 91: sem isto, quadros internos das páginas se apresentavam como
+// "... Orbi/x Chrome/152 Electron/44 ...", inclusive dentro da tela de login
+// do Google. Agora todo o app usa a mesma identificação de Chrome limpa.
+app.userAgentFallback = CHROME_USER_AGENT;
 const userDataDir = resolveUserDataDir();
 app.setPath('userData', userDataDir);
 // Fase 83 — nome exibido pelo sistema (título das caixas de confirmação e

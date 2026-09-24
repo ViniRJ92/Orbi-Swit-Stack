@@ -63,42 +63,56 @@ function isNavigationAllowed(allowedHosts: string[] | null, targetUrl: string): 
 // Fixa em "126" ela deixou de bater com o Chromium real no Electron 44, e o
 // Google recusou o login pela contradição. Assim acompanha qualquer versão.
 const CHROMIUM_MAJOR = (process.versions.chrome || '126').split('.')[0];
-const CHROME_USER_AGENT =
+export const CHROME_USER_AGENT =
   `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROMIUM_MAJOR}.0.0.0 Safari/537.36`;
 
 /**
- * Fase 87 — login com conta Google nas instâncias que NÃO são WhatsApp.
+ * Fase 87/91 — login com conta Google nas instâncias que NÃO são WhatsApp.
  *
  * O Google recusa login em navegador embutido ("este navegador ou app pode
- * não ser seguro"). A pedido do usuário (regra 1 retirada em 2026-09-19),
- * só enquanto a instância está em accounts.google.com ela se identifica como
- * Firefox, e os cabeçalhos de identificação do Chromium (`Sec-CH-UA*`) não
- * são enviados para esse domínio. Fora dele, volta ao user agent de sempre.
- * Riscos informados ao usuário: o Google pode continuar bloqueando, pedir
- * verificação extra ou alertar sobre login suspeito.
+ * não ser seguro"). O caminho que funciona (testado com o Gmail no Electron
+ * 44) é a instância se apresentar como Firefox, de forma coerente, em TODAS
+ * as telas do Google: user agent da página, cabeçalhos (sem `Sec-CH-UA*`) e
+ * os sinais de JavaScript (googleLoginPreload.ts). Antes isso valia só em
+ * accounts.google.com, e o YouTube e a Pesquisa Google eram recusados: o
+ * usuário navegava no site como Chrome e fazia login como Firefox, e o
+ * Google via a troca. A lista de domínios fica igual à do preload.
+ *
+ * Fora do Google nada muda. O WhatsApp não passa por aqui.
  */
-const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
-const GOOGLE_LOGIN_HOST = 'accounts.google.com';
+const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:156.0) Gecko/20100101 Firefox/156.0';
 
-function isGoogleLogin(url: string): boolean {
+const GOOGLE_DOMAINS = ['youtube.com', 'youtu.be', 'youtube-nocookie.com', 'ytimg.com', 'googlevideo.com', 'gstatic.com', 'googleapis.com', 'googleusercontent.com', 'ggpht.com', 'gmail.com', 'withgoogle.com'];
+
+function isGoogleHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (/(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host)) return true;
+  return GOOGLE_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+function isGoogleUrl(url: string): boolean {
   try {
-    return new URL(url).hostname === GOOGLE_LOGIN_HOST;
+    return isGoogleHost(new URL(url).hostname);
   } catch {
     return false;
   }
 }
 
-/** Troca o user agent da página conforme ela entra ou sai do login do Google. */
+/** Troca o user agent da página conforme ela entra ou sai de um site do Google. */
 function followGoogleLoginUserAgent(wc: Electron.WebContents): void {
   wc.on('did-start-navigation', (details) => {
     if (!details.isMainFrame) return;
-    wc.setUserAgent(isGoogleLogin(details.url) ? FIREFOX_USER_AGENT : CHROME_USER_AGENT);
+    wc.setUserAgent(isGoogleUrl(details.url) ? FIREFOX_USER_AGENT : CHROME_USER_AGENT);
   });
 }
 
-/** Cabeçalhos das requisições para o login do Google, na sessão da instância. */
+/** Cabeçalhos de toda requisição para o Google, na sessão da instância. */
 function applyGoogleLoginHeaders(ses: Electron.Session): void {
-  ses.webRequest.onBeforeSendHeaders({ urls: [`https://${GOOGLE_LOGIN_HOST}/*`] }, (details, callback) => {
+  ses.webRequest.onBeforeSendHeaders((details, callback) => {
+    if (!isGoogleUrl(details.url)) {
+      callback({});
+      return;
+    }
     const headers = { ...details.requestHeaders };
     headers['User-Agent'] = FIREFOX_USER_AGENT;
     for (const nome of Object.keys(headers)) {
@@ -324,9 +338,16 @@ export class ViewManager {
     const view = new WebContentsView({
       webPreferences: {
         session: ses,
-        preload: path.join(__dirname, 'webviewPreload.js'),
+        // Fase 91: WhatsApp segue com o webviewPreload de sempre; os outros
+        // serviços usam o servicePreload (o mesmo webviewPreload + proteções
+        // do login do Google e contra a janela de chave de acesso).
+        preload: path.join(__dirname, service.id === 'whatsapp' ? 'webviewPreload.js' : 'servicePreload.js'),
         contextIsolation: true,
         nodeIntegration: false,
+        // Fase 91: fora do WhatsApp, o preload também roda nos quadros
+        // internos (ver servicePreload.ts). Sem isso, no Electron 44, a
+        // página de login do Google às vezes abria sem proteção nenhuma.
+        nodeIntegrationInSubFrames: service.id !== 'whatsapp',
         sandbox: false,
         // O preload usa isso pra saber se está dentro de uma instância
         // WhatsApp (única que tem QR Code/lista de conversas pra detectar) ou
