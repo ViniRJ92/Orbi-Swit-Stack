@@ -59,8 +59,8 @@ const SERVICE_GRID: AccountService[] = [
   'grok',
   'claude',
   'canva',
-  // Fase 88: Spotify fica fora da lista por enquanto (a música não toca sem
-  // a proteção Widevine); a definição continua em services.ts.
+  // Fase 91: com o Electron 44 da castLabs (Widevine), o Spotify toca.
+  'spotify',
   'youtube',
   'deezer',
   'telegram',
@@ -92,6 +92,7 @@ const SERVICE_INFO: Partial<Record<AccountService, { categoria: Exclude<Categori
   canva: { categoria: 'criacao', descricao: 'Artes, posts e apresentações' },
   youtube: { categoria: 'musica', descricao: 'Vídeos e músicas' },
   deezer: { categoria: 'musica', descricao: 'Música e podcasts' },
+  spotify: { categoria: 'musica', descricao: 'Músicas e podcasts' },
   telegram: { categoria: 'redes', descricao: 'Mensagens e grupos' },
 };
 

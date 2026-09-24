@@ -59,8 +59,12 @@ function isNavigationAllowed(allowedHosts: string[] | null, targetUrl: string): 
  * o protocolo e a interface continuam 100% os oficiais), só corrige uma
  * informação de identificação que fazia o WhatsApp Web errar a detecção.
  */
+// Fase 91: a versão anunciada vem do próprio motor (process.versions.chrome).
+// Fixa em "126" ela deixou de bater com o Chromium real no Electron 44, e o
+// Google recusou o login pela contradição. Assim acompanha qualquer versão.
+const CHROMIUM_MAJOR = (process.versions.chrome || '126').split('.')[0];
 const CHROME_USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+  `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROMIUM_MAJOR}.0.0.0 Safari/537.36`;
 
 /**
  * Fase 87 — login com conta Google nas instâncias que NÃO são WhatsApp.
@@ -339,7 +343,8 @@ export class ViewManager {
       applyGoogleLoginHeaders(ses);
       // Fase 89 — esconde os sinais de Chrome na página de login do Google
       // (ver googleLoginPreload.ts). Vale também para os popups dessa sessão.
-      ses.setPreloads([path.join(__dirname, 'googleLoginPreload.js')]);
+      // Electron 44: `setPreloads` ficou obsoleto; o registro agora é por script.
+      ses.registerPreloadScript({ type: 'frame', filePath: path.join(__dirname, 'googleLoginPreload.js') });
       followGoogleLoginUserAgent(view.webContents);
       view.webContents.on('did-create-window', (popup) => {
         popup.webContents.setUserAgent(CHROME_USER_AGENT);

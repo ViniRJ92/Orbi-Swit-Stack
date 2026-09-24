@@ -16,7 +16,7 @@
  *
  * Orbi — Criado por Vinicius Braga
  */
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, components } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AccountStore } from './accountStore';
@@ -64,6 +64,9 @@ import { logger } from './logger';
 const USER_DATA_DIR_NAME = 'orbi';
 const LEGACY_USER_DATA_DIR_NAME = 'orbi-swit-stack';
 function resolveUserDataDir(): string {
+  // Fase 91: só para testes. Com ORBI_DATA_DIR definida, o Orbi usa essa
+  // pasta (ex.: uma cópia dos dados) em vez da pasta real do usuário.
+  if (process.env.ORBI_DATA_DIR) return process.env.ORBI_DATA_DIR;
   const appData = app.getPath('appData');
   const novo = path.join(appData, USER_DATA_DIR_NAME);
   const antigo = path.join(appData, LEGACY_USER_DATA_DIR_NAME);
@@ -148,7 +151,24 @@ process.on('unhandledRejection', (reason) => {
   logger.error(`Promise rejeitada sem tratamento: ${String(reason)}`);
 });
 
-app.whenReady().then(() => {
+/**
+ * Fase 91 — Electron 44 da castLabs, que inclui o Widevine (proteção de
+ * conteúdo). Sem esperar por ele, serviços como Spotify não tocam. Se
+ * falhar, o app segue normalmente: só a reprodução protegida fica de fora.
+ */
+async function prepararWidevine(): Promise<void> {
+  try {
+    await components.whenReady();
+    const status = components.status() as Record<string, { version?: string }>;
+    const widevine = Object.values(status).find((c) => c?.version);
+    logger.info(`Widevine pronto (versão ${widevine?.version ?? 'desconhecida'}).`);
+  } catch (err) {
+    logger.warn(`Widevine indisponível: ${String(err)}. Reprodução protegida (ex.: Spotify) não vai funcionar.`);
+  }
+}
+
+app.whenReady().then(async () => {
+  await prepararWidevine();
   logger.info(`${APP_NAME} iniciado (versão ${app.getVersion()}).`);
 
   // Fase 8: sem contas fictícias na primeira instalação — o usuário começa
