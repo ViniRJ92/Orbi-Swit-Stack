@@ -623,8 +623,9 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Botão "Adicionar conta" com o contorno pontilhado animado ao passar o mouse.',
   ].join('\n'),
   '0.50.0': [
-    'Motor atualizado e Spotify',
+    'Motor atualizado, Spotify e correção do Analytics',
     '',
+    '• Analytics: mensagens que você manda pelo celular passam a contar em Enviadas. Antes elas apareciam como Recebidas. Os números antigos não são recalculados.',
     '• O Orbi passa a usar a versão mais recente do Electron, com um navegador interno bem mais novo e seguro.',
     '• Spotify disponível em "Adicionar conta". Músicas e vídeos protegidos agora tocam dentro do Orbi.',
     '• Login com conta Google mantido no Gmail, YouTube e Pesquisa Google.',

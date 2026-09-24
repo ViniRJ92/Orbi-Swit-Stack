@@ -299,6 +299,10 @@ const SECTIONS: HelpSection[] = [
           <ul className="mt-2 flex flex-col gap-2 text-[13px] leading-6 text-text-dim">
             <li>Conversa que nunca foi aberta no Orbi não entra na contagem. O aviso de não lidas da lista não é usado.</li>
             <li>Mensagem mais antiga que ontem, no momento em que a conversa é aberta, não é contada.</li>
+            <li>
+              Suas mensagens entram em Enviadas mesmo quando você manda pelo celular. Até a versão 0.49.10, as enviadas
+              pelo celular apareciam como Recebidas; os números anteriores a essa correção não são recalculados.
+            </li>
           </ul>        </Bloco>      </>
     ),
   },
