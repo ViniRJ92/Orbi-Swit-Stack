@@ -172,7 +172,9 @@ async function prepararWidevine(): Promise<void> {
 }
 
 app.whenReady().then(async () => {
-  await prepararWidevine();
+  // Em paralelo: sem internet o Widevine pode demorar, e isso não pode
+  // atrasar a abertura do Orbi. Ele só é usado depois (Spotify etc.).
+  void prepararWidevine();
   logger.info(`${APP_NAME} iniciado (versão ${app.getVersion()}).`);
 
   // Fase 8: sem contas fictícias na primeira instalação — o usuário começa

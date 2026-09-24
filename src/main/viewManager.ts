@@ -70,36 +70,26 @@ export const CHROME_USER_AGENT =
  * Fase 87/91 — login com conta Google nas instâncias que NÃO são WhatsApp.
  *
  * O Google recusa login em navegador embutido ("este navegador ou app pode
- * não ser seguro"). O caminho que funciona (testado com o Gmail no Electron
- * 44) é a instância se apresentar como Firefox, de forma coerente, em TODAS
- * as telas do Google: user agent da página, cabeçalhos (sem `Sec-CH-UA*`) e
- * os sinais de JavaScript (googleLoginPreload.ts). Antes isso valia só em
- * accounts.google.com, e o YouTube e a Pesquisa Google eram recusados: o
- * usuário navegava no site como Chrome e fazia login como Firefox, e o
- * Google via a troca. A lista de domínios fica igual à do preload.
+ * não ser seguro"). Só enquanto a instância está em accounts.google.com ela
+ * se apresenta como Firefox 128 (user agent, cabeçalhos sem `Sec-CH-UA*` e
+ * sinais de JavaScript em googleLoginPreload.ts). Fora dele, Chrome.
  *
- * Fora do Google nada muda. O WhatsApp não passa por aqui.
+ * Testado pelo usuário no Electron 44 em 2026-09-24 (Gmail, YouTube,
+ * Pesquisa Google e Spotify). O que QUEBRA o login, também testado: Firefox
+ * mais novo (156) e Firefox em todos os sites do Google. Não mudar sem testar.
  */
 const FIREFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
-
-const GOOGLE_DOMAINS = ['youtube.com', 'youtu.be', 'youtube-nocookie.com', 'ytimg.com', 'googlevideo.com', 'gstatic.com', 'googleapis.com', 'googleusercontent.com', 'ggpht.com', 'gmail.com', 'withgoogle.com'];
-
-function isGoogleHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
-  if (/(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host)) return true;
-  return GOOGLE_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
-}
+const GOOGLE_LOGIN_HOST = 'accounts.google.com';
 
 function isGoogleUrl(url: string): boolean {
   try {
-    // Teste 43: igual ao Orbi atual, Firefox só na tela de login.
-    return new URL(url).hostname === 'accounts.google.com' || (false && isGoogleHost(''));
+    return new URL(url).hostname === GOOGLE_LOGIN_HOST;
   } catch {
     return false;
   }
 }
 
-/** Troca o user agent da página conforme ela entra ou sai de um site do Google. */
+/** Troca o user agent da página conforme ela entra ou sai do login do Google. */
 function followGoogleLoginUserAgent(wc: Electron.WebContents): void {
   wc.on('did-start-navigation', (details) => {
     if (!details.isMainFrame) return;
@@ -107,7 +97,7 @@ function followGoogleLoginUserAgent(wc: Electron.WebContents): void {
   });
 }
 
-/** Cabeçalhos de toda requisição para o Google, na sessão da instância. */
+/** Cabeçalhos das requisições para o login do Google, na sessão da instância. */
 function applyGoogleLoginHeaders(ses: Electron.Session): void {
   ses.webRequest.onBeforeSendHeaders((details, callback) => {
     if (!isGoogleUrl(details.url)) {

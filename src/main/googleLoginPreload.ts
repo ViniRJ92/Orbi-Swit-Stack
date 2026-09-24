@@ -1,15 +1,15 @@
 /**
  * Fase 89/91 — proteções das instâncias que NÃO são WhatsApp.
  *
- * 1. Chave de acesso (passkey) desligada em TODOS os sites. No Electron 44 o
- *    Chromium passou a entregar a "chave de acesso" do Windows aos sites, e a
- *    janela "Segurança do Windows" abria sozinha no login do Google. O
- *    usuário pediu que ela não apareça em momento algum. No Electron 31 esse
- *    recurso já não aparecia, então nada muda para quem usa o Orbi.
+ * 1. Janela "Segurança do Windows" (chave de acesso) nunca aparece, em nenhum
+ *    site. No Electron 44 o Chromium entrega esse recurso aos sites e o login
+ *    do Google abria a janela sozinho. O recurso continua EXISTINDO (um
+ *    Firefox de verdade tem, e removê-lo fazia o Google recusar o login), mas
+ *    todo pedido com chave é recusado em silêncio, sem abrir janela.
  * 2. Login do Google: em accounts.google.com a página se apresenta como
- *    Firefox e esconde os sinais de Chrome (`userAgentData`, `vendor`,
+ *    Firefox 128 e esconde os sinais de Chrome (`userAgentData`, `vendor`,
  *    `window.chrome`), senão o Google recusa o login ("Esse navegador ou app
- *    pode não ser seguro").
+ *    pode não ser seguro"). Testado no Electron 44 em 2026-09-24.
  *
  * Aplicação: `contextBridge.executeInMainWorld` roda na hora, antes dos
  * scripts da página. O `webFrame.executeJavaScript` (usado antes) é
@@ -87,12 +87,7 @@ function protecao(noLoginDoGoogle: boolean, firefoxUserAgent: string): void {
 }
 
 if (typeof location !== 'undefined') {
-  // Fase 91: todas as telas do Google (mesma lista de viewManager.ts), não só
-  // accounts.google.com — o site e o login precisam se apresentar igual.
-  const dominios = ['youtube.com', 'youtu.be', 'youtube-nocookie.com', 'ytimg.com', 'googlevideo.com', 'gstatic.com', 'googleapis.com', 'googleusercontent.com', 'ggpht.com', 'gmail.com', 'withgoogle.com'];
-  const host = location.hostname.toLowerCase();
-  // Teste 43: igual ao Orbi atual, Firefox só na tela de login.
-  const noLogin = host === 'accounts.google.com' && dominios.length > 0;
+  const noLogin = location.hostname === 'accounts.google.com';
   let aplicado = false;
   try {
     const executar = (contextBridge as unknown as { executeInMainWorld?: (s: { func: (...a: never[]) => void; args?: unknown[] }) => unknown }).executeInMainWorld;

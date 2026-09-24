@@ -622,6 +622,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Renomear instância direto em "Gerenciar contas", pelo lápis ou clicando duas vezes no nome.',
     '• Botão "Adicionar conta" com o contorno pontilhado animado ao passar o mouse.',
   ].join('\n'),
+  '0.50.0': [
+    'Motor atualizado e Spotify',
+    '',
+    '• O Orbi passa a usar a versão mais recente do Electron, com um navegador interno bem mais novo e seguro.',
+    '• Spotify disponível em "Adicionar conta". Músicas e vídeos protegidos agora tocam dentro do Orbi.',
+    '• Login com conta Google mantido no Gmail, YouTube e Pesquisa Google.',
+    '• A janela "Segurança do Windows" pedindo chave de acesso não aparece mais.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

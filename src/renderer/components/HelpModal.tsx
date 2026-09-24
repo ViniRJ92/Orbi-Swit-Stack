@@ -114,7 +114,10 @@ const SECTIONS: HelpSection[] = [
             liberar esse login. O Google pode recusar mesmo assim, pedir uma verificação a mais ou avisar de um acesso
             novo. Se recusar, entre pelo e-mail com o código enviado pelo próprio site.
           </Aviso>
-
+          <Aviso>
+            Músicas e vídeos protegidos (Spotify, por exemplo) tocam dentro do Orbi. A janela "Segurança do Windows"
+            pedindo chave de acesso não aparece: o login continua pela senha e pela confirmação no celular.
+          </Aviso>
         </Bloco>
 
         <Bloco title="Trocar de conta">
