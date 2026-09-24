@@ -23,6 +23,7 @@
  * Orbi — Criado por Vinicius Braga
  */
 import { ipcRenderer } from 'electron';
+import { herdarLadoPelaPontinha, LadoDoBalao } from './messageDirection';
 
 /** Lê o serviço desta instância a partir do argumento passado por viewManager.ts. */
 function currentService(): string {
@@ -206,7 +207,14 @@ function classifyByOwnDate(node: Element): 'today' | 'yesterday' | 'other' | nul
  * a ser exatamente a da v0.49.1. Não reintroduzir filtro por classe sem
  * conferir no HTML real do WhatsApp Web.
  */
-function isOutgoing(node: Element, dataId: string): boolean {
+/** Fase 92 — pontinha desenhada no balão, se houver (ver messageDirection.ts). */
+function pontinhaDoBalao(el: Element): LadoDoBalao | null {
+  if (el.querySelector('[data-icon="tail-out"]')) return 'out';
+  if (el.querySelector('[data-icon="tail-in"]')) return 'in';
+  return null;
+}
+
+function isOutgoing(node: Element, dataId: string, ladoPelaPontinha: LadoDoBalao | null = null): boolean {
   // Sinal 1 — formato antigo do identificador (`true_...`).
   if (/^true[_-]/i.test(dataId)) return true;
   if (/^false[_-]/i.test(dataId)) return false;
@@ -223,6 +231,11 @@ function isOutgoing(node: Element, dataId: string): boolean {
   if (above) return above.classList.contains('message-out');
   const below = node.querySelector('.message-out, .message-in');
   if (below) return below.classList.contains('message-out');
+
+  // Sinal 2b — Fase 92: pontinha do balão (ver messageDirection.ts). Resolve
+  // as mensagens enviadas pelo celular, que nenhum dos sinais abaixo pegava.
+  // Sem pontinha, segue para os sinais antigos, como antes.
+  if (ladoPelaPontinha) return ladoPelaPontinha === 'out';
 
   // Sinal 3 — indicador de entrega. Só a SUA mensagem tem relógio de
   // "enviando", tique simples ou tique duplo. Recebida nunca tem.
@@ -262,6 +275,16 @@ function scanChatMessages(panel: Element): ScannedMessage[] {
   let bucket: 'today' | 'yesterday' | 'other' = 'other';
   const out: ScannedMessage[] = [];
 
+  // Fase 92: lado de cada balão pela pontinha, calculado uma vez por
+  // varredura, na ordem da tela (ver messageDirection.ts).
+  const linhas = Array.from(panel.querySelectorAll('[data-id]')).filter((el) => !el.parentElement?.closest('[data-id]'));
+  const lados = herdarLadoPelaPontinha(linhas.map(pontinhaDoBalao));
+  const ladoPorLinha = new Map<Element, LadoDoBalao>();
+  linhas.forEach((linha, i) => {
+    const lado = lados[i];
+    if (lado) ladoPorLinha.set(linha, lado);
+  });
+
   for (const node of nodes) {
     if (node.hasAttribute && node.hasAttribute('data-id')) {
       const dataId = node.getAttribute('data-id') || '';
@@ -270,7 +293,8 @@ function scanChatMessages(panel: Element): ScannedMessage[] {
       // reportada com direção 'out', para o relatório poder separar
       // "Recebidas" de "Enviadas". Continua fora da contagem de interações
       // (interação é pessoa que FALOU com você).
-      const direction: 'in' | 'out' = isOutgoing(node, dataId) ? 'out' : 'in';
+      const linhaDoBalao = ladoPorLinha.has(node) ? node : node.parentElement?.closest('[data-id]') ?? node;
+      const direction: 'in' | 'out' = isOutgoing(node, dataId, ladoPorLinha.get(linhaDoBalao) ?? null) ? 'out' : 'in';
       // Data própria da bolha quando existe. Imagem, figurinha e áudio
       // normalmente NÃO têm esse dado — só mensagem de texto tem.
       const ownDate = classifyByOwnDate(node);

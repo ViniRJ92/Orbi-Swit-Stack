@@ -110,6 +110,30 @@ hist.sync([{ a: 'A', k: 'maria', day: d(0) }]);
 hist.merge({ A: { maria: [d(-3), d(0)], joao: [d(-1)] } });
 check('Histórico da classificação é somado sem repetir dias', hist.getDays().A.maria, [d(-3), d(0)]);
 
+// Fase 92 — quem mandou cada balão, pela pontinha (caso real conferido pelo
+// usuário em 2026-09-24: conversa com 9 mensagens dela e 10 dele, das quais 7
+// mandadas pelo celular eram contadas como recebidas).
+console.log('\nQuem mandou cada balão (pontinha)');
+const { herdarLadoPelaPontinha } = require(path.join(dist, 'messageDirection.js'));
+const conversaReal = [
+  'out', null, null, // 3 dele às 9:52 (pelo computador)
+  'in', null, null, null, // 4 dela
+  'out', null, null, null, null, // 5 dele pelo celular, incluindo a imagem
+  'in', null, null, null, null, // 5 dela
+  'out', null, // 2 dele pelo celular
+];
+const lados = herdarLadoPelaPontinha(conversaReal);
+check('Conversa real: 10 enviadas por ele', lados.filter((l) => l === 'out').length, 10);
+check('Conversa real: 9 recebidas dela', lados.filter((l) => l === 'in').length, 9);
+check('Sem pontinha nenhuma, não decide (volta aos sinais antigos)', herdarLadoPelaPontinha([null, null]), [null, null]);
+check('Balões antes da primeira pontinha não são adivinhados', herdarLadoPelaPontinha([null, 'in', null]), [null, 'in', 'in']);
+check('Enviada e recebida continuam separadas no relatório', (() => {
+  store = novoStore();
+  store.recordChatMessages('A', 'vaneide', lados.map((l, i) => ({ dataId: `v${i}`, bucket: 'today', direction: l })));
+  const r = hoje();
+  return [r.totalReceived, r.totalSent];
+})(), [9, 10]);
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${total - falhas} de ${total} testes passaram.`);
 process.exit(falhas ? 1 : 0);
