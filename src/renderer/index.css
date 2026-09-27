@@ -219,3 +219,13 @@ input:focus-visible,
     stroke-dashoffset: -90;
   }
 }
+
+/* Fase 93: lista de instâncias da barra de cima/de baixo sem barra de
+   rolagem visível; quando não cabe, as setas nas pontas fazem a rolagem. */
+.scroll-sem-barra {
+  scrollbar-width: none;
+}
+
+.scroll-sem-barra::-webkit-scrollbar {
+  display: none;
+}

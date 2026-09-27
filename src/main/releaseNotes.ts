@@ -631,6 +631,13 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Login com conta Google mantido no Gmail, YouTube e Pesquisa Google.',
     '• A janela "Segurança do Windows" pedindo chave de acesso não aparece mais.',
   ].join('\n'),
+  '0.50.1': [
+    'Barra de contas no topo ou embaixo mais limpa',
+    '',
+    '• Cada instância vira uma aba com ícone e nome na mesma linha, mais baixa e compacta.',
+    '• Ficaram só a lupa de busca e o botão de adicionar conta. Os filtros por estado continuam na barra lateral.',
+    '• Sem barra de rolagem aparecendo. Quando as instâncias não cabem, use as setas nas pontas.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

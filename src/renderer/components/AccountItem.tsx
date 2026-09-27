@@ -19,7 +19,7 @@ import { motion } from 'framer-motion';
 import { RotateCw, Star } from 'lucide-react';
 import { AccountRecord, AccountStatus, IconSize } from '../types';
 import { useAppStore } from '../store/useAppStore';
-import { ServiceGlyph } from './ServiceIcon';
+import { ServiceGlyph, ServiceIcon } from './ServiceIcon';
 import { accountStatusLabel } from '../accountStatusLabel';
 
 /**
@@ -61,12 +61,12 @@ export const ICON_SIZE_SPECS: Record<
     rowPadX: 'px-1.5',
     rowPadY: 'py-1',
     rowGap: 'gap-1.5',
-    tileAvatar: 22,
-    tileGlyph: 10,
-    tileStatusDot: 7,
-    tileNameText: 'text-[9px]',
-    tileWidth: 46,
-    tilePad: 4,
+    tileAvatar: 18,
+    tileGlyph: 9,
+    tileStatusDot: 6,
+    tileNameText: 'text-[8.5px]',
+    tileWidth: 40,
+    tilePad: 3,
     tileGap: 2,
   },
   medium: {
@@ -78,13 +78,13 @@ export const ICON_SIZE_SPECS: Record<
     rowPadX: 'px-1.5',
     rowPadY: 'py-1',
     rowGap: 'gap-1.5',
-    tileAvatar: 28,
-    tileGlyph: 13,
-    tileStatusDot: 9,
-    tileNameText: 'text-[10.5px]',
-    tileWidth: 58,
-    tilePad: 5,
-    tileGap: 3,
+    tileAvatar: 22,
+    tileGlyph: 11,
+    tileStatusDot: 7,
+    tileNameText: 'text-[9.5px]',
+    tileWidth: 48,
+    tilePad: 4,
+    tileGap: 2,
   },
   large: {
     rowAvatar: 24,
@@ -95,13 +95,13 @@ export const ICON_SIZE_SPECS: Record<
     rowPadX: 'px-1.5',
     rowPadY: 'py-1.5',
     rowGap: 'gap-1.5',
-    tileAvatar: 38,
-    tileGlyph: 18,
-    tileStatusDot: 12,
-    tileNameText: 'text-[12px]',
-    tileWidth: 72,
-    tilePad: 7,
-    tileGap: 4,
+    tileAvatar: 28,
+    tileGlyph: 13,
+    tileStatusDot: 9,
+    tileNameText: 'text-[10.5px]',
+    tileWidth: 58,
+    tilePad: 5,
+    tileGap: 3,
   },
 };
 
@@ -111,6 +111,18 @@ export const ICON_SIZE_SPECS: Record<
 // da barra em `TOP_BAR_HEIGHT_BY_ICON_SIZE` (Sidebar.tsx e windowManager.ts)
 // — mesmo cuidado de sincronia manual já documentado nessas constantes.
 const TILE_BADGE_HEADROOM = 6;
+
+/**
+ * Fase 93 — barra de cima/de baixo em ABAS: ícone e nome na mesma linha,
+ * como as abas do navegador (escolha do usuário na prévia de 2026-09-27).
+ * A altura da barra (TOP_BAR_HEIGHT_BY_ICON_SIZE em Sidebar.tsx e
+ * windowManager.ts) é a aba + folga, e precisa continuar batendo com isto.
+ */
+const TAB_SPECS: Record<IconSize, { height: number; icon: number; dot: number; text: string; padL: number; padR: number; gap: number }> = {
+  small: { height: 28, icon: 16, dot: 6, text: 'text-[11px]', padL: 5, padR: 8, gap: 6 },
+  medium: { height: 32, icon: 20, dot: 7, text: 'text-[12px]', padL: 6, padR: 10, gap: 7 },
+  large: { height: 36, icon: 22, dot: 8, text: 'text-[12.5px]', padL: 7, padR: 11, gap: 8 },
+};
 
 function statusDotClass(account: AccountRecord, status: AccountStatus | undefined): string {
   if (status?.loadError) return 'bg-danger';
@@ -176,99 +188,59 @@ export function AccountItem({
   // acessível via `title` (tooltip nativo) — só a APRESENTAÇÃO muda, os
   // mesmos estados (erro, suspensa, online, não lidas, favorita) continuam
   // todos representados visualmente (cor do indicador, selo, badge, ícone).
+  // Fase 93: barra de cima/de baixo em abas (ícone + nome na mesma linha).
+  // O texto de status continua no `title` (dica ao passar o mouse); os
+  // estados seguem visíveis: bolinha no canto do ícone, contador de não
+  // lidas, estrela de favorita e botão de tentar de novo quando dá erro.
   if (horizontal) {
+    const tab = TAB_SPECS[iconSize];
     return (
       <li className="list-none shrink-0" {...dragProps}>
         <motion.div
           layout
-          initial={{ opacity: 0, y: -6 }}
+          initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, x: -12 }}
           transition={{ duration: 0.18 }}
-          title={`${account.name} — ${accountStatusLabel(account, status)}`}
-          // Fase 24: `minWidth` (não `width` fixo) — o tile fica compacto por
-          // padrão, mas CRESCE em largura (nunca em altura) para caber o nome
-          // inteiro sem cortar. Isso mantém a altura da barra 100% previsível
-          // (continua batendo com `TOP_BAR_HEIGHT_BY_ICON_SIZE`), só a
-          // largura de cada tile varia conforme o nome da conta.
-          //
-          // Fase 25: padding-top extra (TILE_BADGE_HEADROOM) — o selo de não
-          // lidas (`-top-1.5`, ver abaixo) soma ao ícone e ultrapassava o
-          // topo do tile por poucos pixels, sendo cortado pela borda da
-          // barra. Esse respiro extra só no topo resolve sem mexer no
-          // alinhamento vertical do resto do card.
-          style={{
-            minWidth: spec.tileWidth,
-            paddingTop: spec.tilePad + TILE_BADGE_HEADROOM,
-            paddingBottom: spec.tilePad,
-            paddingLeft: spec.tilePad,
-            paddingRight: spec.tilePad,
-            gap: spec.tileGap,
-          }}
+          title={`${account.name} — ${statusLabel}`}
+          style={{ height: tab.height, paddingLeft: tab.padL, paddingRight: tab.padR, gap: tab.gap }}
           className={
-            // Fase 82: cada instância vira um cartão (fundo leve + contorno
-            // interno). `ring-inset` não soma altura, então o tile continua
-            // cabendo em TOP_BAR_HEIGHT_BY_ICON_SIZE.
-            'group relative flex shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl ring-1 ring-inset transition-colors ' +
+            'group relative flex shrink-0 cursor-pointer items-center whitespace-nowrap rounded-[9px] border transition-colors ' +
             (isActive
-              ? 'bg-surface ring-accent/40 mw-selected'
+              ? 'border-accent/45 bg-surface mw-selected'
               : status?.loadError
-                ? 'bg-danger/5 ring-danger/30'
-                : 'bg-surface/50 ring-border/60 hover:bg-surface-hover') +
+                ? 'border-danger/35 bg-danger/5'
+                : 'border-border/70 bg-surface/50 hover:bg-surface-hover') +
             (drag?.isOver ? ' ring-1 ring-accent' : '')
           }
           onClick={() => switchAccount(account.id)}
         >
-          {isActive && (
-            <span className="absolute inset-x-2 top-0 h-0.5 rounded-b-full accent-gradient" aria-hidden />
+          <span className="relative shrink-0" style={{ width: tab.icon, height: tab.icon }}>
+            <ServiceIcon service={account.service} iconDataUrl={account.iconDataUrl} size={tab.icon} />
+            <span
+              className={'absolute -bottom-0.5 -right-0.5 rounded-full border-[1.5px] border-sidebar ' + statusDotClass(account, status)}
+              style={{ width: tab.dot, height: tab.dot }}
+            />
+          </span>
+          {account.favorite && <Star size={10} className="-mr-0.5 shrink-0 text-accent" fill="currentColor" />}
+          <span className={tab.text + ' font-medium text-text'}>{account.name}</span>
+          {!!status && status.unreadCount > 0 && (
+            <span className="flex min-w-[16px] shrink-0 items-center justify-center rounded-full accent-gradient px-1 text-[9.5px] font-bold leading-[15px] text-accent-contrast">
+              {status.unreadCount > 99 ? '99+' : status.unreadCount}
+            </span>
           )}
-
-          <div className="relative shrink-0">
-            <div
-              className="flex items-center justify-center overflow-hidden rounded-full"
-              style={{
-                width: spec.tileAvatar,
-                height: spec.tileAvatar,
-                background: account.iconDataUrl ? 'transparent' : account.color,
+          {status?.loadError && (
+            <button
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-danger/40 text-danger"
+              title="Tentar novamente"
+              onClick={(e) => {
+                e.stopPropagation();
+                reloadAccount(account.id);
               }}
             >
-              {account.iconDataUrl ? (
-                <img src={account.iconDataUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <ServiceGlyph service={account.service} size={spec.tileGlyph} color="#fff" />
-              )}
-            </div>
-            <span
-              className={'absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-sidebar ' + statusDotClass(account, status)}
-              style={{ width: spec.tileStatusDot, height: spec.tileStatusDot }}
-            />
-            {account.favorite && (
-              <Star size={9} className="absolute -left-1 -top-1 text-accent drop-shadow" fill="currentColor" />
-            )}
-            {!!status && status.unreadCount > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex min-w-[15px] items-center justify-center rounded-full accent-gradient px-1 text-[9px] font-bold leading-tight text-accent-contrast">
-                {status.unreadCount > 99 ? '99+' : status.unreadCount}
-              </span>
-            )}
-            {status?.loadError && (
-              <button
-                className="absolute -bottom-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-danger/40 bg-sidebar text-danger"
-                title="Tentar novamente"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  reloadAccount(account.id);
-                }}
-              >
-                <RotateCw size={9} />
-              </button>
-            )}
-          </div>
-
-          {/* Fase 24: sem `truncate` e sem largura máxima — o nome precisa
-              ficar 100% visível (pedido explícito do usuário). O tile inteiro
-              cresce para acomodá-lo (ver `minWidth` acima), em vez de cortar
-              o texto. */}
-          <span className={spec.tileNameText + ' whitespace-nowrap px-0.5 text-center text-text'}>{account.name}</span>
+              <RotateCw size={9} />
+            </button>
+          )}
         </motion.div>
       </li>
     );

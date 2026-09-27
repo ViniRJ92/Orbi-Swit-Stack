@@ -31,9 +31,9 @@ const HEADER_HEIGHT = 32;
 // Fase 58: vale para 'top' E para 'bottom' — a barra horizontal é a mesma,
 // só muda de ponta.
 const SIDEBAR_TOP_HEIGHT_BY_ICON_SIZE: Record<IconSize, number> = {
-  small: 60,
-  medium: 72,
-  large: 88,
+  small: 40,
+  medium: 46,
+  large: 52,
 };
 
 function getContentBounds(

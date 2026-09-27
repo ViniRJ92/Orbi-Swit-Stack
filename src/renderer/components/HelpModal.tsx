@@ -351,6 +351,10 @@ const SECTIONS: HelpSection[] = [
             ícones, se o aplicativo abre junto com o
             Windows e o que acontece ao clicar no X da janela.
           </p>
+          <Aviso>
+            Com a barra no topo ou embaixo, cada instância vira uma aba com ícone e nome. A lupa, à esquerda, abre a
+            busca; o "+", à direita, adiciona uma conta. Os filtros por estado ficam na barra lateral.
+          </Aviso>
         </Bloco>
 
         <Bloco title="Desempenho">

@@ -44,9 +44,9 @@ import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, clampSidebarWidth } from '../cons
 // AccountItem.tsx) para o selo de não lidas nunca ser cortado pela borda
 // superior da barra (bug relatado pelo usuário).
 const TOP_BAR_HEIGHT_BY_ICON_SIZE: Record<IconSize, number> = {
-  small: 60,
-  medium: 72,
-  large: 88,
+  small: 40,
+  medium: 46,
+  large: 52,
 };
 
 // Fase 82: bolinha de cor de cada filtro na barra horizontal.
@@ -111,6 +111,13 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
   // ajuste é automático: é só a área de contas ser `flex-1`, ela ocupa
   // sozinha o espaço que o bloco de filtros deixou de usar).
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+  // Fase 93: na barra de cima/de baixo só existe a lupa; o campo de busca
+  // abre ao clicar nela e fecha ao sair dele vazio (ou com Esc).
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  const abrirBusca = () => {
+    setBuscaAberta(true);
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+  };
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const expandFilters = () => {
     setFiltersCollapsed(false);
@@ -160,6 +167,11 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
       observer.disconnect();
     };
   }, [isHorizontal, updateScrollButtons, accounts.length, iconSize]);
+
+  useEffect(() => {
+    if (isHorizontal && filter !== 'all') setFilter('all');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHorizontal]);
 
   const scrollTopBarBy = (delta: number) => {
     topScrollRef.current?.scrollBy({ left: delta, behavior: 'smooth' });
@@ -307,7 +319,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
   // Fase 21: listas de conta em coluna (padrão) ou em linha (modo "Topo") — só
   // muda a direção do flex/espaçamento, a lógica de drag-and-drop e os dados
   // renderizados (renderAccountList acima) são exatamente os mesmos.
-  const listClassName = isHorizontal ? 'flex shrink-0 items-center gap-1' : 'space-y-0.5';
+  const listClassName = isHorizontal ? 'flex shrink-0 items-center gap-[3px]' : 'space-y-0.5';
 
   const ungrouped = visibleAccounts.filter((a) => !a.groupId || !knownGroupIds.has(a.groupId));
 
@@ -324,7 +336,7 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
       ref={isHorizontal ? topScrollRef : undefined}
       className={
         isHorizontal
-          ? 'flex h-full min-w-0 flex-1 items-center gap-3 overflow-x-auto px-1 py-1'
+          ? 'scroll-sem-barra flex h-full min-w-0 flex-1 items-center gap-[3px] overflow-x-auto px-1 py-1'
           : 'flex-1 space-y-2 overflow-y-auto px-2'
       }
     >
@@ -456,90 +468,39 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
           (isTop ? 'border-b' : 'border-t')
         }
       >
-        {/* Fase 24/26: bloco "CONTAS" + busca + filtros espremido ao máximo à
-            esquerda — gap e paddings internos reduzidos ao mínimo (pedido
-            explícito do usuário), como um único grupo compacto encostado na
-            borda esquerda da barra. Fase 26: agora pode ser minimizado — só
-            o quadradinho de busca fica visível, liberando largura para a
-            lista de contas. */}
-        {/* Fase 82 — barra horizontal no novo visual: título "Contas" com
-            ícone, busca, filtros em grupo com bolinha de cor e, na ponta
-            direita, contador de conectadas e o botão de adicionar. A altura
-            continua a de TOP_BAR_HEIGHT_BY_ICON_SIZE (windowManager depende
-            dela). Mesma lógica de busca, filtros e recolher de antes. */}
-        <div className="flex shrink-0 items-center gap-2.5">
-          <div className="flex shrink-0 items-center gap-2 pr-0.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/15 text-accent">
-              <Users size={14} />
-            </span>
-            <span className="text-[12.5px] font-semibold text-text">Contas</span>
+        {/* Fase 93: da barra de cima/de baixo saíram título, filtros, contador
+            e botão de recolher (pedido do usuário). Fica só a lupa, que abre
+            o campo de busca ao clicar. */}
+        {buscaAberta || searchQuery ? (
+          <div className="relative shrink-0">
+            <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-accent" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onBlur={() => {
+                if (!searchQuery) setBuscaAberta(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchQuery('');
+                  setBuscaAberta(false);
+                }
+              }}
+              placeholder="Buscar..."
+              className="w-36 rounded-lg border border-border bg-input py-1.5 pl-8 pr-2 text-[12px] text-text placeholder:text-text-faint focus:border-accent"
+            />
           </div>
-          {filtersCollapsed ? (
-            <button
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-input text-text-dim transition-colors hover:border-border-strong hover:text-text"
-              onClick={expandFilters}
-              title="Expandir busca e filtros"
-            >
-              <Search size={13} />
-            </button>
-          ) : (
-            <>
-              <div className="relative shrink-0">
-                <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-accent" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar..."
-                  className="w-36 rounded-lg border border-border bg-input py-1.5 pl-8 pr-2 text-[12px] text-text placeholder:text-text-faint focus:border-accent"
-                />
-              </div>
-
-              {/* Fase 56: aqui as abas CONTINUAM como estavam, de propósito.
-                  A barra no modo "Topo" tem altura fixa (60 a 88px, ver
-                  TOP_BAR_HEIGHT_BY_ICON_SIZE) e logo abaixo dela começa a
-                  WebContentsView da instância, que é uma camada NATIVA
-                  desenhada na frente desta página. Um menu suspenso aberto
-                  aqui cairia justamente nessa faixa e ficaria invisível e
-                  sem receber cliques. Na barra lateral esquerda, que ocupa
-                  a altura toda, o menu tem para onde abrir — por isso lá a
-                  troca foi feita (hoje é o botão de filtros ao lado de "Contas"). */}
-              <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-input p-0.5">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setFilter(f.key)}
-                    aria-pressed={filter === f.key}
-                    className={
-                      // Fase 41: `whitespace-nowrap` para o rótulo nunca
-                      // quebrar dentro do próprio botão nesta barra baixa.
-                      'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-[11.5px] font-medium transition-colors ' +
-                      (filter === f.key ? 'bg-surface text-text shadow-sm' : 'text-text-dim hover:text-text')
-                    }
-                  >
-                    {f.key !== 'all' && <span className={'h-1.5 w-1.5 rounded-full ' + FILTER_DOT[f.key]} />}
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Fase 26: botão de minimizar/expandir o bloco de filtros —
-              recolhido, vira "<<" (ChevronsLeft) apontando pra abrir de
-              volta ("expandir pra esquerda"); é o mesmo botão, só o ícone e
-              o título trocam conforme o estado. */}
+        ) : (
           <button
-            className="flex h-6 w-5 shrink-0 items-center justify-center rounded text-text-faint transition-colors hover:bg-surface-hover hover:text-text-dim"
-            onClick={() => (filtersCollapsed ? expandFilters() : setFiltersCollapsed(true))}
-            title={filtersCollapsed ? 'Expandir filtros' : 'Minimizar filtros'}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
+            onClick={abrirBusca}
+            title="Buscar instância"
           >
-            {filtersCollapsed ? <ChevronsRight size={13} /> : <ChevronsLeft size={13} />}
+            <Search size={14} />
           </button>
-        </div>
-
-        <div className="h-6 w-px shrink-0 bg-border" aria-hidden />
+        )}
 
         {/* Fase 22: botões de seta nas pontas + rolagem nativa (arraste,
             trackpad, barra de rolagem visível) — o scroll do mouse NÃO
@@ -579,24 +540,13 @@ export function Sidebar({ onAdd, position }: { onAdd: () => void; position: Side
             explícito do usuário para otimizar o espaço útil da barra para a
             lista de contas. A versão do app continua visível em Configurações,
             na aba "Sobre o Sistema" (Fase 50), não precisa duplicar aqui. */}
-        <div className="ml-auto flex shrink-0 items-center gap-2.5">
-          <span
-            className="whitespace-nowrap rounded-lg border border-border bg-input px-2.5 py-1.5 text-[11.5px] text-text-dim"
-            title="Instâncias conectadas"
-          >
-            <span className="font-semibold tabular-nums text-accent">
-              {filterCounts.online}/{filterCounts.all}
-            </span>{' '}
-            conectadas
-          </span>
-          <button
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg accent-gradient px-3 py-1.5 text-[12px] font-semibold text-accent-contrast shadow-sm transition-opacity hover:opacity-90"
-            onClick={onAdd}
-          >
-            <Plus size={14} />
-            Adicionar conta
-          </button>
-        </div>
+        <button
+          className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg accent-gradient text-accent-contrast shadow-sm transition-opacity hover:opacity-90"
+          onClick={onAdd}
+          title="Adicionar conta"
+        >
+          <Plus size={15} />
+        </button>
       </aside>
     );
   }
