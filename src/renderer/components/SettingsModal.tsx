@@ -54,6 +54,9 @@ import {
   DownloadCloud as DownloadCloudIcon,
   Info,
   ShieldCheck,
+  ChevronDown,
+  Check,
+  AppWindow,
 } from 'lucide-react';
 import {
   AccountRecord,
@@ -65,10 +68,12 @@ import {
   SidebarPosition,
   ThemePreference,
   UpdateState,
+  StartupAccountMode,
+  StartupAccountSetting,
 } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { Modal } from './Modal';
-import { ServiceGlyph } from './ServiceIcon';
+import { ServiceGlyph, ServiceIcon } from './ServiceIcon';
 import { ColorSwatchButton } from './ColorSwatchButton';
 import { OrbiLogo } from './OrbiLogo';
 import { accountStatusLabel } from '../accountStatusLabel';
@@ -677,6 +682,133 @@ function InstanceRow({
   );
 }
 
+/** Fase 94 — as três escolhas de "Ao abrir o Orbi, mostrar". */
+const STARTUP_ACCOUNT_OPTIONS: { value: StartupAccountMode; label: string }[] = [
+  { value: 'first', label: 'Primeira da lista' },
+  { value: 'last', label: 'Última que usei' },
+  { value: 'specific', label: 'Escolher instância' },
+];
+
+/**
+ * Fase 94 — cartão "Ao abrir o Orbi, mostrar". Lê e grava a escolha por
+ * conta própria (window.multiwhats), sem depender do resto da aba. A lista
+ * de instâncias segue a mesma ordem e os mesmos agrupamentos da barra.
+ */
+function StartupAccountCard() {
+  const accounts = useAppStore((s) => s.accounts);
+  const groups = useAppStore((s) => s.groups);
+  const [setting, setSetting] = useState<StartupAccountSetting>({ mode: 'first', accountId: null });
+  const [listaAberta, setListaAberta] = useState(false);
+
+  useEffect(() => {
+    window.multiwhats.getStartupAccount().then(setSetting);
+  }, []);
+
+  const salvar = async (novo: StartupAccountSetting) => {
+    setSetting(await window.multiwhats.setStartupAccount(novo));
+  };
+
+  const escolhida = accounts.find((a) => a.id === setting.accountId) ?? null;
+  const idsDeGrupo = new Set(groups.map((g) => g.id));
+  const secoes = [
+    { titulo: null as string | null, contas: accounts.filter((a) => !a.groupId || !idsDeGrupo.has(a.groupId)) },
+    ...groups.map((g) => ({ titulo: g.name as string | null, contas: accounts.filter((a) => a.groupId === g.id) })),
+  ].filter((sec) => sec.contas.length > 0);
+
+  const escolherModo = (mode: StartupAccountMode) => {
+    if (mode === 'specific') {
+      // Sem instância escolhida ainda, já sugere a primeira da lista.
+      salvar({ mode, accountId: escolhida?.id ?? accounts[0]?.id ?? null });
+      setListaAberta(true);
+      return;
+    }
+    setListaAberta(false);
+    salvar({ mode, accountId: null });
+  };
+
+  return (
+    <Card
+      title="Ao abrir o Orbi, mostrar"
+      icon={<AppWindow size={15} />}
+      description="Qual instância aparece primeiro quando o Orbi abre."
+    >
+      <div className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-input p-1">
+        {STARTUP_ACCOUNT_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => escolherModo(opt.value)}
+            aria-pressed={setting.mode === opt.value}
+            className={
+              'rounded-md border px-2 py-1.5 text-xs transition-colors ' +
+              (setting.mode === opt.value
+                ? 'border-accent bg-accent/10 font-semibold text-accent'
+                : 'border-transparent text-text-dim hover:text-text')
+            }
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {setting.mode === 'specific' && (
+        <div className="relative mt-2.5">
+          <button
+            onClick={() => setListaAberta((v) => !v)}
+            className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-input px-3 py-2 text-left text-[12.5px] text-text transition-colors hover:border-border-strong"
+          >
+            {escolhida ? (
+              <>
+                <ServiceIcon service={escolhida.service} iconDataUrl={escolhida.iconDataUrl} size={18} />
+                <span className="min-w-0 flex-1 truncate">{escolhida.name}</span>
+              </>
+            ) : (
+              <span className="flex-1 text-text-faint">Escolha uma instância</span>
+            )}
+            <ChevronDown size={14} className="shrink-0 text-text-dim" />
+          </button>
+
+          {listaAberta && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setListaAberta(false)} aria-hidden />
+              <div className="mw-scroll absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-xl">
+                {secoes.map((sec) => (
+                  <div key={sec.titulo ?? 'avulsas'}>
+                    {sec.titulo && (
+                      <div className="px-3 pb-0.5 pt-2 text-[10.5px] font-semibold uppercase tracking-wide text-text-faint">
+                        {sec.titulo}
+                      </div>
+                    )}
+                    {sec.contas.map((conta) => (
+                      <button
+                        key={conta.id}
+                        onClick={() => {
+                          salvar({ mode: 'specific', accountId: conta.id });
+                          setListaAberta(false);
+                        }}
+                        className={
+                          'flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-hover ' +
+                          (conta.id === setting.accountId ? 'bg-accent/10 text-text' : 'text-text-dim')
+                        }
+                      >
+                        <ServiceIcon service={conta.service} iconDataUrl={conta.iconDataUrl} size={18} />
+                        <span className="min-w-0 flex-1 truncate">{conta.name}</span>
+                        {conta.id === setting.accountId && <Check size={13} className="shrink-0 text-accent" />}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <p className="mt-2 text-[11.5px] text-text-faint">
+            Se essa instância for excluída, o Orbi volta a abrir a primeira da lista.
+          </p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function GeneralAppearanceTab({
   startup,
   toggleStartup,
@@ -721,6 +853,8 @@ function GeneralAppearanceTab({
           onChange={toggleStartup}
         />
       </div>
+
+      <StartupAccountCard />
 
       <Card title="Tema visual" icon={<Sun size={15} />} description="Esquema de cores da interface do Orbi.">
         <div className="grid grid-cols-3 gap-3">

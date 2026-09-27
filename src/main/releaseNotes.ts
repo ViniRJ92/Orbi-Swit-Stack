@@ -638,6 +638,12 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Ficaram só a lupa de busca e o botão de adicionar conta. Os filtros por estado continuam na barra lateral.',
     '• Sem barra de rolagem aparecendo. Quando as instâncias não cabem, use as setas nas pontas.',
   ].join('\n'),
+  '0.50.2': [
+    'Escolha qual instância abre primeiro',
+    '',
+    '• Em Configurações, Geral & Aparência, a opção "Ao abrir o Orbi, mostrar": a primeira da lista, a última que você usou ou uma instância escolhida.',
+    '• Se a instância escolhida for excluída, o Orbi volta a abrir a primeira da lista.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

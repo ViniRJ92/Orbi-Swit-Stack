@@ -352,6 +352,10 @@ const SECTIONS: HelpSection[] = [
             Windows e o que acontece ao clicar no X da janela.
           </p>
           <Aviso>
+            Em "Ao abrir o Orbi, mostrar" você escolhe qual instância aparece primeiro: a primeira da lista, a última
+            que você usou ou uma instância específica. Se a escolhida for excluída, o Orbi abre a primeira da lista.
+          </Aviso>
+          <Aviso>
             Com a barra no topo ou embaixo, cada instância vira uma aba com ícone e nome. A lupa, à esquerda, abre a
             busca; o "+", à direita, adiciona uma conta. Os filtros por estado ficam na barra lateral.
           </Aviso>

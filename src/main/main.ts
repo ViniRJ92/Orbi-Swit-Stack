@@ -116,6 +116,7 @@ let analyticsStore: AnalyticsStore | null = null;
 let chatActivityStore: ChatActivityStore | null = null;
 let calendarStore: CalendarStore | null = null;
 let updateManager: UpdateManager | null = null;
+let settingsStoreRef: SettingsStore | null = null;
 
 function pushAccountsUpdate(): void {
   const win = windowManager?.get();
@@ -137,6 +138,8 @@ function pushAccountsUpdate(): void {
 
 function switchToAccount(accountId: string): void {
   accountManager?.switchTo(accountId);
+  // Fase 94: lembrada para o modo "Última que usei" (ver settingsStore).
+  settingsStoreRef?.setLastActiveAccountId(accountId);
   pushAccountsUpdate();
 }
 
@@ -182,6 +185,7 @@ app.whenReady().then(async () => {
   // 20 instâncias mockadas "WhatsApp 01..20".
   const accountStore = new AccountStore();
   const settingsStore = new SettingsStore();
+  settingsStoreRef = settingsStore;
   const groupStore = new GroupStore();
   analyticsStore = new AnalyticsStore();
   chatActivityStore = new ChatActivityStore();
@@ -369,11 +373,18 @@ app.whenReady().then(async () => {
     logger.error(`Uma página travou/encerrou inesperadamente (motivo: ${details.reason}).`);
   });
 
-  const first = accountStore.list()[0];
-  if (first) {
+  // Fase 94: a instância inicial segue a escolha de Configurações ("Ao abrir
+  // o Orbi, mostrar"). Se a escolhida (ou a última usada) não existir mais,
+  // volta para a primeira da lista, que era o comportamento de sempre.
+  const contasSalvas = accountStore.list();
+  const escolha = settingsStore.getStartupAccount();
+  const idPreferido =
+    escolha.mode === 'specific' ? escolha.accountId : escolha.mode === 'last' ? settingsStore.getLastActiveAccountId() : null;
+  const inicial = contasSalvas.find((a) => a.id === idPreferido) ?? contasSalvas[0];
+  if (inicial) {
     // A troca de verdade acontece assim que a janela terminar de carregar
     // (ver callback onReady passado ao WindowManager acima).
-    accountManager.switchTo(first.id);
+    accountManager.switchTo(inicial.id);
   }
 
   setInterval(() => {

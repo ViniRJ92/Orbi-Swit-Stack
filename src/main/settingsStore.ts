@@ -73,6 +73,18 @@ export function resolvePerformancePreset(
  */
 export type CloseBehavior = 'tray' | 'ask' | 'quit';
 
+/**
+ * Fase 94 — qual instância aparece quando o Orbi abre: a primeira da lista
+ * (comportamento de sempre), a última que o usuário estava usando, ou uma
+ * escolhida por ele em Configurações. Se a escolhida (ou a última) não
+ * existir mais, volta para a primeira da lista.
+ */
+export type StartupAccountMode = 'first' | 'last' | 'specific';
+export interface StartupAccountSetting {
+  mode: StartupAccountMode;
+  accountId: string | null;
+}
+
 export const SIDEBAR_WIDTH_MIN = 200;
 export const SIDEBAR_WIDTH_MAX = 450;
 export const SIDEBAR_WIDTH_DEFAULT = 268;
@@ -113,6 +125,11 @@ interface SettingsShape {
    * instalações anteriores a este recurso).
    */
   lastSeenVersion: string;
+  /** Fase 94 — ver StartupAccountSetting. */
+  startupAccountMode: StartupAccountMode;
+  startupAccountId: string;
+  /** Fase 94 — última instância aberta, para o modo "Última que usei". */
+  lastActiveAccountId: string;
 }
 
 const STORE_FILE = 'settings.json';
@@ -131,6 +148,9 @@ const DEFAULTS: SettingsShape = {
   sidebarPosition: 'left',
   iconSize: 'medium',
   lastSeenVersion: '',
+  startupAccountMode: 'first',
+  startupAccountId: '',
+  lastActiveAccountId: '',
 };
 
 function clampSidebarWidth(width: number): number {
@@ -166,6 +186,31 @@ export class SettingsStore {
     } catch (err) {
       console.error('[SettingsStore] Falha ao salvar settings.json:', err);
     }
+  }
+
+  getStartupAccount(): StartupAccountSetting {
+    const mode = this.data.startupAccountMode;
+    return {
+      mode: mode === 'last' || mode === 'specific' ? mode : 'first',
+      accountId: this.data.startupAccountId || null,
+    };
+  }
+
+  setStartupAccount(setting: StartupAccountSetting): StartupAccountSetting {
+    this.data.startupAccountMode = setting.mode;
+    this.data.startupAccountId = setting.mode === 'specific' ? setting.accountId ?? '' : '';
+    this.persist();
+    return this.getStartupAccount();
+  }
+
+  getLastActiveAccountId(): string | null {
+    return this.data.lastActiveAccountId || null;
+  }
+
+  setLastActiveAccountId(accountId: string): void {
+    if (this.data.lastActiveAccountId === accountId) return;
+    this.data.lastActiveAccountId = accountId;
+    this.persist();
   }
 
   getTheme(): ThemePreference {

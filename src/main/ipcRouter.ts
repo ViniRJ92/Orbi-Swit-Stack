@@ -23,6 +23,7 @@ import {
   CUSTOM_MAX_LOADED_MAX,
   SidebarPosition,
   IconSize,
+  StartupAccountSetting,
 } from './settingsStore';
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
@@ -439,6 +440,10 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
     logger.clear();
     return true;
   });
+
+  // Fase 94 — instância que aparece ao abrir o Orbi.
+  ipcMain.handle('mw:get-startup-account', () => settingsStore.getStartupAccount());
+  ipcMain.handle('mw:set-startup-account', (_evt, setting: StartupAccountSetting) => settingsStore.setStartupAccount(setting));
 
   ipcMain.handle('mw:get-close-behavior', () => settingsStore.getCloseBehavior());
 

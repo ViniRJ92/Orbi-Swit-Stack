@@ -5,7 +5,7 @@
  */
 import { contextBridge, ipcRenderer } from 'electron';
 import { AccountsChangedPayload, AnalyticsRange } from './types';
-import { PerformanceMode, CloseBehavior, SidebarPosition, IconSize } from './settingsStore';
+import { PerformanceMode, CloseBehavior, SidebarPosition, IconSize, StartupAccountSetting } from './settingsStore';
 import { AccountService } from './services';
 import { UpdateState } from './updateManager';
 import { WhatsNewResult } from './releaseNotes';
@@ -40,6 +40,8 @@ const api = {
   getDiagnostics: () => ipcRenderer.invoke('mw:get-diagnostics'),
   readRecentLogs: (maxLines: number) => ipcRenderer.invoke('mw:read-recent-logs', maxLines),
   clearLogs: () => ipcRenderer.invoke('mw:clear-logs'),
+  getStartupAccount: () => ipcRenderer.invoke('mw:get-startup-account'),
+  setStartupAccount: (setting: StartupAccountSetting) => ipcRenderer.invoke('mw:set-startup-account', setting),
   getCloseBehavior: () => ipcRenderer.invoke('mw:get-close-behavior'),
   setCloseBehavior: (behavior: CloseBehavior) => ipcRenderer.invoke('mw:set-close-behavior', behavior),
   getConfirmBeforeRemove: () => ipcRenderer.invoke('mw:get-confirm-before-remove'),

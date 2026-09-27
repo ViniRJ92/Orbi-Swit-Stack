@@ -114,6 +114,13 @@ export type ThemePreference = 'dark' | 'light' | 'system';
 
 export type CloseBehavior = 'tray' | 'ask' | 'quit';
 
+/** Fase 94 — espelha StartupAccountSetting de src/main/settingsStore.ts. */
+export type StartupAccountMode = 'first' | 'last' | 'specific';
+export interface StartupAccountSetting {
+  mode: StartupAccountMode;
+  accountId: string | null;
+}
+
 /**
  * Posição da barra de contas. Fase 21: "left" (padrão) e "top". Fase 58:
  * "right" e "bottom". "left"/"right" são painéis verticais redimensionáveis;
@@ -334,6 +341,8 @@ export interface OrbiSwitStackApi {
   getDiagnostics: () => Promise<DiagnosticsInfo>;
   readRecentLogs: (maxLines: number) => Promise<string[]>;
   clearLogs: () => Promise<boolean>;
+  getStartupAccount: () => Promise<StartupAccountSetting>;
+  setStartupAccount: (setting: StartupAccountSetting) => Promise<StartupAccountSetting>;
   getCloseBehavior: () => Promise<CloseBehavior>;
   setCloseBehavior: (behavior: CloseBehavior) => Promise<CloseBehavior>;
   getConfirmBeforeRemove: () => Promise<boolean>;
