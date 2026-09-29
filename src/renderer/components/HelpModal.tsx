@@ -356,6 +356,9 @@ const SECTIONS: HelpSection[] = [
             que você usou ou uma instância específica. Se a escolhida for excluída, o Orbi abre a primeira da lista.
           </Aviso>
           <Aviso>
+            O dia e a hora ficam à esquerda da faixa de cima, ao lado dos botões Agenda e Configurações.
+          </Aviso>
+          <Aviso>
             Com a barra no topo ou embaixo, cada instância vira uma aba com ícone e nome. A lupa, à esquerda, abre a
             busca; o "+", à direita, adiciona uma conta. Os filtros por estado ficam na barra lateral.
           </Aviso>

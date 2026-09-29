@@ -5,7 +5,43 @@
  * uma aba dentro de Configurações, e o lugar dele no topo passou a ser do
  * botão "Ajuda", que abre o manual de uso.
  */
+import { useEffect, useState } from 'react';
 import { Settings, HelpCircle, LayoutGrid, Search, BarChart3, RotateCw, CalendarDays } from 'lucide-react';
+
+const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+/**
+ * Fase 95 — dia e hora à esquerda na faixa de cima ("Ter, 29 set | 14:41"),
+ * escolha do usuário na prévia de 2026-09-29. Sem segundos: atualiza na
+ * virada de cada minuto. Não é clicável, então a faixa continua servindo
+ * para arrastar a janela por cima dela também.
+ */
+function DataHora() {
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => {
+    let intervalo: ReturnType<typeof setInterval> | undefined;
+    const primeiro = setTimeout(() => {
+      setAgora(new Date());
+      intervalo = setInterval(() => setAgora(new Date()), 60_000);
+    }, 60_000 - (Date.now() % 60_000) + 50);
+    return () => {
+      clearTimeout(primeiro);
+      if (intervalo) clearInterval(intervalo);
+    };
+  }, []);
+  const hora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+  return (
+    <div className="flex items-center gap-2 whitespace-nowrap rounded-full border border-accent/30 bg-accent/10 px-2.5 py-[3px] text-[11.5px] text-text">
+      <CalendarDays size={12} className="text-accent" />
+      <span>
+        {DIAS[agora.getDay()]}, {agora.getDate()} {MESES[agora.getMonth()]}
+      </span>
+      <span className="h-3 w-px bg-accent/30" aria-hidden />
+      <span className="font-semibold tabular-nums text-accent">{hora}</span>
+    </div>
+  );
+}
 
 export function Header({
   onOpenHelp,
@@ -35,10 +71,15 @@ export function Header({
 }) {
   return (
     <header
-      className="flex h-8 min-h-[32px] items-center justify-end border-b border-border bg-header px-4 py-0 transition-colors"
+      className="flex h-8 min-h-[32px] items-center justify-between border-b border-border bg-header px-4 py-0 transition-colors"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      {/* Fase 95: dia e hora encostados à esquerda (pedido do usuário). */}
+      <DataHora />
+      <div
+        className="flex items-center gap-1"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      >
         <button
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-text-dim transition-colors hover:bg-surface-hover hover:text-text"
           onClick={onOpenPalette}

@@ -644,6 +644,11 @@ export const RELEASE_NOTES: Record<string, string> = {
     '• Em Configurações, Geral & Aparência, a opção "Ao abrir o Orbi, mostrar": a primeira da lista, a última que você usou ou uma instância escolhida.',
     '• Se a instância escolhida for excluída, o Orbi volta a abrir a primeira da lista.',
   ].join('\n'),
+  '0.50.3': [
+    'Dia e hora no topo',
+    '',
+    '• O dia da semana, a data e a hora aparecem à esquerda da faixa de cima, em verde.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {
