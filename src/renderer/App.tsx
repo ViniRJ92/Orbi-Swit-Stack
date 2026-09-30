@@ -28,6 +28,13 @@ export function App() {
   const appInfo = useAppStore((s) => s.appInfo);
   const accounts = useAppStore((s) => s.accounts);
   const statuses = useAppStore((s) => s.statuses);
+  // Fase 97: faixa de cima fixa ou automática (Configurações). No modo
+  // automático o processo principal avisa quando ela aparece ou some.
+  const [faixaVisivel, setFaixaVisivel] = useState(true);
+  useEffect(() => {
+    window.multiwhats.getHeaderVisible().then(setFaixaVisivel);
+    return window.multiwhats.onHeaderVisibleChanged(setFaixaVisivel);
+  }, []);
   const theme = useAppStore((s) => s.theme);
   const isResizingSidebar = useAppStore((s) => s.isResizingSidebar);
   const sidebarPosition = useAppStore((s) => s.sidebarPosition);
@@ -108,7 +115,7 @@ export function App() {
   // Fase 31: instância em exibição — alvo do botão de recarregar e do F5.
   const activeAccountId = accounts.find((a) => statuses.get(a.id)?.isActive)?.id ?? null;
 
-  const header = (
+  const header = !faixaVisivel ? null : (
     <Header
       onOpenHelp={() => setHelpOpen(true)}
       onOpenCalendar={() => setCalendarOpen(true)}
@@ -123,6 +130,14 @@ export function App() {
         if (activeAccountId) reloadAccount(activeAccountId);
       }}
       canReload={activeAccountId !== null}
+      canGoBack={!!(activeAccountId && statuses.get(activeAccountId)?.canGoBack)}
+      canGoForward={!!(activeAccountId && statuses.get(activeAccountId)?.canGoForward)}
+      onGoBack={() => {
+        if (activeAccountId) window.multiwhats.goBack(activeAccountId);
+      }}
+      onGoForward={() => {
+        if (activeAccountId) window.multiwhats.goForward(activeAccountId);
+      }}
       hasUpdate={hasUpdate}
     />
   );

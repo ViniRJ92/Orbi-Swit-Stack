@@ -124,6 +124,8 @@ interface ManagedView {
 export class ViewManager {
   private window: BrowserWindow;
   private views: Map<string, ManagedView> = new Map();
+  /** Fase 96 — janela das ferramentas de desenvolvedor (F12) de cada instância. */
+  private devToolsWindows: Map<string, BrowserWindow> = new Map();
   private activeAccountId: string | null = null;
   private contentBounds: Electron.Rectangle = { x: 0, y: 0, width: 0, height: 0 };
   /**
@@ -467,6 +469,8 @@ export class ViewManager {
   private teardownView(accountId: string): ManagedView | undefined {
     const managed = this.views.get(accountId);
     if (!managed) return undefined;
+    // Fase 96: a instância saiu da memória, então as ferramentas dela fecham junto.
+    this.closeDevTools(accountId);
     this.window.contentView.removeChildView(managed.view);
     this.webContentsIdToAccount.delete(managed.view.webContents.id);
     (managed.view.webContents as any).close?.();
@@ -660,6 +664,66 @@ export class ViewManager {
 
   hasLoadError(accountId: string): boolean {
     return this.loadErrorState.get(accountId) ?? false;
+  }
+
+  /**
+   * Fase 96 — F12: abre as ferramentas de desenvolvedor da instância numa
+   * janela própria, maximizada (pedido do usuário: "em toda a tela"). F12 de
+   * novo fecha. Só olha a página; não muda nada nela nem no Analytics.
+   */
+  toggleDevTools(accountId: string): void {
+    const managed = this.views.get(accountId);
+    if (!managed) return;
+    const aberta = this.devToolsWindows.get(accountId);
+    if (aberta && !aberta.isDestroyed()) {
+      aberta.close();
+      return;
+    }
+    const wc = managed.view.webContents;
+    const conta = this.accountStore.get(accountId);
+    const janela = new BrowserWindow({
+      show: false,
+      title: `Ferramentas de desenvolvedor — ${conta?.name ?? 'instância'}`,
+      autoHideMenuBar: true,
+    });
+    this.devToolsWindows.set(accountId, janela);
+    janela.on('closed', () => {
+      this.devToolsWindows.delete(accountId);
+      if (!wc.isDestroyed() && wc.isDevToolsOpened()) wc.closeDevTools();
+    });
+    // F12 também funciona com o foco nas próprias ferramentas.
+    janela.webContents.on('before-input-event', (_event, input) => {
+      if (input.type === 'keyDown' && input.key === 'F12') janela.close();
+    });
+    wc.setDevToolsWebContents(janela.webContents);
+    wc.openDevTools({ mode: 'detach' });
+    janela.maximize();
+    janela.show();
+  }
+
+  private closeDevTools(accountId: string): void {
+    const janela = this.devToolsWindows.get(accountId);
+    if (janela && !janela.isDestroyed()) janela.close();
+    this.devToolsWindows.delete(accountId);
+  }
+
+  /** Fase 96 — voltar/avançar página, como no navegador. */
+  canGoBack(accountId: string): boolean {
+    const wc = this.views.get(accountId)?.view.webContents;
+    return !!wc && !wc.isDestroyed() && wc.navigationHistory.canGoBack();
+  }
+
+  canGoForward(accountId: string): boolean {
+    const wc = this.views.get(accountId)?.view.webContents;
+    return !!wc && !wc.isDestroyed() && wc.navigationHistory.canGoForward();
+  }
+
+  goBack(accountId: string): void {
+    if (this.canGoBack(accountId)) this.views.get(accountId)?.view.webContents.navigationHistory.goBack();
+  }
+
+  goForward(accountId: string): void {
+    if (this.canGoForward(accountId)) this.views.get(accountId)?.view.webContents.navigationHistory.goForward();
   }
 
   /** Recarrega a página do WhatsApp Web de uma conta já carregada (ex.: depois de um erro de rede). */

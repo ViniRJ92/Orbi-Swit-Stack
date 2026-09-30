@@ -5,7 +5,7 @@
  */
 import { contextBridge, ipcRenderer } from 'electron';
 import { AccountsChangedPayload, AnalyticsRange } from './types';
-import { PerformanceMode, CloseBehavior, SidebarPosition, IconSize, StartupAccountSetting } from './settingsStore';
+import { PerformanceMode, CloseBehavior, SidebarPosition, IconSize, StartupAccountSetting, HeaderMode } from './settingsStore';
 import { AccountService } from './services';
 import { UpdateState } from './updateManager';
 import { WhatsNewResult } from './releaseNotes';
@@ -22,6 +22,8 @@ const api = {
   reorderAccounts: (orderedIds: string[]) => ipcRenderer.invoke('mw:reorder-accounts', orderedIds),
   removeAccount: (id: string) => ipcRenderer.invoke('mw:remove-account', id),
   reloadAccount: (id: string) => ipcRenderer.invoke('mw:reload-account', id),
+  goBack: (id: string) => ipcRenderer.invoke('mw:go-back', id),
+  goForward: (id: string) => ipcRenderer.invoke('mw:go-forward', id),
   getStartupSetting: () => ipcRenderer.invoke('mw:get-startup-setting'),
   setStartupSetting: (enabled: boolean) => ipcRenderer.invoke('mw:set-startup-setting', enabled),
   getTheme: () => ipcRenderer.invoke('mw:get-theme'),
@@ -40,6 +42,14 @@ const api = {
   getDiagnostics: () => ipcRenderer.invoke('mw:get-diagnostics'),
   readRecentLogs: (maxLines: number) => ipcRenderer.invoke('mw:read-recent-logs', maxLines),
   clearLogs: () => ipcRenderer.invoke('mw:clear-logs'),
+  getHeaderMode: () => ipcRenderer.invoke('mw:get-header-mode'),
+  setHeaderMode: (mode: HeaderMode) => ipcRenderer.invoke('mw:set-header-mode', mode),
+  getHeaderVisible: () => ipcRenderer.invoke('mw:get-header-visible'),
+  onHeaderVisibleChanged: (cb: (visivel: boolean) => void) => {
+    const listener = (_evt: unknown, visivel: boolean) => cb(visivel);
+    ipcRenderer.on('mw:header-visible', listener);
+    return () => ipcRenderer.removeListener('mw:header-visible', listener);
+  },
   getStartupAccount: () => ipcRenderer.invoke('mw:get-startup-account'),
   setStartupAccount: (setting: StartupAccountSetting) => ipcRenderer.invoke('mw:set-startup-account', setting),
   getCloseBehavior: () => ipcRenderer.invoke('mw:get-close-behavior'),

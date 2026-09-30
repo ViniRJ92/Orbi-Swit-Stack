@@ -62,6 +62,8 @@ export class AccountManager {
       suspended: acc.suspended,
       loaded: this.viewManager.hasView(acc.id),
       loadError: this.viewManager.hasView(acc.id) ? this.viewManager.hasLoadError(acc.id) : false,
+      canGoBack: this.viewManager.canGoBack(acc.id),
+      canGoForward: this.viewManager.canGoForward(acc.id),
     }));
   }
 
@@ -165,6 +167,14 @@ export class AccountManager {
   /** Soma de não lidas de todas as contas — usado no selo da barra de tarefas. */
   totalUnread(): number {
     return this.buildStatuses().reduce((sum, s) => sum + (s.unreadCount || 0), 0);
+  }
+
+  goBack(id: string): void {
+    this.viewManager.goBack(id);
+  }
+
+  goForward(id: string): void {
+    this.viewManager.goForward(id);
   }
 
   reload(id: string): void {

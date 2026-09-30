@@ -6,9 +6,9 @@
  *
  * Orbi — Criado por Vinicius Braga
  */
-import { BrowserWindow, Menu, dialog } from 'electron';
+import { BrowserWindow, Menu, dialog, screen } from 'electron';
 import * as path from 'path';
-import { CloseBehavior, IconSize, SIDEBAR_WIDTH_DEFAULT, SidebarPosition } from './settingsStore';
+import { CloseBehavior, HeaderMode, IconSize, SIDEBAR_WIDTH_DEFAULT, SidebarPosition } from './settingsStore';
 import { buildUnreadBadge } from './unreadBadge';
 
 // Precisa bater EXATAMENTE com a altura real do <header> em Header.tsx
@@ -40,7 +40,9 @@ function getContentBounds(
   win: BrowserWindow,
   sidebarWidth: number,
   sidebarPosition: SidebarPosition,
-  iconSize: IconSize
+  iconSize: IconSize,
+  /** Fase 97: 32 com a faixa de cima à mostra, 0 quando ela está oculta. */
+  alturaFaixa: number = HEADER_HEIGHT
 ): Electron.Rectangle {
   const [width, height] = win.getContentSize();
   // Fase 58: as quatro posições. O header sempre tem 32px, mas ONDE ele fica
@@ -48,23 +50,23 @@ function getContentBounds(
   // inteira; nas verticais (Esquerda/Direita) ocupa só a coluna ao lado da
   // barra — ver App.tsx, que monta o layout exatamente assim.
   if (sidebarPosition === 'top') {
-    const y = HEADER_HEIGHT + SIDEBAR_TOP_HEIGHT_BY_ICON_SIZE[iconSize];
+    const y = alturaFaixa + SIDEBAR_TOP_HEIGHT_BY_ICON_SIZE[iconSize];
     return { x: 0, y, width, height: Math.max(0, height - y) };
   }
   if (sidebarPosition === 'bottom') {
     // Header no topo, conteúdo no meio, barra de contas colada na base: a
     // área da instância perde a altura do header E a da barra.
     const barra = SIDEBAR_TOP_HEIGHT_BY_ICON_SIZE[iconSize];
-    return { x: 0, y: HEADER_HEIGHT, width, height: Math.max(0, height - HEADER_HEIGHT - barra) };
+    return { x: 0, y: alturaFaixa, width, height: Math.max(0, height - alturaFaixa - barra) };
   }
   if (sidebarPosition === 'right') {
     // Espelho de "left": a barra fica na borda direita, então a instância
     // começa em x = 0 e termina onde a barra começa.
     return {
       x: 0,
-      y: HEADER_HEIGHT,
+      y: alturaFaixa,
       width: Math.max(0, width - sidebarWidth),
-      height: Math.max(0, height - HEADER_HEIGHT),
+      height: Math.max(0, height - alturaFaixa),
     };
   }
   // "left" (padrão): sidebar com altura total ao lado do header — o header,
@@ -72,9 +74,9 @@ function getContentBounds(
   // a WebContentsView começa em x = largura da sidebar, y = altura do header.
   return {
     x: sidebarWidth,
-    y: HEADER_HEIGHT,
+    y: alturaFaixa,
     width: Math.max(0, width - sidebarWidth),
-    height: Math.max(0, height - HEADER_HEIGHT),
+    height: Math.max(0, height - alturaFaixa),
   };
 }
 
@@ -101,6 +103,12 @@ export class WindowManager {
     if (initialSidebarWidth) this.sidebarWidth = initialSidebarWidth;
     if (initialSidebarPosition) this.sidebarPosition = initialSidebarPosition;
     if (initialIconSize) this.iconSize = initialIconSize;
+  }
+
+  /** Fase 96 — F11: Orbi inteiro em tela cheia (sem a barra do Windows). */
+  toggleFullScreen(): void {
+    const win = this.get();
+    if (win) win.setFullScreen(!win.isFullScreen());
   }
 
   markQuitting(): void {
@@ -149,7 +157,7 @@ export class WindowManager {
       if (win.isDestroyed() || win.isMinimized()) return;
       const [largura, altura] = win.getContentSize();
       if (largura <= 0 || altura <= 0) return;
-      this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize));
+      this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize, this.alturaFaixa()));
     };
 
     /**
@@ -184,7 +192,7 @@ export class WindowManager {
     win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
     win.webContents.on('did-finish-load', () => {
-      this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize));
+      this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize, this.alturaFaixa()));
       this.onReady();
     });
 
@@ -259,7 +267,71 @@ export class WindowManager {
     this.sidebarWidth = width;
     const win = this.window;
     if (!win) return;
-    this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize));
+    this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize, this.alturaFaixa()));
+  }
+
+  // Fase 97 — faixa de cima: sempre visível ('fixed') ou oculta até o mouse
+  // parar na bordinha do topo ('auto'). Só os 3 pixels de cima revelam, e
+  // precisa parar ali um instante, para não atrapalhar cliques no topo do site.
+  private headerMode: HeaderMode = 'fixed';
+  private headerVisible = true;
+  private revelarDesde = 0;
+  private sairDesde = 0;
+  private headerTimer: ReturnType<typeof setInterval> | null = null;
+
+  private alturaFaixa(): number {
+    return this.headerMode === 'fixed' || this.headerVisible ? HEADER_HEIGHT : 0;
+  }
+
+  isHeaderVisible(): boolean {
+    return this.headerMode === 'fixed' || this.headerVisible;
+  }
+
+  setHeaderMode(mode: HeaderMode): void {
+    this.headerMode = mode;
+    this.revelarDesde = 0;
+    this.sairDesde = 0;
+    if (this.headerTimer) clearInterval(this.headerTimer);
+    this.headerTimer = mode === 'auto' ? setInterval(() => this.vigiarBordaDoTopo(), 100) : null;
+    this.setHeaderVisible(mode === 'fixed');
+  }
+
+  private setHeaderVisible(visivel: boolean): void {
+    this.headerVisible = visivel;
+    const win = this.window;
+    if (!win || win.isDestroyed()) return;
+    win.webContents.send('mw:header-visible', this.isHeaderVisible());
+    this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize, this.alturaFaixa()));
+  }
+
+  private vigiarBordaDoTopo(): void {
+    const win = this.window;
+    if (!win || win.isDestroyed() || win.isMinimized() || !win.isVisible()) return;
+    const p = screen.getCursorScreenPoint();
+    const area = win.getContentBounds();
+    const dentroNaLargura = p.x >= area.x && p.x < area.x + area.width;
+    const agora = Date.now();
+    if (!this.headerVisible) {
+      const naBorda = dentroNaLargura && p.y >= area.y - 1 && p.y <= area.y + 2;
+      if (!naBorda) {
+        this.revelarDesde = 0;
+      } else if (!this.revelarDesde) {
+        this.revelarDesde = agora;
+      } else if (agora - this.revelarDesde >= 250) {
+        this.revelarDesde = 0;
+        this.setHeaderVisible(true);
+      }
+      return;
+    }
+    const sobreAFaixa = dentroNaLargura && p.y >= area.y - 1 && p.y <= area.y + HEADER_HEIGHT + 6;
+    if (sobreAFaixa) {
+      this.sairDesde = 0;
+    } else if (!this.sairDesde) {
+      this.sairDesde = agora;
+    } else if (agora - this.sairDesde >= 700) {
+      this.sairDesde = 0;
+      this.setHeaderVisible(false);
+    }
   }
 
   /** Aplica uma nova posição de sidebar (Fase 21) e recalcula os bounds imediatamente. */
@@ -267,7 +339,7 @@ export class WindowManager {
     this.sidebarPosition = position;
     const win = this.window;
     if (!win) return;
-    this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize));
+    this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize, this.alturaFaixa()));
   }
 
   /**
@@ -282,7 +354,7 @@ export class WindowManager {
     this.iconSize = size;
     const win = this.window;
     if (!win) return;
-    this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize));
+    this.onContentBoundsChanged(getContentBounds(win, this.sidebarWidth, this.sidebarPosition, this.iconSize, this.alturaFaixa()));
   }
 
   /** Selo com o total de não lidas no ícone da barra de tarefas (só Windows). */

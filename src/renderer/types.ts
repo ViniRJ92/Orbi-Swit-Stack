@@ -103,6 +103,9 @@ export interface AccountStatus {
   suspended: boolean;
   loaded: boolean;
   loadError: boolean;
+  /** Fase 96 — ver src/main/types.ts. */
+  canGoBack?: boolean;
+  canGoForward?: boolean;
 }
 
 export interface AccountsChangedPayload {
@@ -116,6 +119,9 @@ export type CloseBehavior = 'tray' | 'ask' | 'quit';
 
 /** Fase 94 — espelha StartupAccountSetting de src/main/settingsStore.ts. */
 export type StartupAccountMode = 'first' | 'last' | 'specific';
+
+/** Fase 97 — espelha HeaderMode de src/main/settingsStore.ts. */
+export type HeaderMode = 'fixed' | 'auto';
 export interface StartupAccountSetting {
   mode: StartupAccountMode;
   accountId: string | null;
@@ -323,6 +329,8 @@ export interface OrbiSwitStackApi {
   reorderAccounts: (orderedIds: string[]) => Promise<boolean>;
   removeAccount: (id: string) => Promise<boolean>;
   reloadAccount: (id: string) => Promise<boolean>;
+  goBack: (id: string) => Promise<boolean>;
+  goForward: (id: string) => Promise<boolean>;
   getStartupSetting: () => Promise<boolean>;
   setStartupSetting: (enabled: boolean) => Promise<boolean>;
   getTheme: () => Promise<ThemePreference>;
@@ -341,6 +349,10 @@ export interface OrbiSwitStackApi {
   getDiagnostics: () => Promise<DiagnosticsInfo>;
   readRecentLogs: (maxLines: number) => Promise<string[]>;
   clearLogs: () => Promise<boolean>;
+  getHeaderMode: () => Promise<HeaderMode>;
+  setHeaderMode: (mode: HeaderMode) => Promise<HeaderMode>;
+  getHeaderVisible: () => Promise<boolean>;
+  onHeaderVisibleChanged: (cb: (visivel: boolean) => void) => () => void;
   getStartupAccount: () => Promise<StartupAccountSetting>;
   setStartupAccount: (setting: StartupAccountSetting) => Promise<StartupAccountSetting>;
   getCloseBehavior: () => Promise<CloseBehavior>;

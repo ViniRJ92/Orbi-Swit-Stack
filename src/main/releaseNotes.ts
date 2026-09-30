@@ -649,6 +649,14 @@ export const RELEASE_NOTES: Record<string, string> = {
     '',
     '• O dia da semana, a data e a hora aparecem à esquerda da faixa de cima, em verde.',
   ].join('\n'),
+  '0.50.4': [
+    'Navegação e tela cheia',
+    '',
+    '• Voltar e avançar páginas nas instâncias: botões no topo, Alt + setas e os botões laterais do mouse.',
+    '• F11 deixa o Orbi em tela cheia. F12 abre as ferramentas de desenvolvedor da instância.',
+    '• Faixa de cima pode ficar oculta: aparece ao parar o mouse na bordinha do topo (Configurações, Geral & Aparência).',
+    '• Dia e hora voltaram ao visual neutro.',
+  ].join('\n'),
 };
 
 export interface WhatsNewResult {

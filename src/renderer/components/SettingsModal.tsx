@@ -57,6 +57,7 @@ import {
   ChevronDown,
   Check,
   AppWindow,
+  PanelTopClose,
 } from 'lucide-react';
 import {
   AccountRecord,
@@ -70,6 +71,7 @@ import {
   UpdateState,
   StartupAccountMode,
   StartupAccountSetting,
+  HeaderMode,
 } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { Modal } from './Modal';
@@ -809,6 +811,51 @@ function StartupAccountCard() {
   );
 }
 
+/** Fase 97 — as duas escolhas da faixa de cima. */
+const HEADER_MODE_OPTIONS: { value: HeaderMode; label: string; description: string }[] = [
+  { value: 'fixed', label: 'Sempre visível', description: 'A faixa com data, Agenda e Configurações fica sempre à mostra.' },
+  {
+    value: 'auto',
+    label: 'Ocultar automaticamente',
+    description: 'A faixa some. Pare o mouse na bordinha do topo da janela para ela aparecer.',
+  },
+];
+
+/** Fase 97 — cartão "Faixa de cima". Lê e grava a escolha por conta própria. */
+function HeaderModeCard() {
+  const [mode, setMode] = useState<HeaderMode>('fixed');
+  useEffect(() => {
+    window.multiwhats.getHeaderMode().then(setMode);
+  }, []);
+  const escolher = async (novo: HeaderMode) => setMode(await window.multiwhats.setHeaderMode(novo));
+  return (
+    <Card
+      title="Faixa de cima"
+      icon={<PanelTopClose size={15} />}
+      description={HEADER_MODE_OPTIONS.find((o) => o.value === mode)?.description}
+      action={
+        <div className="flex rounded-lg border border-border bg-input p-1">
+          {HEADER_MODE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => escolher(opt.value)}
+              aria-pressed={mode === opt.value}
+              className={
+                'whitespace-nowrap rounded-md border px-3 py-1.5 text-xs transition-colors ' +
+                (mode === opt.value
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-transparent text-text-dim hover:text-text')
+              }
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      }
+    />
+  );
+}
+
 function GeneralAppearanceTab({
   startup,
   toggleStartup,
@@ -855,6 +902,8 @@ function GeneralAppearanceTab({
       </div>
 
       <StartupAccountCard />
+
+      <HeaderModeCard />
 
       <Card title="Tema visual" icon={<Sun size={15} />} description="Esquema de cores da interface do Orbi.">
         <div className="grid grid-cols-3 gap-3">

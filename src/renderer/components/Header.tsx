@@ -6,7 +6,7 @@
  * botão "Ajuda", que abre o manual de uso.
  */
 import { useEffect, useState } from 'react';
-import { Settings, HelpCircle, LayoutGrid, Search, BarChart3, RotateCw, CalendarDays } from 'lucide-react';
+import { Settings, HelpCircle, LayoutGrid, Search, BarChart3, RotateCw, CalendarDays, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -32,13 +32,13 @@ function DataHora() {
   }, []);
   const hora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
   return (
-    <div className="flex items-center gap-2 whitespace-nowrap rounded-full border border-accent/30 bg-accent/10 px-2.5 py-[3px] text-[11.5px] text-text">
-      <CalendarDays size={12} className="text-accent" />
+    <div className="flex items-center gap-2 whitespace-nowrap rounded-full border border-border bg-surface/60 px-2.5 py-[3px] text-[11.5px] text-text-dim">
+      <CalendarDays size={12} />
       <span>
         {DIAS[agora.getDay()]}, {agora.getDate()} {MESES[agora.getMonth()]}
       </span>
-      <span className="h-3 w-px bg-accent/30" aria-hidden />
-      <span className="font-semibold tabular-nums text-accent">{hora}</span>
+      <span className="h-3 w-px bg-border" aria-hidden />
+      <span className="font-semibold tabular-nums text-text">{hora}</span>
     </div>
   );
 }
@@ -53,6 +53,10 @@ export function Header({
   onReloadActive,
   canReload,
   hasUpdate,
+  canGoBack,
+  canGoForward,
+  onGoBack,
+  onGoForward,
 }: {
   /** Fase 50: abre o manual de uso (HelpModal). */
   onOpenHelp: () => void;
@@ -68,14 +72,31 @@ export function Header({
   canReload: boolean;
   /** Fase 27: acende um ponto vermelho sobre "Configurações" quando há uma atualização disponível/baixada. */
   hasUpdate?: boolean;
+  /** Fase 96: voltar/avançar página na instância visível (também Alt+← / Alt+→). */
+  canGoBack: boolean;
+  canGoForward: boolean;
+  onGoBack: () => void;
+  onGoForward: () => void;
 }) {
+  const botaoSeta =
+    'flex h-6 w-6 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-surface-hover hover:text-text disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-dim';
   return (
     <header
       className="flex h-8 min-h-[32px] items-center justify-between border-b border-border bg-header px-4 py-0 transition-colors"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      {/* Fase 95: dia e hora encostados à esquerda (pedido do usuário). */}
-      <DataHora />
+      {/* Fase 96: voltar/avançar página, antes do dia e hora (Fase 95). */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-0.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <button className={botaoSeta} onClick={onGoBack} disabled={!canGoBack} title="Voltar (Alt+←)">
+            <ArrowLeft size={15} />
+          </button>
+          <button className={botaoSeta} onClick={onGoForward} disabled={!canGoForward} title="Avançar (Alt+→)">
+            <ArrowRight size={15} />
+          </button>
+        </div>
+        <DataHora />
+      </div>
       <div
         className="flex items-center gap-1"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}

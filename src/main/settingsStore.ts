@@ -80,6 +80,9 @@ export type CloseBehavior = 'tray' | 'ask' | 'quit';
  * existir mais, volta para a primeira da lista.
  */
 export type StartupAccountMode = 'first' | 'last' | 'specific';
+
+/** Fase 97 — faixa de cima (data, Agenda, Configurações...): sempre visível ou ocultar automaticamente. */
+export type HeaderMode = 'fixed' | 'auto';
 export interface StartupAccountSetting {
   mode: StartupAccountMode;
   accountId: string | null;
@@ -130,6 +133,8 @@ interface SettingsShape {
   startupAccountId: string;
   /** Fase 94 — última instância aberta, para o modo "Última que usei". */
   lastActiveAccountId: string;
+  /** Fase 97 — ver HeaderMode. */
+  headerMode: HeaderMode;
 }
 
 const STORE_FILE = 'settings.json';
@@ -151,6 +156,7 @@ const DEFAULTS: SettingsShape = {
   startupAccountMode: 'first',
   startupAccountId: '',
   lastActiveAccountId: '',
+  headerMode: 'fixed',
 };
 
 function clampSidebarWidth(width: number): number {
@@ -186,6 +192,16 @@ export class SettingsStore {
     } catch (err) {
       console.error('[SettingsStore] Falha ao salvar settings.json:', err);
     }
+  }
+
+  getHeaderMode(): HeaderMode {
+    return this.data.headerMode === 'auto' ? 'auto' : 'fixed';
+  }
+
+  setHeaderMode(mode: HeaderMode): HeaderMode {
+    this.data.headerMode = mode === 'auto' ? 'auto' : 'fixed';
+    this.persist();
+    return this.data.headerMode;
   }
 
   getStartupAccount(): StartupAccountSetting {

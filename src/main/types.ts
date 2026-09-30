@@ -45,6 +45,9 @@ export interface AccountStatus {
   loaded: boolean;
   /** A última tentativa de carregar o WhatsApp Web falhou (ex.: sem internet). */
   loadError: boolean;
+  /** Fase 96 — a instância tem página anterior/seguinte (botões ← → e Alt+setas). */
+  canGoBack?: boolean;
+  canGoForward?: boolean;
 }
 
 /** Metadados exportáveis de uma conta para backup (sem qualquer dado de sessão/autenticação). */

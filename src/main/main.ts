@@ -212,6 +212,8 @@ app.whenReady().then(async () => {
     settingsStore.getIconSize()
   );
   const win = windowManager.create();
+  // Fase 97: faixa de cima fixa ou automática, conforme Configurações.
+  windowManager.setHeaderMode(settingsStore.getHeaderMode());
 
   viewManager = new ViewManager(win, accountStore);
 
@@ -280,8 +282,23 @@ app.whenReady().then(async () => {
     () => accountManager!.getActiveAccountId(),
     (id) => switchToAccount(id),
     () => windowManager?.get()?.webContents.send('mw:open-command-palette'),
-    (id) => accountManager?.reload(id)
+    (id) => accountManager?.reload(id),
+    (id) => viewManager?.toggleDevTools(id),
+    () => windowManager?.toggleFullScreen(),
+    (id) => {
+      accountManager?.goBack(id);
+    },
+    (id) => {
+      accountManager?.goForward(id);
+    }
   );
+  // Fase 96: botões laterais do mouse (voltar/avançar), como no navegador.
+  windowManager.get()?.on('app-command', (_e, comando) => {
+    const activeId = accountManager?.getActiveAccountId();
+    if (!activeId) return;
+    if (comando === 'browser-backward') accountManager?.goBack(activeId);
+    if (comando === 'browser-forward') accountManager?.goForward(activeId);
+  });
   viewManager.setShortcutHandler((input) => shortcutManagerRef.handleNavigationShortcut(input));
 
   trayManager = new TrayManager(
@@ -366,6 +383,8 @@ app.whenReady().then(async () => {
     setSidebarWidth: (width) => windowManager?.setSidebarWidth(width),
     setSidebarPosition: (position) => windowManager?.setSidebarPosition(position),
     setIconSize: (size) => windowManager?.setIconSize(size),
+    setHeaderMode: (mode) => windowManager?.setHeaderMode(mode),
+    isHeaderVisible: () => windowManager?.isHeaderVisible() ?? true,
     resetMessageTracking: () => viewManager?.resetMessageTracking(),
   });
 

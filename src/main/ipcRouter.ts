@@ -24,6 +24,7 @@ import {
   SidebarPosition,
   IconSize,
   StartupAccountSetting,
+  HeaderMode,
 } from './settingsStore';
 import { AnalyticsStore } from './analyticsStore';
 import { ChatActivityStore } from './chatActivityStore';
@@ -75,6 +76,9 @@ export interface IpcRouterDeps {
   setSidebarWidth: (width: number) => void;
   setSidebarPosition: (position: SidebarPosition) => void;
   setIconSize: (size: IconSize) => void;
+  /** Fase 97 — faixa de cima fixa ou automática. */
+  setHeaderMode: (mode: HeaderMode) => void;
+  isHeaderVisible: () => boolean;
   /** Fase 33.2 — faz cada instância esquecer quais balões já reportou (usado ao limpar o Analytics). */
   resetMessageTracking: () => void;
 }
@@ -184,6 +188,16 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
   ipcMain.handle('mw:reorder-accounts', (_evt, orderedIds: string[]) => {
     accountManager.reorder(orderedIds);
     deps.pushAccountsUpdate();
+    return true;
+  });
+
+  // Fase 96 — voltar/avançar página na instância.
+  ipcMain.handle('mw:go-back', (_evt, id: string) => {
+    accountManager.goBack(id);
+    return true;
+  });
+  ipcMain.handle('mw:go-forward', (_evt, id: string) => {
+    accountManager.goForward(id);
     return true;
   });
 
@@ -487,6 +501,15 @@ export function registerIpcHandlers(deps: IpcRouterDeps): void {
 
   // Fase 22: tamanho dos ícones/cards de conta ("small"/"medium"/"large").
   ipcMain.handle('mw:get-icon-size', () => settingsStore.getIconSize());
+
+  // Fase 97 — faixa de cima.
+  ipcMain.handle('mw:get-header-mode', () => settingsStore.getHeaderMode());
+  ipcMain.handle('mw:set-header-mode', (_evt, mode: HeaderMode) => {
+    const salvo = settingsStore.setHeaderMode(mode);
+    deps.setHeaderMode(salvo);
+    return salvo;
+  });
+  ipcMain.handle('mw:get-header-visible', () => deps.isHeaderVisible());
 
   ipcMain.handle('mw:set-icon-size', (_evt, size: IconSize) => {
     settingsStore.setIconSize(size);

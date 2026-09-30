@@ -357,6 +357,8 @@ const SECTIONS: HelpSection[] = [
           </Aviso>
           <Aviso>
             O dia e a hora ficam à esquerda da faixa de cima, ao lado dos botões Agenda e Configurações.
+            Em "Faixa de cima" dá para deixá-la sempre visível ou ocultar automaticamente: oculta, ela aparece quando
+            você para o mouse na bordinha do topo da janela.
           </Aviso>
           <Aviso>
             Com a barra no topo ou embaixo, cada instância vira uma aba com ícone e nome. A lupa, à esquerda, abre a
@@ -408,6 +410,9 @@ const SECTIONS: HelpSection[] = [
                 ['Ctrl + Shift + Tab', 'Volta para a instância anterior'],
                 ['Ctrl + K', 'Abre a busca rápida de contas'],
                 ['F5 ou Ctrl + R', 'Recarrega a instância que está aberta'],
+                ['Alt + ← / Alt + →', 'Volta ou avança uma página na instância (também pelos botões ← → no topo e pelos botões laterais do mouse)'],
+                ['F11', 'Deixa o Orbi em tela cheia; F11 de novo volta ao normal'],
+                ['F12', 'Abre ou fecha as ferramentas de desenvolvedor da instância, em tela cheia'],
                 ['Esc', 'Fecha a tela aberta no momento'],
               ].map(([tecla, oQueFaz]) => (
                 <tr key={tecla} className="border-b border-border/60 last:border-b-0">
